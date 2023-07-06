@@ -505,6 +505,7 @@ class TableOrder {
                 this.data = r.message.order.data;
                 this.render();
                 this.check_items({ items: r.message.items });
+                this.print_order();
             },
         });
     }
@@ -550,6 +551,34 @@ class TableOrder {
 
     print_account() {
         const title = this.data.name + " (" + __("Account") + ")";
+        const order_manage = this.order_manage;
+        const props = {
+            model: "Table Order",
+            model_name: this.data.name,
+            from_server: true,
+            args: {
+                format: "Order Account",
+                _lang: RM.lang,
+                no_letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 1,
+                letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 'No%20Letterhead'
+            },
+            set_buttons: true,
+            is_pdf: true,
+            customize: true,
+            title: title
+        }
+
+        if (order_manage.print_modal) {
+            order_manage.print_modal.set_props(props);
+            order_manage.print_modal.set_title(title);
+            order_manage.print_modal.reload().show();
+        } else {
+            order_manage.print_modal = new DeskModal(props);
+        }
+    }
+
+    print_order() {
+        const title = this.data.name + " (" + __("Order Print") + ")";
         const order_manage = this.order_manage;
         const props = {
             model: "Table Order",
