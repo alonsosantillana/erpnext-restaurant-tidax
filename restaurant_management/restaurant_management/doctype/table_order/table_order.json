@@ -25,7 +25,9 @@
   "taxes_and_charges",
   "selling_price_list",
   "company",
-  "customer_name"
+  "customer_name",
+  "customer_tax_id",
+  "customer_tipo_documento_identidad"
  ],
  "fields": [
   {
@@ -139,22 +141,37 @@
    "label": "Room Description"
   },
   {
-   "fetch_from": "customer.name",
+   "fetch_from": "customer.customer_name",
    "fieldname": "customer_name",
-   "fieldtype": "Read Only",
-   "label": "Customer"
+   "fieldtype": "Data",
+   "label": "Full Name",
+   "read_only": 1
   },
   {
    "fieldname": "address",
    "fieldtype": "Link",
    "label": "Address",
    "options": "Address"
+  },
+  {
+   "fetch_from": "customer.tax_id",
+   "fieldname": "customer_tax_id",
+   "fieldtype": "Data",
+   "label": "Tax Id",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "customer.tipo_documento_identidad",
+   "fieldname": "customer_tipo_documento_identidad",
+   "fieldtype": "Data",
+   "label": "Tipo de Documento",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2022-11-25 07:58:48.917404",
+ "modified": "2023-07-07 09:02:17.266486",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order",

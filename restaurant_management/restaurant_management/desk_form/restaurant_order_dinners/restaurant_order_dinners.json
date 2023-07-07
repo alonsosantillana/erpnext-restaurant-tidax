@@ -11,8 +11,7 @@
   {
    "allow_read_on_all_link_options": 1,
    "collapsible": 0,
-   "default": "",
-   "depends_on": "",
+   "default": "1",
    "description": "",
    "extra_field": 0,
    "fetch_if_empty": 0,
@@ -34,7 +33,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2023-06-27 20:58:37.684124",
+ "modified": "2023-07-07 09:12:56.977659",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-dinners",
