@@ -123,6 +123,7 @@ class OrderManage extends ObjectManage {
         this.modal.container.append(this.template());
 
         this.#components.customer = RMHelper.default_button("Customer", 'people', () => this.update_current_order('customer'));
+        this.#components.new_customer = RMHelper.default_button("NewCustomer", 'add', () => this.consultar_cliente());
         this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
 
@@ -132,6 +133,7 @@ class OrderManage extends ObjectManage {
 
         this.modal.buttons_container.prepend(`
 			${this.components.delete.html()}
+            ${this.components.new_customer.html()}
             ${this.components.customer.html()}
 			${this.components.dinners.html()}
 		`);
@@ -603,10 +605,12 @@ class OrderManage extends ObjectManage {
                 }
 
                 this.#components.Divide.prop("disabled", this.current_order.items_count === 0);
+                this.#components.new_customer.enable().show();
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
                 this.#components.Transfer.enable();
             } else {
+                this.#components.new_customer.disable().hide();
                 this.#components.customer.disable().hide();
                 this.#components.dinners.disable().hide();
                 this.#components.Transfer.disable();
@@ -809,6 +813,39 @@ class OrderManage extends ObjectManage {
         if (this.current_order != null) {
             this.current_order.edit(type);
         }
+    }
+
+    consultar_cliente(){
+        frappe.prompt(
+            [{'fieldname': 'tax_id', 'fieldtype': 'Data', 'label': 'RUC del cliente', 'reqd': 0}],
+            function (values) {
+                //frappe.msgprint("RUC " + values.tax_id);
+                if (values.tax_id && values.tax_id.length) {
+                    frappe.call({
+                        method: "ovenube_peru.nubefact_integration.doctype.api_consultas.api_consultas.get_party",
+                        args: {
+                            company: "TIDAX",
+                            tax_id: values.tax_id,
+                            party_type: "Customer"
+                        },
+                        callback: function(r) {
+                            if (r.message) {
+                                frappe.msgprint("El cliente esta disponible " + r.message);
+                            }
+                            else {
+                                frappe.msgprint("El cliente no pudo ser encontrado, revise el número de documento");
+                            }
+                        },
+                        async: false
+                    });
+                }
+                else {
+                    frappe.msgprint("Debe ingresar un número de documento");
+                }
+            },
+            'Consultar Cliente',
+            'Aceptar'
+        )
     }
 
     clear_current_order() {

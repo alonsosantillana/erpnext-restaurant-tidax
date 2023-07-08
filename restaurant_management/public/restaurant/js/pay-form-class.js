@@ -115,20 +115,30 @@ class PayForm extends DeskForm {
     }
 
     set_dinners_input(){
-        this.dinners = frappe.jshtml({
-            tag: "input",
-            properties: {
-                type: "text",
-                class: `input-with-feedback form-control bold`
-            },
-        }).on("click", (obj) => {
-            this.num_pad.input = obj;
-        }).val(this.doc.dinners).int();
-
+        if(this.doc.dinners == 0){
+            this.dinners = frappe.jshtml({
+                tag: "input",
+                properties: {
+                    type: "text",
+                    class: `input-with-feedback form-control bold`
+                },
+            }).on("click", (obj) => {
+                this.num_pad.input = obj;
+            }).val("1").int();
+        } else{
+            this.dinners = frappe.jshtml({
+                tag: "input",
+                properties: {
+                    type: "text",
+                    class: `input-with-feedback form-control bold`
+                },
+            }).on("click", (obj) => {
+                this.num_pad.input = obj;
+            }).val(this.doc.dinners).int();
+        }
         this.get_field("dinners").$wrapper.empty().append(
             this.form_tag("Dinners", this.dinners)
         );
-
     }
 
     form_tag(label, input) {
@@ -193,7 +203,6 @@ class PayForm extends DeskForm {
 
         RM.working("Generating Invoice");
         this.order.data.dinners = this.dinners.val();
-
         frappeHelper.api.call({
             model: "Table Order",
             name: this.order.data.name,
