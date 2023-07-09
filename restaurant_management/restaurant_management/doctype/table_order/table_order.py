@@ -361,6 +361,14 @@ class TableOrder(Document):
         else:
             invoice = self.get_invoice({entry["identifier"]: entry})
             item = invoice.items[0]
+            # TIDAX
+            PrCeGr = frappe.db.sql(f"""SELECT ro.description FROM `tabRestaurant Object` as ro inner join
+                                    `tabProduction Center Group` as pcg on ro.name = pcg.parent and ro.type = 'Production Center' and item_group = '{item.item_group}' 
+                                    order by item_group asc;""", as_dict=True)
+            centro_pro = ""
+            for pt in PrCeGr:
+                centro_pro += pt.description + ","
+
             data = dict(
                 item_code=item.item_code,
                 qty=item.qty,
@@ -381,6 +389,7 @@ class TableOrder(Document):
                 batch_no=entry["batch_no"],
                 has_serial_no=entry["has_serial_no"],
                 serial_no=entry["serial_no"],
+                item_pt = centro_pro
             )
 
             self.validate()

@@ -814,7 +814,7 @@ class OrderManage extends ObjectManage {
             this.current_order.edit(type);
         }
     }
-
+    // TIDAX
     consultar_cliente(){
         frappe.prompt(
             [{'fieldname': 'tax_id', 'fieldtype': 'Data', 'label': 'RUC del cliente', 'reqd': 0}],

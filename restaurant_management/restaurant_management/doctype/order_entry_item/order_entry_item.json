@@ -27,7 +27,8 @@
   "has_batch_no",
   "batch_no",
   "has_serial_no",
-  "serial_no"
+  "serial_no",
+  "item_pt"
  ],
  "fields": [
   {
@@ -168,12 +169,17 @@
    "fieldtype": "Link",
    "label": "Serial No",
    "options": "Serial No"
+  },
+  {
+   "fieldname": "item_pt",
+   "fieldtype": "Data",
+   "label": "Item PT"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-09-12 16:34:06.730751",
+ "modified": "2023-07-09 03:47:06.502580",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Order Entry Item",

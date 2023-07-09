@@ -576,7 +576,7 @@ class TableOrder {
             order_manage.print_modal = new DeskModal(props);
         }
     }
-
+    // TIDAX
     print_order() {
         const title = this.data.name + " (" + __("Order Print") + ")";
         const order_manage = this.order_manage;
@@ -585,7 +585,7 @@ class TableOrder {
             model_name: this.data.name,
             from_server: true,
             args: {
-                format: "Order Account",
+                format: "Order",
                 _lang: RM.lang,
                 no_letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 1,
                 letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 'No%20Letterhead'

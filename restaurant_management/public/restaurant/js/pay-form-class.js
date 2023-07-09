@@ -241,7 +241,8 @@ class PayForm extends DeskForm {
             model: "POS Invoice",
             model_name: invoice_name,
             args: {
-                format: RM.pos_profile.print_format,
+                //format: RM.pos_profile.print_format,
+                format: "POS CE",
                 _lang: RM.lang,
                 no_letterhead: RM.pos_profile.letter_head || 1,
                 letterhead: RM.pos_profile.letter_head || 'No%20Letterhead'

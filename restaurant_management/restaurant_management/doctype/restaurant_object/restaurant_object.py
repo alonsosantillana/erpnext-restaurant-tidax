@@ -329,6 +329,21 @@ class RestaurantObject(Document):
                 items_groups.append(item.name)
 
         return items_groups
+    
+    # TIDAX
+    @property
+    def _production_center(self):
+        productions_centers = []
+        for group in self.production_center_group:
+            lft, rgt = frappe.db.get_value('Item Group', group.item_group, ['lft', 'rgt'])
+
+            for item in frappe.get_list("Item Group", "name", filters={
+                "lft": (">=", lft),
+                "rgt": ("<=", rgt)
+            }):
+                productions_centers.append(group.description)
+
+        return productions_centers
 
     def set_style(self, data, shape=None):
         _data = data
