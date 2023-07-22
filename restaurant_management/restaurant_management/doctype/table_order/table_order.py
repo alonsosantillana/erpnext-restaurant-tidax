@@ -156,7 +156,7 @@ class TableOrder(Document):
             frappe.throw(_("There is not Item in this Order"))
 
         invoice = self.get_invoice(entry_items, True)
-        frappe.msgprint("SI PASA POR AQUI")
+        # frappe.msgprint("SI PASA POR AQUI")
         invoice.payments = []
         for mp in mode_of_payment:
             invoice.append('payments', dict(
