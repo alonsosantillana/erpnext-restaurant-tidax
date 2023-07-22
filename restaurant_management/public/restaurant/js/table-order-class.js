@@ -550,6 +550,24 @@ class TableOrder {
     }
 
     print_account() {
+        //TIDAX
+        var formato_impresion;
+        frappe.call({
+            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            args: {
+                filtro: "print_format"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    formato_impresion = r.message[0].value;
+                }
+                else {
+                    frappe.msgprint("El formato no pudo ser encontrado");
+                }
+            },
+            async: false
+        });
+
         const title = this.data.name + " (" + __("Account") + ")";
         const order_manage = this.order_manage;
         const props = {
@@ -557,7 +575,7 @@ class TableOrder {
             model_name: this.data.name,
             from_server: true,
             args: {
-                format: "Order Account",
+                format: formato_impresion,
                 _lang: RM.lang,
                 no_letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 1,
                 letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 'No%20Letterhead'
@@ -578,6 +596,23 @@ class TableOrder {
     }
     // TIDAX
     print_order() {
+        var formato_impresion;
+        frappe.call({
+            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            args: {
+                filtro: "print_format_order"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    formato_impresion = r.message[0].value;
+                }
+                else {
+                    frappe.msgprint("El formato no pudo ser encontrado");
+                }
+            },
+            async: false
+        });
+
         const title = this.data.name + " (" + __("Order Print") + ")";
         const order_manage = this.order_manage;
         const props = {
@@ -585,7 +620,7 @@ class TableOrder {
             model_name: this.data.name,
             from_server: true,
             args: {
-                format: "Order",
+                format: formato_impresion,
                 _lang: RM.lang,
                 no_letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 1,
                 letterhead: RM.pos_profile.letter_head ? RM.pos_profile.letter_head : 'No%20Letterhead'

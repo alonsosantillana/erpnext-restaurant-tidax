@@ -221,8 +221,83 @@ class PayForm extends DeskForm {
                     order_manage.check_item_editor_status();
                     
                     this.hide();
-                    this.print(r.message.invoice_name);
+                    // this.print(r.message.invoice_name);
                     order_manage.make_orders();
+
+                    // TIDAX
+                    RM.working("Generating Invoice Electronic");
+                    var com = frappe.defaults.get_user_default('company');
+
+                    new Promise(function(resolve, reject) {
+                        frappe.call({
+                            method: "ovenube_peru.nubefact_integration.facturacion_electronica.consult_document",
+                            args: {
+                                'company': com,
+                                'invoice': r.message.invoice_name,
+                                'doctype': "POS Invoice"
+                            },
+                            callback: function(values) {
+                                console.log(values.message.codigo);
+                                resolve(values);
+                            }
+                        });
+                    }).then(function(values) {
+                        if (values.message.codigo == "24"){
+                            frappe.call({
+                                method: "ovenube_peru.nubefact_integration.facturacion_electronica.send_document",
+                                args: {
+                                    'company': com,
+                                    'invoice': r.message.invoice_name,
+                                    'doctype': "POS Invoice"
+                                },
+                                callback: function(data) {
+                                    if (data.message.codigo_hash) {
+                                        RM.working("Sinchronizing Invoice Electronic");
+                                        let estado = (data.message.codigo_hash != "") ? ("Aceptado") : ("Rechazado");
+
+                                        frappe.call({
+                                            method: "ovenube_peru.nubefact_integration.facturacion_electronica.update_pos_invoice_ce",
+                                            args: {
+                                                'company': com,
+                                                'invoice': r.message.invoice_name,
+                                                'doctype': "POS Invoice",
+                                                'estado_sunat': estado,
+                                                //'sunat_descripcion': data.message.sunat_descripcion,
+                                                'cadena_para_codigo_qr': data.message.cadena_para_codigo_qr,
+                                                //'codigo_de_barras': data.message.codigo_de_barras,
+                                                'codigo_hash': data.message.codigo_hash,
+                                                'enlace_del_pdf': data.message.enlace_del_pdf
+                                            },
+                                            callback: function(data) {
+                                                console.log(data);
+                                                if (data.message.codigo_hash) {                                                    
+                                                    //window.open(data.message.enlace_del_pdf);
+                                                    console.log("CE Generado");
+                                                } else{
+                                                    frappe.validated = false;
+                                                    frappe.throw(data.message.errors);
+                                                }
+                                            }
+                                        });
+                                        window.open(data.message.enlace_del_pdf);
+                                    } else{
+                                        frappe.validated = false;
+                                        frappe.throw(data.message.errors);
+                                    }
+                                    RM.ready();
+                                }
+                            });
+                        } else {
+                            // frappe.model.set_value(cdt, cdn, "estado_sunat", (values.message.codigo_hash != "") ? ("Aceptado") : ("Rechazado"));
+                            // frappe.model.set_value(cdt, cdn, "respuesta_sunat", values.message.sunat_descripcion);
+                            // frappe.model.set_value(cdt, cdn, "codigo_qr_sunat", values.message.cadena_para_codigo_qr);
+                            // frappe.model.set_value(cdt, cdn, "codigo_barras_sunat", values.message.codigo_de_barras);
+                            // frappe.model.set_value(cdt, cdn, "codigo_hash_sunat", values.message.codigo_hash);
+                            // frappe.model.set_value(cdt, cdn, "enlace_pdf", values.message.enlace_del_pdf);
+                            window.open(values.message.enlace_del_pdf);
+                        }
+                    });
+                    this.print(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }
@@ -231,8 +306,43 @@ class PayForm extends DeskForm {
         });
     }
 
+    make_pad() {
+        this.num_pad = new NumPad({
+            on_enter: () => {
+                this.update_paid_value();
+            }
+        });
+
+        this.get_field("num_pad").$wrapper.empty().append(
+            `<div style="width: 100% !important; height: 200px !important; padding: 0">
+                ${this.num_pad.html}
+            </div>`
+        );
+
+        this.get_field("num_pad").$wrapper.parent().parent().css("max-width", "300px");
+        this.get_field("payment_methods").$wrapper.parent().parent().removeClass("col-sm-6").addClass("col");
+    }
+
     print(invoice_name) {
         if (!RM.can_pay) return;
+
+        //TIDAX
+        var formato_impresion;
+        frappe.call({
+            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            args: {
+                filtro: "print_format_ce"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    formato_impresion = r.message[0].value;
+                }
+                else {
+                    frappe.msgprint("El formato no pudo ser encontrado");
+                }
+            },
+            async: false
+        });
 
         const title = invoice_name + " (" + __("Print") + ")";
         const order_manage = this.order.order_manage;
@@ -241,8 +351,7 @@ class PayForm extends DeskForm {
             model: "POS Invoice",
             model_name: invoice_name,
             args: {
-                //format: RM.pos_profile.print_format,
-                format: "POS CE",
+                format: formato_impresion,
                 _lang: RM.lang,
                 no_letterhead: RM.pos_profile.letter_head || 1,
                 letterhead: RM.pos_profile.letter_head || 'No%20Letterhead'

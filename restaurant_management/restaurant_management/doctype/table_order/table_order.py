@@ -10,7 +10,7 @@ from frappe.model.document import Document
 import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
-
+from restaurant_management.restaurant_management.doctype.utils import obtener_res_set
 status_attending = "Attending"
 
 
@@ -156,14 +156,40 @@ class TableOrder(Document):
             frappe.throw(_("There is not Item in this Order"))
 
         invoice = self.get_invoice(entry_items, True)
-
+        frappe.msgprint("SI PASA POR AQUI")
         invoice.payments = []
         for mp in mode_of_payment:
             invoice.append('payments', dict(
                 mode_of_payment=mp,
                 amount=mode_of_payment[mp]
             ))
-
+        # TIDAX
+        if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+            serie = obtener_res_set("serie_boleta")
+            # invoice.naming_series = "BV-BP01-.######"
+            invoice.naming_series = serie[0]["value"]
+            invoice.codigo_comprobante = "03"
+            invoice.tipo_comprobante = "Boleta de Venta"
+            invoice.codigo_tipo_documento = "1"
+            invoice.tipo_documento_identidad = "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
+            invoice.codigo_transaccion_sunat = "1"
+            invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+            invoice.condicion_pago = "CONTADO"
+            invoice.tax_id = self.customer_tax_id
+        # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+        else:
+            serie = obtener_res_set("serie_factura")
+            # invoice.naming_series = "FV-FP01-.######"
+            invoice.naming_series = serie[0]["value"]
+            invoice.codigo_comprobante = "01"
+            invoice.tipo_comprobante = "Factura"
+            invoice.codigo_tipo_documento = "6"
+            invoice.tipo_documento_identidad = "REGISTRO ÙNICO DE CONTRIBUYENTES"
+            invoice.codigo_transaccion_sunat = "1"
+            invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+            invoice.condicion_pago = "CONTADO"
+            invoice.tax_id = self.customer_tax_id
+            
         invoice.validate()
         invoice.save()
         invoice.submit()

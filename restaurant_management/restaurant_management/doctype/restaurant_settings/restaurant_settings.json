@@ -16,7 +16,13 @@
   "column_break_9",
   "color",
   "column_break_7",
+  "print_format_order",
   "print_format",
+  "print_format_ce",
+  "sec_brk_001",
+  "serie_factura",
+  "col_brk_001",
+  "serie_boleta",
   "double_click_events_section",
   "double_click_events_info",
   "column_break_10",
@@ -76,7 +82,7 @@
   {
    "fieldname": "print_format",
    "fieldtype": "Link",
-   "label": "Print Format",
+   "label": "Print Format Pre-Cuenta",
    "options": "Print Format"
   },
   {
@@ -145,12 +151,43 @@
   {
    "fieldname": "column_break_9",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_format_order",
+   "fieldtype": "Link",
+   "label": "Print Format Order",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "print_format_ce",
+   "fieldtype": "Link",
+   "label": "Print Format CE",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "sec_brk_001",
+   "fieldtype": "Section Break",
+   "label": "Series Comprobantes"
+  },
+  {
+   "fieldname": "serie_factura",
+   "fieldtype": "Data",
+   "label": "Serie Factura"
+  },
+  {
+   "fieldname": "col_brk_001",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "serie_boleta",
+   "fieldtype": "Data",
+   "label": "Serie Boleta"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-13 21:07:25.854704",
+ "modified": "2023-07-14 02:47:55.240069",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Settings",

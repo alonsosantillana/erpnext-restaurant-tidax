@@ -24,5 +24,21 @@ frappe.ui.form.on('Restaurant Settings', {
 				]
 			};
 		});
+
+		frm.set_query("print_format_order", function () {
+			return {
+				filters: [
+					['Print Format', 'doc_type', '=', 'Table Order']
+				]
+			};
+		});
+
+		frm.set_query("print_format_ce", function () {
+			return {
+				filters: [
+					['Print Format', 'doc_type', '=', 'POS Invoice']
+				]
+			};
+		});
 	}
 });
