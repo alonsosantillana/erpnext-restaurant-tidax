@@ -163,7 +163,12 @@ class TableOrder(Document):
                 mode_of_payment=mp,
                 amount=mode_of_payment[mp]
             ))
+
         # TIDAX
+        total_dicount_lines = 0
+        for it in self.entry_items:
+            total_dicount_lines += (it.discount_amount * it.qty)
+
         if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
             serie = obtener_res_set("serie_boleta")
             # invoice.naming_series = "BV-BP01-.######"
@@ -176,6 +181,7 @@ class TableOrder(Document):
             invoice.tipo_transaccion_sunat = "VENTA INTERNA"
             invoice.condicion_pago = "CONTADO"
             invoice.tax_id = self.customer_tax_id
+            invoice.total_amount_discount_lines = total_dicount_lines
         # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
         else:
             serie = obtener_res_set("serie_factura")
@@ -189,6 +195,7 @@ class TableOrder(Document):
             invoice.tipo_transaccion_sunat = "VENTA INTERNA"
             invoice.condicion_pago = "CONTADO"
             invoice.tax_id = self.customer_tax_id
+            invoice.total_amount_discount_lines = total_dicount_lines
             
         invoice.validate()
         invoice.save()
@@ -196,6 +203,10 @@ class TableOrder(Document):
 
         self.status = "Invoiced"
         self.link_invoice = invoice.name
+
+        # TIDAX
+        self.total_amount_discount_lines = total_dicount_lines
+
         self.save()
         
         frappe.db.set_value("Table Order", self.name, "docstatus", 1)

@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2023-07-25 23:08:35.986429",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "rm_pp_dia",
+  "rm_pp_fecha",
+  "col_brk_001",
+  "rm_pp_pase",
+  "rm_pp_procesado",
+  "sec_brk_001",
+  "rm_pp_producto",
+  "sec_brk_002",
+  "rm_pp_cantprod",
+  "col_brk_002",
+  "amended_from",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "default": "RM-PP-.######",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "RM-PP-.######"
+  },
+  {
+   "fieldname": "rm_pp_dia",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Dia de Produccion",
+   "options": "\nLunes\nMartes\nJueves\nViernes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rm_pp_fecha",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Fecha de Prodccion",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_brk_001",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Check si valido la informaci\u00f3n",
+   "fieldname": "rm_pp_pase",
+   "fieldtype": "Check",
+   "label": "Datos verificados"
+  },
+  {
+   "default": "0",
+   "fieldname": "rm_pp_procesado",
+   "fieldtype": "Check",
+   "label": "Reporte procesado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_brk_001",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rm_pp_producto",
+   "fieldtype": "Table",
+   "options": "MFC Pichanga Inscripcion Reporte Producto"
+  },
+  {
+   "fieldname": "sec_brk_002",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rm_pp_cantprod",
+   "fieldtype": "Int",
+   "label": "Total de productos",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_brk_002",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "MFC Pichanga Inscripcion Reporte",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "RM PRODUCTOS A PRODUCIR",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2023-07-25 23:08:35.986429",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "RM PRODUCTOS A PRODUCIR",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "role": "Customer",
+   "select": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
