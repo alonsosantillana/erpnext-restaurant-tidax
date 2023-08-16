@@ -123,9 +123,10 @@ class OrderManage extends ObjectManage {
         this.modal.container.append(this.template());
 
         this.#components.customer = RMHelper.default_button("Customer", 'people', () => this.update_current_order('customer'));
-        this.#components.new_customer = RMHelper.default_button("NewCustomer", 'add', () => this.consultar_cliente());
+        this.#components.new_customer = RMHelper.default_button("NewCustomer", 'addpeople', () => this.consultar_cliente()); //TIDAX
         this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
+        this.#components.discount_global = RMHelper.default_button("Discount", 'discount', () => this.update_current_order('discount')); //TIDAX
 
         this.modal.title_container.empty().append(
             RMHelper.return_main_button(this.title, () => this.modal.hide()).html()
@@ -133,9 +134,10 @@ class OrderManage extends ObjectManage {
 
         this.modal.buttons_container.prepend(`
 			${this.components.delete.html()}
-            ${this.components.new_customer.html()}
+            ${this.components.new_customer.html()} 
             ${this.components.customer.html()}
 			${this.components.dinners.html()}
+            ${this.components.discount_global.html()}
 		`);
     }
 
@@ -605,14 +607,16 @@ class OrderManage extends ObjectManage {
                 }
 
                 this.#components.Divide.prop("disabled", this.current_order.items_count === 0);
-                this.#components.new_customer.enable().show();
+                this.#components.new_customer.enable().show(); //TIDAX
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
+                this.#components.discount_global.enable().show(); //TIDAX
                 this.#components.Transfer.enable();
             } else {
-                this.#components.new_customer.disable().hide();
+                this.#components.new_customer.disable().hide(); //TIDAX
                 this.#components.customer.disable().hide();
                 this.#components.dinners.disable().hide();
+                this.#components.discount_global.disable().hide(); //TIDAX
                 this.#components.Transfer.disable();
                 this.#components.Order.disable();
                 this.#components.Divide.disable();

@@ -3,6 +3,7 @@ class PayForm extends DeskForm {
     num_pad = null;
     payment_methods = {};
     dinners = null;
+    discount_global_percent = null;
     form_name = "Payment Order";
     has_primary_action = false;
     
@@ -71,6 +72,7 @@ class PayForm extends DeskForm {
         await super.reload(null, true);
 
         this.set_dinners_input();
+        // this.set_discount_global_percent_input();
         this.update_paid_value();
     }
 
@@ -106,6 +108,8 @@ class PayForm extends DeskForm {
         this.get_field("payment_methods").$wrapper.empty().append(payment_methods);
 
         this.set_dinners_input();
+
+        // this.set_discount_global_percent_input();
         
         this.update_paid_value();
 
@@ -141,6 +145,34 @@ class PayForm extends DeskForm {
         );
     }
 
+    //TIDAX
+    // set_discount_global_percent_input(){
+    //     if(this.doc.discount_global_percent == 0){
+    //         this.discount_global_percent = frappe.jshtml({
+    //             tag: "input",
+    //             properties: {
+    //                 type: "text",
+    //                 class: `input-with-feedback form-control bold`
+    //             },
+    //         }).on("click", (obj) => {
+    //             this.num_pad.input = obj;
+    //         }).val("0").float();
+    //     } else{
+    //         this.dinners = frappe.jshtml({
+    //             tag: "input",
+    //             properties: {
+    //                 type: "text",
+    //                 class: `input-with-feedback form-control bold`
+    //             },
+    //         }).on("click", (obj) => {
+    //             this.num_pad.input = obj;
+    //         }).val(this.doc.discount_global_percent).float();
+    //     }
+    //     this.get_field("discount_global_percent").$wrapper.empty().append(
+    //         this.form_tag("Discount Global Percent", this.discount_global_percent)
+    //     );
+    // }
+
     form_tag(label, input) {
         return `
         <div class="form-group">
@@ -162,7 +194,8 @@ class PayForm extends DeskForm {
                 class: `btn btn-primary btn-lg btn-flat`,
                 style: "width: 100%; height: 60px;"
             },
-            content: `<span style="font-size: 25px; font-weight: 400">{{text}} ${this.order.total_money}</span>`,
+            // content: `<span style="font-size: 25px; font-weight: 400">{{text}} ${this.order.total_money}</span>`,
+            content: `<span style="font-size: 25px; font-weight: 400">{{text}}</span>`,
             text: `${__("Pay")}`
         }).on("click", () => {
             if (!RM.can_pay) return;
@@ -374,14 +407,29 @@ class PayForm extends DeskForm {
 
     update_paid_value() {
         let total = 0;
-
+        let total_con_desc = 0;
         setTimeout(() => {
             Object.keys(this.payment_methods).forEach((payment_method) => {
                 total += this.payment_methods[payment_method].float_val;
             });
 
-            this.set_value("total_payment", total);
-            this.set_value("change_amount", (total - this.order.amount));
+            //TIDAX
+            if(this.doc.discount > 0) {
+                total_con_desc = this.order.amount - this.doc.discount
+                this.set_value("amount", total_con_desc);
+                this.set_value("total_payment", total);
+                this.set_value("change_amount", (total - total_con_desc));
+            }
+            else if(this.doc.discount_global_percent > 0){
+                total_con_desc = this.order.amount*(1-(this.doc.discount_global_percent/100));
+                this.set_value("amount", total_con_desc);
+                this.set_value("total_payment", total);
+                this.set_value("change_amount", (total - total_con_desc));
+            }
+            else{
+                this.set_value("total_payment", total);
+                this.set_value("change_amount", (total - this.order.amount));
+            }
         }, 0);
     }
 }

@@ -648,6 +648,10 @@ class TableOrder {
         this.edit("dinners");
     }
 
+    set_discount() {
+        this.edit("discount");
+    }
+
     edit(type) {
         const form = type + "_form";
         if (this[form]) {

@@ -3,12 +3,15 @@ let DOUBLE_CLICK = 'double_click';
 class RMHelperClass {
     constructor() {
         this.icons = {
-            add: `<span class='fa fa-plus' style="padding-right: 5px"></span`,
-            trash: `<span class='fa fa-trash' style="padding-right: 5px"></span`,
+            discount: `<span class='fa fa-percent' style="padding-right: 5px"></span>`,
+            add: `<span class='fa fa-plus' style="padding-right: 5px"></span>`,
+            trash: `<span class='fa fa-trash' style="padding-right: 5px"></span>`,
             edit: `<span class='fa fa-pencil' style="padding-right: 5px"></span>`,
             ok: `<span class='fa fa-check' style="padding-right: 5px"></span>`,
-            people: `<span class='fa fa-user' style="padding-right: 5px"><span`,
-            peoples: `<span class='fa fa-users' style="padding-right: 5px"><span`,
+            people: `<span class='fa fa-user' style="padding-right: 5px"></span>`,
+            peoples: `<span class='fa fa-users' style="padding-right: 5px"></span>`,
+            addpeople: `<span class='fa fa-user-plus' style="padding-right: 5px"></span>`,
+            
         }
     }
 

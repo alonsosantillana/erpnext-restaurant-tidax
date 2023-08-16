@@ -167,7 +167,7 @@ class TableOrder(Document):
         # TIDAX
         total_dicount_lines = 0
         for it in self.entry_items:
-            total_dicount_lines += (it.discount_amount * it.qty)
+            total_dicount_lines += (it.discount_amount * it.qty)            
 
         if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
             serie = obtener_res_set("serie_boleta")
@@ -182,6 +182,10 @@ class TableOrder(Document):
             invoice.condicion_pago = "CONTADO"
             invoice.tax_id = self.customer_tax_id
             invoice.total_amount_discount_lines = total_dicount_lines
+            if(self.discount > 0):
+                invoice.discount_amount = self.discount
+            if(self.discount_global_percent>0):
+                invoice.additional_discount_percentage = self.discount_global_percent
         # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
         else:
             serie = obtener_res_set("serie_factura")
@@ -196,7 +200,11 @@ class TableOrder(Document):
             invoice.condicion_pago = "CONTADO"
             invoice.tax_id = self.customer_tax_id
             invoice.total_amount_discount_lines = total_dicount_lines
-            
+            if(self.discount > 0):
+                invoice.discount_amount = self.discount
+            if(self.discount_global_percent>0):
+                invoice.additional_discount_percentage = self.discount_global_percent
+
         invoice.validate()
         invoice.save()
         invoice.submit()

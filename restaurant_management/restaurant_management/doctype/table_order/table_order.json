@@ -17,6 +17,7 @@
   "dinners",
   "link_invoice",
   "discount",
+  "discount_global_percent",
   "total_amount_discount_lines",
   "tax",
   "amount",
@@ -89,8 +90,7 @@
   {
    "fieldname": "discount",
    "fieldtype": "Currency",
-   "label": "Discount",
-   "read_only": 1
+   "label": "Discount"
   },
   {
    "fieldname": "tax",
@@ -173,12 +173,18 @@
    "fieldtype": "Currency",
    "label": "Total Descuentos por Items",
    "options": "curerncy"
+  },
+  {
+   "fieldname": "discount_global_percent",
+   "fieldtype": "Percent",
+   "label": "Discount Global Percent",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-07-26 14:31:44.747502",
+ "modified": "2023-08-15 12:29:22.566746",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order",
