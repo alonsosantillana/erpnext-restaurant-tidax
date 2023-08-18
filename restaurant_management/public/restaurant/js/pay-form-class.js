@@ -327,6 +327,7 @@ class PayForm extends DeskForm {
                             // frappe.model.set_value(cdt, cdn, "codigo_barras_sunat", values.message.codigo_de_barras);
                             // frappe.model.set_value(cdt, cdn, "codigo_hash_sunat", values.message.codigo_hash);
                             // frappe.model.set_value(cdt, cdn, "enlace_pdf", values.message.enlace_del_pdf);
+                            RM.working("Ready");
                             window.open(values.message.enlace_del_pdf);
                         }
                     });

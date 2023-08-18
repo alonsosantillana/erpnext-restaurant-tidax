@@ -123,7 +123,7 @@ class OrderManage extends ObjectManage {
         this.modal.container.append(this.template());
 
         this.#components.customer = RMHelper.default_button("Customer", 'people', () => this.update_current_order('customer'));
-        this.#components.new_customer = RMHelper.default_button("NewCustomer", 'addpeople', () => this.consultar_cliente()); //TIDAX
+        this.#components.new_customer = RMHelper.default_button("", 'addpeople', () => this.consultar_cliente()); //TIDAX
         this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
         this.#components.discount_global = RMHelper.default_button("Discount", 'discount', () => this.update_current_order('discount')); //TIDAX
