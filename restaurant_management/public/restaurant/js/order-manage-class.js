@@ -610,7 +610,8 @@ class OrderManage extends ObjectManage {
                 this.#components.new_customer.enable().show(); //TIDAX
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
-                this.#components.discount_global.enable().show(); //TIDAX
+                //this.#components.discount_global.enable().show(); //TIDAX
+                this.#components.discount_global.disable().hide(); //TIDAX
                 this.#components.Transfer.enable();
             } else {
                 this.#components.new_customer.disable().hide(); //TIDAX
@@ -661,7 +662,9 @@ class OrderManage extends ObjectManage {
         objects.Minus.prop("disabled", !item_is_enabled_to_edit);
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
         objects.Trash.prop("disabled", !item.is_enabled_to_delete);
-
+        if(item.data.status == "Completed"){
+            this.#components.discount_global.enable().show();
+        }
         item.check_status();
     }
 

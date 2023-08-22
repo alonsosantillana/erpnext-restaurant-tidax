@@ -506,6 +506,7 @@ class TableOrder {
                 this.render();
                 this.check_items({ items: r.message.items });
                 this.print_order();
+                this.print_order_silent();
             },
         });
     }
@@ -595,6 +596,36 @@ class TableOrder {
         }
     }
     // TIDAX
+    print_order_silent(){
+        var formato_impresion;
+        frappe.call({
+            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            args: {
+                filtro: "print_format_order"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    formato_impresion = r.message[0].value;
+                }
+                else {
+                    frappe.msgprint("El formato no pudo ser encontrado");
+                }
+            },
+            async: false
+        });
+
+
+        frappe.call({
+            method: 'silent_print.utils.print_format.print_silently',
+            args: {
+                doctype: "Table Order",
+                name: this.data.name,
+                print_format: formato_impresion,
+                print_type: "ORDER"
+            }
+        });
+    }
+    // TIDAX
     print_order() {
         var formato_impresion;
         frappe.call({
@@ -647,7 +678,7 @@ class TableOrder {
     set_dinners() {
         this.edit("dinners");
     }
-
+    // TIDAX
     set_discount() {
         this.edit("discount");
     }
