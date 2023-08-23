@@ -331,7 +331,7 @@ class PayForm extends DeskForm {
                             window.open(values.message.enlace_del_pdf);
                         }
                     });
-                    this.print(r.message.invoice_name);
+                    //this.print(r.message.invoice_name);
                     this.print_invoice_silent(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();

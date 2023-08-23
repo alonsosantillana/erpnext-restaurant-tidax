@@ -549,6 +549,11 @@ class TableOrder {
 //this.order_manage.toggle_main_section("invoice");
         }
     }
+    // TIDAX
+    print_account_tdx(){
+        //this.print_account();
+        this.print_account_silent();
+    }
 
     // TIDAX
     print_account_silent(){

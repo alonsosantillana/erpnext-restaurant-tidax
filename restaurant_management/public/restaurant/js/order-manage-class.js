@@ -427,7 +427,8 @@ class OrderManage extends ObjectManage {
                     {
                         name: "Account",
                         props: { class: "lg pad-btn" }, content: '<span class="fa fa-file-o pull-right"></span>',
-                        action: "print_account"
+                        action: "print_account_tdx"
+                        //action: "print_account"
                     }
                 ]
             ],
