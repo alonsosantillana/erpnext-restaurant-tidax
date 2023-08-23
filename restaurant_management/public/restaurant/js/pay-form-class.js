@@ -255,6 +255,7 @@ class PayForm extends DeskForm {
                     
                     this.hide();
                     // this.print(r.message.invoice_name);
+                    this.print_invoice_silent(r.message.invoice_name);
                     order_manage.make_orders();
 
                     // TIDAX
@@ -359,6 +360,7 @@ class PayForm extends DeskForm {
     }
     // TIDAX
     print_invoice_silent(invoice_name){
+        if (!RM.can_pay) return;
         var formato_impresion;
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
@@ -375,7 +377,6 @@ class PayForm extends DeskForm {
             },
             async: false
         });
-
 
         frappe.call({
             method: 'silent_print.utils.print_format.print_silently',
