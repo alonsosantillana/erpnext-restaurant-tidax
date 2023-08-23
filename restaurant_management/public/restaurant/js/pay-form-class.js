@@ -332,6 +332,7 @@ class PayForm extends DeskForm {
                         }
                     });
                     this.print(r.message.invoice_name);
+                    this.print_invoice_silent(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }
@@ -355,6 +356,36 @@ class PayForm extends DeskForm {
 
         this.get_field("num_pad").$wrapper.parent().parent().css("max-width", "300px");
         this.get_field("payment_methods").$wrapper.parent().parent().removeClass("col-sm-6").addClass("col");
+    }
+    // TIDAX
+    print_invoice_silent(invoice_name){
+        var formato_impresion;
+        frappe.call({
+            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            args: {
+                filtro: "print_format_ce"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    formato_impresion = r.message[0].value;
+                }
+                else {
+                    frappe.msgprint("El formato no pudo ser encontrado");
+                }
+            },
+            async: false
+        });
+
+
+        frappe.call({
+            method: 'silent_print.utils.print_format.print_silently',
+            args: {
+                doctype: "POS INVOICE",
+                name: invoice_name,
+                print_format: formato_impresion,
+                print_type: "INVOICE"
+            }
+        });
     }
 
     print(invoice_name) {

@@ -550,6 +550,37 @@ class TableOrder {
         }
     }
 
+    // TIDAX
+    print_account_silent(){
+        var formato_impresion;
+        frappe.call({
+            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            args: {
+                filtro: "print_format"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    formato_impresion = r.message[0].value;
+                }
+                else {
+                    frappe.msgprint("El formato no pudo ser encontrado");
+                }
+            },
+            async: false
+        });
+
+
+        frappe.call({
+            method: 'silent_print.utils.print_format.print_silently',
+            args: {
+                doctype: "Table Order",
+                name: this.data.name,
+                print_format: formato_impresion,
+                print_type: "ACCOUNT"
+            }
+        });
+    }
+
     print_account() {
         //TIDAX
         var formato_impresion;
@@ -594,6 +625,7 @@ class TableOrder {
         } else {
             order_manage.print_modal = new DeskModal(props);
         }
+        this.print_account_silent();// TIDAX
     }
     // TIDAX
     print_order_silent(){
