@@ -389,7 +389,8 @@ class PayForm extends DeskForm {
                 name: invoice_name,
                 print_format: formato_impresion,
                 print_type: "INVOICE"
-            }
+            },
+            async: false
         });
     }
 
@@ -422,7 +423,8 @@ class PayForm extends DeskForm {
                 name: invoice_name,
                 print_format: formato_impresion,
                 print_type: "INVOICE"
-            }
+            },
+            async: false
         });
 
         const title = invoice_name + " (" + __("Print") + ")";
