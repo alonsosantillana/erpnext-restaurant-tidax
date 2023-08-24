@@ -314,7 +314,7 @@ class PayForm extends DeskForm {
                                                 }
                                             }
                                         });
-                                        window.open(data.message.enlace_del_pdf);
+                                        //window.open(data.message.enlace_del_pdf);
                                     } else{
                                         frappe.validated = false;
                                         frappe.throw(data.message.errors);
