@@ -255,41 +255,7 @@ class PayForm extends DeskForm {
                     
                     this.hide();
                     // this.print(r.message.invoice_name);
-                    // this.print_invoice_silent(r.message.invoice_name);
-
-
-                    if (!RM.can_pay) return;
-                    var formato_impresion;
-                    frappe.call({
-                        method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
-                        args: {
-                            filtro: "print_format_ce"
-                        },
-                        callback: function(r) {
-                            if (r.message) {
-                                formato_impresion = r.message[0].value;
-                            }
-                            else {
-                                frappe.msgprint("El formato no pudo ser encontrado");
-                            }
-                        },
-                        async: false
-                    });
-
-                    frappe.call({
-                        method: 'silent_print.utils.print_format.print_silently',
-                        args: {
-                            doctype: "POS INVOICE",
-                            name: "BV-BP01-000025",
-                            print_format: formato_impresion,
-                            print_type: "INVOICE"
-                        }
-                    });
-
-
-
-
-
+                    this.print_invoice_silent(r.message.invoice_name);
 
                     order_manage.make_orders();
 
@@ -368,7 +334,7 @@ class PayForm extends DeskForm {
                         }
                     });
                     //this.print(r.message.invoice_name);
-                    //this.print_invoice_silent(r.message.invoice_name);
+                    this.print_invoice_silent(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }
@@ -397,6 +363,7 @@ class PayForm extends DeskForm {
     print_invoice_silent(invoice_name){
         if (!RM.can_pay) return;
         var formato_impresion;
+        
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
             args: {
@@ -412,7 +379,8 @@ class PayForm extends DeskForm {
             },
             async: false
         });
-
+        frappe.msgprint(invoice_name);
+        frappe.msgprint(formato_impresion);
         frappe.call({
             method: 'silent_print.utils.print_format.print_silently',
             args: {
