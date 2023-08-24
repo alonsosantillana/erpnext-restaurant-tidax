@@ -395,7 +395,6 @@ class PayForm extends DeskForm {
 
     print(invoice_name) {
         if (!RM.can_pay) return;
-
         //TIDAX
         var formato_impresion;
         frappe.call({
@@ -411,6 +410,7 @@ class PayForm extends DeskForm {
                     frappe.msgprint("El formato no pudo ser encontrado");
                 }
             },
+            async: false
         });
         frappe.msgprint("NO SILENT");
         frappe.msgprint(invoice_name);
