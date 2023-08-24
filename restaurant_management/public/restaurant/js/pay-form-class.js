@@ -254,7 +254,7 @@ class PayForm extends DeskForm {
                     
                     this.hide();
                     // this.print(r.message.invoice_name);
-                    this.print_invoice_silent(r.message.invoice_name);
+                    // this.print_invoice_silent(r.message.invoice_name);
 
                     order_manage.make_orders();
 
@@ -306,6 +306,7 @@ class PayForm extends DeskForm {
                                                 console.log(data);
                                                 if (data.message.codigo_hash) {                                                    
                                                     //window.open(data.message.enlace_del_pdf);
+                                                    frappe.msgprint("DEBERIA IMPRIMIR");
                                                     this.print_invoice_silent(r.message.invoice_name);
                                                     console.log("CE Generado");
                                                 } else{
@@ -315,7 +316,7 @@ class PayForm extends DeskForm {
                                             }
                                         });
                                         //window.open(data.message.enlace_del_pdf);
-                                        this.print_invoice_silent(r.message.invoice_name);
+                                        //this.print_invoice_silent(r.message.invoice_name);
                                     } else{
                                         frappe.validated = false;
                                         frappe.throw(data.message.errors);
@@ -335,7 +336,7 @@ class PayForm extends DeskForm {
                         }
                     });
                     //this.print(r.message.invoice_name);
-                    this.print_invoice_silent(r.message.invoice_name);
+                    //this.print_invoice_silent(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }
