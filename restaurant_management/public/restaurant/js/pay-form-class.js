@@ -280,7 +280,7 @@ class PayForm extends DeskForm {
                         method: 'silent_print.utils.print_format.print_silently',
                         args: {
                             doctype: "POS INVOICE",
-                            name: r.message.invoice_name,
+                            name: "BV-BP01-000025",
                             print_format: formato_impresion,
                             print_type: "INVOICE"
                         }
