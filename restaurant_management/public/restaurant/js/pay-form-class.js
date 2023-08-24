@@ -233,7 +233,7 @@ class PayForm extends DeskForm {
     #send_payment() {
         if (!RM.can_pay) return;
         const order_manage = this.order.order_manage;
-
+        let comprobante;
         RM.working("Generating Invoice");
         this.order.data.dinners = this.dinners.val();
         frappeHelper.api.call({
@@ -255,6 +255,7 @@ class PayForm extends DeskForm {
                     
                     this.hide();
                     // this.print(r.message.invoice_name);
+                    comprobante = r.message.invoice_name;
                     this.print_invoice_silent(r.message.invoice_name);
 
                     order_manage.make_orders();
@@ -341,6 +342,7 @@ class PayForm extends DeskForm {
             },
             freeze: true
         });
+        this.print_invoice_silent(comprobante);
     }
 
     make_pad() {
