@@ -333,7 +333,43 @@ class PayForm extends DeskForm {
                         }
                     });
                     //this.print(r.message.invoice_name);
-                    this.print_invoice_silent(r.message.invoice_name);
+                    //this.print_invoice_silent(r.message.invoice_name);
+
+
+                    if (!RM.can_pay) return;
+                    var formato_impresion;
+                    frappe.call({
+                        method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+                        args: {
+                            filtro: "print_format_ce"
+                        },
+                        callback: function(r) {
+                            if (r.message) {
+                                formato_impresion = r.message[0].value;
+                            }
+                            else {
+                                frappe.msgprint("El formato no pudo ser encontrado");
+                            }
+                        },
+                        async: false
+                    });
+
+                    frappe.call({
+                        method: 'silent_print.utils.print_format.print_silently',
+                        args: {
+                            doctype: "POS INVOICE",
+                            name: invoice_name,
+                            print_format: formato_impresion,
+                            print_type: "INVOICE"
+                        }
+                    });
+
+
+
+
+
+
+
                 } else {
                     this.reset_payment_button();
                 }
