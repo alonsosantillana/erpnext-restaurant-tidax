@@ -372,23 +372,21 @@ class PayForm extends DeskForm {
             callback: function(r) {
                 if (r.message) {
                     formato_impresion = r.message[0].value;
+
+                    frappe.call({
+                        method: 'silent_print.utils.print_format.print_silently',
+                        args: {
+                            doctype: "POS INVOICE",
+                            name: invoice_name,
+                            print_format: formato_impresion,
+                            print_type: "INVOICE"
+                        },
+                        async: false
+                    });
                 }
                 else {
                     frappe.msgprint("El formato no pudo ser encontrado");
                 }
-            },
-            async: false
-        });
-        frappe.msgprint("SILENT");
-        frappe.msgprint(invoice_name);
-        frappe.msgprint(formato_impresion);
-        frappe.call({
-            method: 'silent_print.utils.print_format.print_silently',
-            args: {
-                doctype: "POS INVOICE",
-                name: invoice_name,
-                print_format: formato_impresion,
-                print_type: "INVOICE"
             },
             async: false
         });
