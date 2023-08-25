@@ -372,7 +372,6 @@ class PayForm extends DeskForm {
             callback: function(r) {
                 if (r.message) {
                     formato_impresion = r.message[0].value;
-
                     frappe.call({
                         method: 'silent_print.utils.print_format.print_silently',
                         args: {
@@ -380,8 +379,7 @@ class PayForm extends DeskForm {
                             name: invoice_name,
                             print_format: formato_impresion,
                             print_type: "INVOICE"
-                        },
-                        async: false
+                        }
                     });
                 }
                 else {
