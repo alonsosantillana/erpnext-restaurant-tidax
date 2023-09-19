@@ -110,7 +110,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2023-09-10 04:35:42.253268",
+ "modified": "2023-09-19 05:38:24.460869",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-customer",

@@ -595,7 +595,7 @@ RestaurantManage = class RestaurantManage {
 
 	delete_current_room() {
 		this.current_room = null;
-		frappe.set_route(`/restaurant-manage?restaurant_room=?`);
+		// frappe.set_route(`/restaurant-manage?restaurant_room=?`);
 		this.test_components();
 	}
 
