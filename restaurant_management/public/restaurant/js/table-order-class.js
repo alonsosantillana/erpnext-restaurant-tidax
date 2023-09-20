@@ -505,7 +505,7 @@ class TableOrder {
                 this.data = r.message.order.data;
                 this.render();
                 this.check_items({ items: r.message.items });
-                this.print_order();
+                //this.print_order();
                 this.print_order_silent();
             },
         });
@@ -630,7 +630,7 @@ class TableOrder {
         } else {
             order_manage.print_modal = new DeskModal(props);
         }
-        this.print_account_silent();// TIDAX
+        this.print_account_silent();// TIDAX   ----> PDF + IMPRIMIR
     }
     // TIDAX
     print_order_silent(){

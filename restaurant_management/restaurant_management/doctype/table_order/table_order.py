@@ -186,6 +186,7 @@ class TableOrder(Document):
                 invoice.discount_amount = self.discount
             if(self.discount_global_percent>0):
                 invoice.additional_discount_percentage = self.discount_global_percent
+            invoice.table_description = self.table_description
             invoice.owner = "cajero@tidax.pe"
         # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
         else:
@@ -205,6 +206,7 @@ class TableOrder(Document):
                 invoice.discount_amount = self.discount
             if(self.discount_global_percent>0):
                 invoice.additional_discount_percentage = self.discount_global_percent
+            invoice.table_description = self.table_description
             invoice.owner = "cajero@tidax.pe"
 
         invoice.validate()

@@ -78,6 +78,7 @@ class PayForm extends DeskForm {
 
     make_inputs() {
         let payment_methods = "";
+        let total_con_desc = 0;
         RM.pos_profile.payments.forEach(mode_of_payment => {
             this.payment_methods[mode_of_payment.mode_of_payment] = frappe.jshtml({
                 tag: "input",
@@ -92,7 +93,18 @@ class PayForm extends DeskForm {
             }).float();
 
             if (mode_of_payment.default === 1) {
-                this.payment_methods[mode_of_payment.mode_of_payment].val(this.order.data.amount);
+                // TIDAX
+                if(this.doc.discount > 0) {
+                    total_con_desc = this.order.data.amount - this.doc.discount
+                    this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
+                }
+                else if(this.doc.discount_global_percent > 0){
+                    total_con_desc = this.order.data.amount*(1-(this.doc.discount_global_percent/100));
+                    this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
+                }
+                else{
+                    this.payment_methods[mode_of_payment.mode_of_payment].val(this.order.data.amount);
+                }
 
                 setTimeout(() => {
                     this.payment_methods[mode_of_payment.mode_of_payment].select();
@@ -144,34 +156,6 @@ class PayForm extends DeskForm {
             this.form_tag("Dinners", this.dinners)
         );
     }
-
-    //TIDAX
-    // set_discount_global_percent_input(){
-    //     if(this.doc.discount_global_percent == 0){
-    //         this.discount_global_percent = frappe.jshtml({
-    //             tag: "input",
-    //             properties: {
-    //                 type: "text",
-    //                 class: `input-with-feedback form-control bold`
-    //             },
-    //         }).on("click", (obj) => {
-    //             this.num_pad.input = obj;
-    //         }).val("0").float();
-    //     } else{
-    //         this.dinners = frappe.jshtml({
-    //             tag: "input",
-    //             properties: {
-    //                 type: "text",
-    //                 class: `input-with-feedback form-control bold`
-    //             },
-    //         }).on("click", (obj) => {
-    //             this.num_pad.input = obj;
-    //         }).val(this.doc.discount_global_percent).float();
-    //     }
-    //     this.get_field("discount_global_percent").$wrapper.empty().append(
-    //         this.form_tag("Discount Global Percent", this.discount_global_percent)
-    //     );
-    // }
 
     form_tag(label, input) {
         return `
@@ -253,8 +237,6 @@ class PayForm extends DeskForm {
                     order_manage.check_item_editor_status();
                     
                     this.hide();
-                    // this.print(r.message.invoice_name);
-                    // this.print_invoice_silent(r.message.invoice_name);
 
                     order_manage.make_orders();
 
@@ -330,10 +312,10 @@ class PayForm extends DeskForm {
                             // frappe.model.set_value(cdt, cdn, "codigo_hash_sunat", values.message.codigo_hash);
                             // frappe.model.set_value(cdt, cdn, "enlace_pdf", values.message.enlace_del_pdf);
                             RM.working("Ready");
-                            window.open(values.message.enlace_del_pdf);
+                            // window.open(values.message.enlace_del_pdf);
                         }
                     });
-                    this.print(r.message.invoice_name);
+                    // this.print(r.message.invoice_name);
                     this.print_invoice_silent(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
@@ -451,6 +433,7 @@ class PayForm extends DeskForm {
         }
     }
 
+    //TIDAX
     update_paid_value() {
         let total = 0;
         let total_con_desc = 0;
@@ -478,4 +461,16 @@ class PayForm extends DeskForm {
             }
         }, 0);
     }
+    // update_paid_value() {
+    //     let total = 0;
+
+    //     setTimeout(() => {
+    //         Object.keys(this.payment_methods).forEach((payment_method) => {
+    //             total += this.payment_methods[payment_method].float_val;
+    //         });
+
+    //         this.set_value("total_payment", total);
+    //         this.set_value("change_amount", (total - this.order.amount));
+    //     }, 0);
+    // }
 }
