@@ -129,6 +129,11 @@ class TableOrder(Document):
             RestaurantManage.production_center_notify(status)
 
     def make_invoice(self, mode_of_payment, customer=None, dinners=0):
+        # TIDAX: obteniendo el perfil del usuario para ver si puede realizar el comprobante
+        profile = frappe.db.get_value("User", frappe.session.user, "role_profile_name")
+        if profile == "Resto_Mozos" or profile == "Resto_Cocinas":
+            return frappe.throw(_("No tiene permisos suficientes para generar el comprobante"))
+
         if self.link_invoice:
             return frappe.throw(_("The order has been invoiced"))
 

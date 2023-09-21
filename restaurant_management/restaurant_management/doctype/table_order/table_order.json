@@ -76,6 +76,7 @@
    "read_only": 1
   },
   {
+   "bold": 1,
    "fieldname": "amount",
    "fieldtype": "Currency",
    "label": "Amount",
@@ -184,7 +185,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-09-20 08:54:56.019602",
+ "modified": "2023-09-20 19:56:59.151259",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order",
