@@ -180,7 +180,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Configuraci\u00f3n",
-   "link_count": 4,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -217,6 +217,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Grupos de productos",
+   "link_count": 0,
+   "link_to": "Item Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Clientes",
    "link_count": 0,
    "link_to": "Customer",
@@ -225,8 +235,8 @@
    "type": "Link"
   }
  ],
- "modified": "2023-08-26 20:49:34.425952",
- "modified_by": "cajero@tidax.pe",
+ "modified": "2023-09-22 16:53:28.297052",
+ "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Management",
  "number_cards": [],
