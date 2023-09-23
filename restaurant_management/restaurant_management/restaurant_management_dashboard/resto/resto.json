@@ -1,0 +1,29 @@
+{
+ "cards": [],
+ "charts": [
+  {
+   "chart": "Resto Ordenes",
+   "width": "Half"
+  },
+  {
+   "chart": "Resto Ordenes Grupos Platos",
+   "width": "Half"
+  },
+  {
+   "chart": "Resto Ventas",
+   "width": "Full"
+  }
+ ],
+ "creation": "2023-09-22 17:44:36.817895",
+ "dashboard_name": "Resto",
+ "docstatus": 0,
+ "doctype": "Dashboard",
+ "idx": 0,
+ "is_default": 1,
+ "is_standard": 1,
+ "modified": "2023-09-22 19:45:31.134398",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "Resto",
+ "owner": "Administrator"
+}

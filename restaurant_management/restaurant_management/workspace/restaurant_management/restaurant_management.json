@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"s5pXpGLdkx\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Restaurant Management</span>\",\"col\":12}},{\"id\":\"hRP5CGZTdn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"POS Restaurant\",\"col\":3}},{\"id\":\"XeZ7JpnXpW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"f9pyLDHT6e\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuraci\u00f3n\",\"col\":4}},{\"id\":\"TakfKRxIpo\",\"type\":\"card\",\"data\":{\"card_name\":\"Shift\",\"col\":4}},{\"id\":\"XlyWsLAxBs\",\"type\":\"card\",\"data\":{\"card_name\":\"Restaurant\",\"col\":4}},{\"id\":\"yj7gKVZVCR\",\"type\":\"card\",\"data\":{\"card_name\":\"Reportes\",\"col\":4}}]",
+ "content": "[{\"id\":\"s5pXpGLdkx\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Restaurant Management</span>\",\"col\":12}},{\"id\":\"hRP5CGZTdn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"POS Restaurant\",\"col\":3}},{\"id\":\"XeZ7JpnXpW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"f9pyLDHT6e\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuraci\u00f3n\",\"col\":4}},{\"id\":\"TakfKRxIpo\",\"type\":\"card\",\"data\":{\"card_name\":\"Shift\",\"col\":4}},{\"id\":\"XlyWsLAxBs\",\"type\":\"card\",\"data\":{\"card_name\":\"Restaurant\",\"col\":4}},{\"id\":\"KCJy-gOQ2S\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Numero Diario Ventas\",\"col\":4}},{\"id\":\"kMUc6fBPyb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas en Proceso\",\"col\":4}},{\"id\":\"LAAhFSBc26\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas Completadas\",\"col\":4}},{\"id\":\"yj7gKVZVCR\",\"type\":\"card\",\"data\":{\"card_name\":\"Reportes\",\"col\":4}}]",
  "creation": "2023-04-26 17:15:35.609631",
  "custom_blocks": [],
  "docstatus": 0,
@@ -235,11 +235,24 @@
    "type": "Link"
   }
  ],
- "modified": "2023-09-22 16:53:28.297052",
+ "modified": "2023-09-22 19:33:35.124298",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Management",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Mesas en Proceso",
+   "number_card_name": "Resto Mesa Atendiendo"
+  },
+  {
+   "label": "Numero Diario Ventas",
+   "number_card_name": "Resto Numero de Ventas"
+  },
+  {
+   "label": "Mesas Completadas",
+   "number_card_name": "Resto Mesa Completada"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
