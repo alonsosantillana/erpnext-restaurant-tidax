@@ -14,15 +14,19 @@
  "idx": 0,
  "is_public": 0,
  "is_standard": 1,
- "last_synced_on": "2023-09-25 13:22:59.101454",
- "modified": "2023-09-25 13:24:10.996813",
+ "last_synced_on": "2023-09-25 15:54:43.072427",
+ "modified": "2023-09-25 16:12:22.468181",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Resto Ventas",
  "number_of_groups": 0,
  "owner": "Administrator",
  "parent_document_type": "",
- "roles": [],
+ "roles": [
+  {
+   "role": "Admin Resto"
+  }
+ ],
  "source": "",
  "time_interval": "Daily",
  "timeseries": 1,

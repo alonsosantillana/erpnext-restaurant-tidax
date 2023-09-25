@@ -5,6 +5,7 @@
  "chart_type": "Group By",
  "color": "#ECAD4B",
  "creation": "2023-09-22 18:29:52.459844",
+ "custom_options": "",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "Order Entry Item",
@@ -15,15 +16,19 @@
  "idx": 0,
  "is_public": 0,
  "is_standard": 1,
- "last_synced_on": "2023-09-25 13:19:37.171126",
- "modified": "2023-09-25 13:23:45.343251",
+ "last_synced_on": "2023-09-25 15:54:43.465467",
+ "modified": "2023-09-25 16:12:52.032207",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Resto Ordenes Grupos Platos",
  "number_of_groups": 12,
  "owner": "Administrator",
  "parent_document_type": "Table Order",
- "roles": [],
+ "roles": [
+  {
+   "role": "Admin Resto"
+  }
+ ],
  "source": "",
  "time_interval": "Yearly",
  "timeseries": 0,
