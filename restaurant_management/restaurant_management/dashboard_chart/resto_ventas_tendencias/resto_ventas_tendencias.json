@@ -1,49 +1,34 @@
 {
- "based_on": "",
  "chart_name": "Resto Ventas Tendencias",
  "chart_type": "Report",
- "creation": "2023-09-25 09:23:11.296844",
+ "creation": "2023-09-25 09:27:04.885895",
+ "custom_options": "{\"x_field\": \"item_group\", \"chart_type\": \"Bar\", \"y_axis_fields\": [{\"idx\": 1, \"__islocal\": true, \"name\": \"row 1\", \"y_field\": \"total(qty)\"}, {\"idx\": 2, \"__islocal\": true, \"name\": \"row 2\", \"y_field\": \"total(amt)\"}], \"y_fields\": [\"total(qty)\", \"total(amt)\"], \"colors\": [null, null]}",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
- "document_type": "",
- "dynamic_filters_json": "{}",
- "filters_json": "{\"period\":\"Monthly\",\"based_on\":\"Item\",\"group_by\":\"\",\"fiscal_year\":\"2023\",\"company\":\"Demo\"}",
+ "filters_json": "{\"period\":\"Monthly\",\"based_on\":\"Item Group\",\"fiscal_year\":\"2023\",\"company\":\"Demo\"}",
  "group_by_type": "Count",
  "idx": 0,
- "is_public": 1,
+ "is_public": 0,
  "is_standard": 1,
- "modified": "2023-09-25 09:24:20.320104",
+ "modified": "2023-09-25 13:23:58.940124",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Resto Ventas Tendencias",
  "number_of_groups": 0,
  "owner": "Administrator",
- "parent_document_type": "",
  "report_name": "Sales Invoice Trends",
  "roles": [],
- "source": "",
  "time_interval": "Yearly",
  "timeseries": 0,
  "timespan": "Last Year",
- "type": "Line",
+ "type": "Bar",
  "use_report_chart": 0,
- "value_based_on": "",
- "x_field": "item",
+ "x_field": "item_group",
  "y_axis": [
   {
-   "color": "#4463F0",
    "y_field": "total(qty)"
   },
   {
-   "color": "#449CF0",
-   "y_field": "total(amt)"
-  },
-  {
-   "color": "#449CF0",
-   "y_field": "total(qty)"
-  },
-  {
-   "color": "#4463F0",
    "y_field": "total(amt)"
   }
  ]

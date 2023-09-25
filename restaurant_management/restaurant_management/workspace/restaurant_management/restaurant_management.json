@@ -180,7 +180,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Configuraci\u00f3n",
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -227,6 +227,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Lista de precios",
+   "link_count": 0,
+   "link_to": "Item Price",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Clientes",
    "link_count": 0,
    "link_to": "Customer",
@@ -235,7 +245,7 @@
    "type": "Link"
   }
  ],
- "modified": "2023-09-22 20:17:02.560012",
+ "modified": "2023-09-25 12:37:51.159443",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Management",
