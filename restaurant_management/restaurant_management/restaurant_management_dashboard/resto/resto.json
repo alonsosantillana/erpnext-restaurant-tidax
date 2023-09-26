@@ -14,11 +14,11 @@
    "width": "Full"
   },
   {
-   "chart": "Resto Ventas Tendencias",
+   "chart": "Resto Ventas Utilidad",
    "width": "Half"
   },
   {
-   "chart": "Resto Ventas Utilidad",
+   "chart": "Resto Ventas Tendencias",
    "width": "Half"
   }
  ],
@@ -29,7 +29,7 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2023-09-25 16:13:52.831344",
+ "modified": "2023-09-26 14:55:49.998579",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Resto",

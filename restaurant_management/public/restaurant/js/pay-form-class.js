@@ -315,7 +315,8 @@ class PayForm extends DeskForm {
                             // window.open(values.message.enlace_del_pdf);
                         }
                     });
-                    this.print_invoice_silent(r.message.invoice_name);
+                    // this.print_invoice_silent(r.message.invoice_name);
+                    this.print(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }
@@ -391,16 +392,16 @@ class PayForm extends DeskForm {
             async: false
         });
 
-        frappe.call({
-            method: 'silent_print.utils.print_format.print_silently',
-            args: {
-                doctype: "POS INVOICE",
-                name: invoice_name,
-                print_format: formato_impresion,
-                print_type: "INVOICE"
-            },
-            async: false
-        });
+        // frappe.call({
+        //     method: 'silent_print.utils.print_format.print_silently',
+        //     args: {
+        //         doctype: "POS INVOICE",
+        //         name: invoice_name,
+        //         print_format: formato_impresion,
+        //         print_type: "INVOICE"
+        //     },
+        //     async: false
+        // });
 
         const title = invoice_name + " (" + __("Print") + ")";
         const order_manage = this.order.order_manage;
