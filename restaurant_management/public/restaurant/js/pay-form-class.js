@@ -315,7 +315,6 @@ class PayForm extends DeskForm {
                             // window.open(values.message.enlace_del_pdf);
                         }
                     });
-                    // this.print(r.message.invoice_name);
                     this.print_invoice_silent(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
@@ -391,9 +390,7 @@ class PayForm extends DeskForm {
             },
             async: false
         });
-        frappe.msgprint("NO SILENT");
-        frappe.msgprint(invoice_name);
-        frappe.msgprint(formato_impresion);
+
         frappe.call({
             method: 'silent_print.utils.print_format.print_silently',
             args: {
