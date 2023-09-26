@@ -214,7 +214,6 @@ class TableOrder(Document):
             invoice.owner = "cajero@resto.pe"
 
         invoice.validate()
-        invoice.owner = "cajero@resto.pe"
         invoice.save()
         invoice.submit()
 
