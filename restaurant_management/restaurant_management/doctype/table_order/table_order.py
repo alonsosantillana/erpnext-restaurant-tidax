@@ -161,7 +161,6 @@ class TableOrder(Document):
             frappe.throw(_("There is not Item in this Order"))
 
         invoice = self.get_invoice(entry_items, True)
-        # frappe.msgprint("SI PASA POR AQUI")
         invoice.payments = []
         for mp in mode_of_payment:
             invoice.append('payments', dict(
@@ -192,7 +191,7 @@ class TableOrder(Document):
             if(self.discount_global_percent>0):
                 invoice.additional_discount_percentage = self.discount_global_percent
             invoice.table_description = self.table_description
-            invoice.owner = "cajero@tidax.pe"
+            invoice.owner = "cajero@resto.pe"
         # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
         else:
             serie = obtener_res_set("serie_factura")
@@ -212,9 +211,10 @@ class TableOrder(Document):
             if(self.discount_global_percent>0):
                 invoice.additional_discount_percentage = self.discount_global_percent
             invoice.table_description = self.table_description
-            invoice.owner = "cajero@tidax.pe"
+            invoice.owner = "cajero@resto.pe"
 
         invoice.validate()
+        invoice.owner = "cajero@resto.pe"
         invoice.save()
         invoice.submit()
 

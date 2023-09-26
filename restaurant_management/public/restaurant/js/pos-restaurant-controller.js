@@ -1,6 +1,6 @@
 // TIDAX
 let usuario;
-usuario = "cajero@tidax.pe";
+usuario = "cajero@resto.pe";
 erpnext.PointOfSale.RestaurantController = class {
 	constructor(wrapper) {
 		this.wrapper = $(wrapper).find('.layout-main-section');
