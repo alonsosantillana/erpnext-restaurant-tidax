@@ -28,7 +28,8 @@
   "batch_no",
   "has_serial_no",
   "serial_no",
-  "item_pt"
+  "item_pt",
+  "unit_value"
  ],
  "fields": [
   {
@@ -176,12 +177,18 @@
    "fieldname": "item_pt",
    "fieldtype": "Data",
    "label": "Item PT"
+  },
+  {
+   "fieldname": "unit_value",
+   "fieldtype": "Currency",
+   "label": "Unit Value",
+   "options": "currency"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2023-09-22 18:38:11.557769",
+ "modified": "2023-09-29 17:26:18.729098",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Order Entry Item",

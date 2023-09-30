@@ -156,7 +156,8 @@ class TableOrder(Document):
         entry_items = {
             item.identifier: item.as_dict() for item in self.entry_items
         }
-
+        print("MAKE INVOICE ----------------------->")
+        print(entry_items)
         if len(entry_items) == 0:
             frappe.throw(_("There is not Item in this Order"))
 
@@ -171,7 +172,7 @@ class TableOrder(Document):
         # TIDAX
         total_dicount_lines = 0
         for it in self.entry_items:
-            total_dicount_lines += (it.discount_amount * it.qty)            
+            total_dicount_lines += (it.discount_amount * it.qty)     
 
         if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
             serie = obtener_res_set("serie_boleta")
@@ -260,6 +261,8 @@ class TableOrder(Document):
         return True
 
     def transfer_order_values(self, to_doc):
+        print("TRANSFER ORDER VALUES-------------------->")
+        print(self)
         to_doc.company = self.company
         to_doc.is_pos = 1
         to_doc.customer = self.customer
@@ -279,9 +282,12 @@ class TableOrder(Document):
         
         for i in entry_items:
             item = entry_items[i]
+            print("GET INVOICE -------------------->")
+            print(item)
             if item["qty"] > 0:
                 rate = 0 if item["rate"] is None else item["rate"]
                 price_list_rate = 0 if item["price_list_rate"] is None else item["price_list_rate"]
+                unit_value = 0 if item["unit_value"] is None else item["unit_value"]
 
                 margin_rate_or_amount = (rate - price_list_rate)
                 invoice.append('items', dict(
@@ -304,7 +310,9 @@ class TableOrder(Document):
                     batch_no=item["batch_no"],
 
                     conversion_factor=1,
+                    unit_value=0 if unit_value <= 0 else unit_value,
                 ))
+                
 
                 if "item_tax_rate" in item:
                     if not item["item_tax_rate"] in taxes:
@@ -414,13 +422,13 @@ class TableOrder(Document):
         else:
             invoice = self.get_invoice({entry["identifier"]: entry})
             item = invoice.items[0]
-            # TIDAX
+            # TIDAX : Obtencion de cocinas dependiendo del grupo de productos
             PrCeGr = frappe.db.sql(f"""SELECT ro.description FROM `tabRestaurant Object` as ro inner join
                                     `tabProduction Center Group` as pcg on ro.name = pcg.parent and ro.type = 'Production Center' and item_group = '{item.item_group}' 
                                     order by item_group asc;""", as_dict=True)
             centro_pro = ""
             for pt in PrCeGr:
-                centro_pro += pt.description + ","
+                centro_pro += pt.description + "| "
 
             data = dict(
                 item_code=item.item_code,
@@ -442,7 +450,9 @@ class TableOrder(Document):
                 batch_no=entry["batch_no"],
                 has_serial_no=entry["has_serial_no"],
                 serial_no=entry["serial_no"],
-                item_pt = centro_pro
+                # TIDAX : Adicion de cocinas y caso descuento es 100%
+                item_pt = centro_pro,
+                unit_value = item.price_list_rate if item.discount_percentage == 100 else 0
             )
 
             self.validate()
@@ -484,6 +494,8 @@ class TableOrder(Document):
                 batch_no=entry_item["batch_no"],
                 has_serial_no=entry_item["has_serial_no"],
                 serial_no=entry_item["serial_no"],
+                # TIDAX : Adicion
+                unit_value=entry_item["unit_value"],
             ))
             item.serial_no = None
 
@@ -549,6 +561,7 @@ class TableOrder(Document):
                     "batch_no",
                     "has_serial_no",
                     "serial_no",
+                    "unit_value",
                 ]}
 
                 row["order_name"] = item.parent
@@ -619,6 +632,7 @@ class TableOrder(Document):
                     batch_no=item.batch_no,
                     has_serial_no=item.has_serial_no,
                     serial_no=item.serial_no,
+                    unit_value=item.unit_value,
                 ))
         self.save()
 
