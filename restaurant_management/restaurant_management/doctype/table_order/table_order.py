@@ -171,8 +171,10 @@ class TableOrder(Document):
 
         # TIDAX
         total_dicount_lines = 0
+        total_free = 0
         for it in self.entry_items:
-            total_dicount_lines += (it.discount_amount * it.qty)     
+            total_dicount_lines += (it.discount_amount * it.qty)
+            total_free += (it.unit_value * it.qty)
 
         if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
             serie = obtener_res_set("serie_boleta")
@@ -187,10 +189,17 @@ class TableOrder(Document):
             invoice.condicion_pago = "CONTADO"
             invoice.tax_id = self.customer_tax_id
             invoice.total_amount_discount_lines = total_dicount_lines
-            if(self.discount > 0):
+            # Descuento globales
+            if(self.discount > 0 and self.discount < self.amount):
                 invoice.discount_amount = self.discount
-            if(self.discount_global_percent>0):
+            if(self.discount_global_percent>0 and self.discount_global_percent<100):
                 invoice.additional_discount_percentage = self.discount_global_percent
+            # Casuistica descuento lineal y descuento global
+            if(total_free>0):
+                invoice.total_amount_free = total_free
+            elif(self.discount_global_percent>=100 or self.discount >= self.amount):
+                invoice.total_amount_free = self.amount
+                invoice.is_free_global = 1
             invoice.table_description = self.table_description
             invoice.owner = "cajero@resto.pe"
         # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
@@ -207,10 +216,17 @@ class TableOrder(Document):
             invoice.condicion_pago = "CONTADO"
             invoice.tax_id = self.customer_tax_id
             invoice.total_amount_discount_lines = total_dicount_lines
-            if(self.discount > 0):
+            # Descuento globales
+            if(self.discount > 0 and self.discount < self.amount):
                 invoice.discount_amount = self.discount
-            if(self.discount_global_percent>0):
+            if(self.discount_global_percent>0 and self.discount_global_percent<100):
                 invoice.additional_discount_percentage = self.discount_global_percent
+            # Casuistica descuento lineal y descuento global
+            if(total_free>0):
+                invoice.total_amount_free = total_free
+            elif(self.discount_global_percent>=100 or self.discount >= self.amount):
+                invoice.total_amount_free = self.amount
+                invoice.is_free_global = 1
             invoice.table_description = self.table_description
             invoice.owner = "cajero@resto.pe"
 
@@ -261,8 +277,8 @@ class TableOrder(Document):
         return True
 
     def transfer_order_values(self, to_doc):
-        print("TRANSFER ORDER VALUES-------------------->")
-        print(self)
+        # print("TRANSFER ORDER VALUES-------------------->")
+        # print(self)
         to_doc.company = self.company
         to_doc.is_pos = 1
         to_doc.customer = self.customer
@@ -282,8 +298,8 @@ class TableOrder(Document):
         
         for i in entry_items:
             item = entry_items[i]
-            print("GET INVOICE -------------------->")
-            print(item)
+            # print("GET INVOICE -------------------->")
+            # print(item)
             if item["qty"] > 0:
                 rate = 0 if item["rate"] is None else item["rate"]
                 price_list_rate = 0 if item["price_list_rate"] is None else item["price_list_rate"]

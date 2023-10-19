@@ -170,7 +170,7 @@ class FoodCommand {
             text: ""
         });
 
-        return `			
+        return `<audio id="xyz" src="/home/erpnext/frappe-bench/apps/frappe/frappe/public/sounds/submit.mp3" preload="auto"></audio>			
 		<div class="food-command">
 			<div class="food-command-title">
 				${this.title.html()}
