@@ -169,11 +169,18 @@ class FoodCommand {
             content: '<h6 style="width: 100%;">{{text}}</h6>',
             text: ""
         });
+        // TIDAX
+        this.alerta_pedido = frappe.jshtml({
+            tag: "audio autoplay",
+            // properties: { class: "row product-notes", style: "display: none;" },
+            content: '<source src="/home/erpnext/frappe-bench/apps/frappe/frappe/public/sounds/submit.mp3">',
+            text: ""
+        });
 
-        return `<audio id="xyz" src="/home/erpnext/frappe-bench/apps/frappe/frappe/public/sounds/submit.mp3" preload="auto"></audio>			
-		<div class="food-command">
+        return `${this.alerta_pedido.html()}			
+		<div class="food-command">${this.alerta_pedido.html()}
 			<div class="food-command-title">
-				${this.title.html()}
+                ${this.alerta_pedido.html()} ${this.title.html()}
 			</div>
 			${this.detail.html()}
 			<div class="row" style="height: auto">
