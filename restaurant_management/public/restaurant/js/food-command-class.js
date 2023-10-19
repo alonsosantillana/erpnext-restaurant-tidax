@@ -84,6 +84,7 @@ class FoodCommand {
         ).css([
             { prop: "background-color", value: psd.color }
         ]);
+        RM.sound_submit()
     }
 
     execute() {
@@ -171,16 +172,17 @@ class FoodCommand {
         });
         // TIDAX
         this.alerta_pedido = frappe.jshtml({
-            tag: "audio autoplay",
+            tag: "audio controls ",
             // properties: { class: "row product-notes", style: "display: none;" },
-            content: '<source src="/home/erpnext/frappe-bench/apps/frappe/frappe/public/sounds/submit.mp3">',
+            properties: { preload: "auto" },
+            content: '<source src="/assets/frappe/sounds/submit.mp3" type="audio/mpeg">',
             text: ""
         });
 
-        return `${this.alerta_pedido.html()}			
-		<div class="food-command">${this.alerta_pedido.html()}
+        return `			
+		<div class="food-command">
 			<div class="food-command-title">
-                ${this.alerta_pedido.html()} ${this.title.html()}
+            ${$("#sound-submit").trigger('play')}${this.title.html()}
 			</div>
 			${this.detail.html()}
 			<div class="row" style="height: auto">
