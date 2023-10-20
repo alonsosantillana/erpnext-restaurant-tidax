@@ -211,28 +211,27 @@ ProcessManage = class ProcessManage {
                         <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
                         popupDocument.write("<h2>Información de Comandas</h2>");
         
-                        let cabeceraMostrada = false;
                         let compara="";
+                        let compara_ant="";
                         // Itera sobre las órdenes y muestra la cabecera una vez
                         // y los detalles debajo de la misma en divs
-                        ordenes.forEach((orden) => {
+                        ordenes.forEach((orden) => {                         
                             if ((orden.room_description+orden.table_description) !== compara) {
-                                popupDocument.write(`<div style='float: left;position: relative;width: 20%;margin: 10px;padding: 10px;box-shadow: 3px 3px 5px #888888;
-                                box-sizing: border-box;display:table;'>`);
+                                compara_ant = compara;
+                                if (compara === compara_ant && compara_ant !== "") {   
+                                    popupDocument.write("</div>");                                
+                                }
+                                popupDocument.write(`<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
                                 popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
-                                cabeceraMostrada = true;
                                 
+                                compara = orden.room_description+orden.table_description;
                             }
-
-                            popupDocument.write("<p><strong>Qty</strong> [" + orden.qty + "]" +" "+orden.item_code+" "+ orden.item_name +"</p>");
-                            if ((orden.room_description+orden.table_description) === compara) {                      
-                                popupDocument.write("</div>");
-                                
+                            if ((orden.room_description+orden.table_description) === compara) {
+                                popupDocument.write("<p><strong>Qty</strong> [" + orden.qty + "]" +" "+orden.item_code+" "+ orden.item_name +"</p>");
                             }
-                            compara = orden.room_description+orden.table_description;
-                        });
-                        
-                        popupDocument.write("</body></html>");
+                        })
+                        popupDocument.write("</div></body></html>");
                         popupDocument.close();
                     } else {
                         alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
