@@ -1,0 +1,14 @@
+.comanda {
+    display: inline-block;
+    width: 30%; /* Ancho de la columna, ajusta según tus necesidades */
+    margin: 10px; /* Márgenes exteriores para separación */
+    padding: 10px; /* Relleno interno para separación entre el contenido y el borde */
+    box-sizing: border-box; /* Para incluir el relleno y el borde en el ancho total */
+    background-color: #f5f5f5; /* Color de fondo */
+    border: 1px solid #ddd; /* Borde opcional */
+    box-shadow: 3px 3px 5px #888888; /* Sombra opcional */
+    color: #333; /* Color de texto */
+    font-family: Arial, sans-serif; /* Fuente de texto */
+    text-align: center; /* Alineación de texto */
+    border-radius: 10px; /* Esquinas redondeadas */
+}

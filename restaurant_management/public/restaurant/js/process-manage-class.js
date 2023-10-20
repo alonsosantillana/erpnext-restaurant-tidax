@@ -46,8 +46,200 @@ ProcessManage = class ProcessManage {
         this.modal.container.empty().append(this.template());
         this.modal.title_container.empty().append(
             RMHelper.return_main_button(this.title, () => this.modal.hide()).html(),
-            "<button>alonso</button>"
+            `<button id="openPopupButton" class="btn btn-default btn-flat">Consolidacion de Platos</button>`,
+            `<button id="openPopupButtonCom" class="btn btn-default btn-flat">Comandas</button>`,
+            `<button id="openPopupButtonAte" class="btn btn-default btn-flat">Pedidos Atendidos</button>`
         );
+        this.agrupacion_platos();
+        this.agrupacion_comandas();
+        this.agrupacion_platos_atendidos();
+        
+    }
+    // TIDAX: Agrupa los platos pendientes y los muestra en una nueva ventana
+    agrupacion_platos(){
+        // Agrega un evento al botón "Abrir Nueva Ventana"
+        document.getElementById('openPopupButton').addEventListener('click', () => {
+            const popupWindow = window.open("", "Consolidacion de Platos", "width=600,height=400,top=100,left=100");
+            
+            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
+            frappe.call({
+                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
+                callback: (r) => {
+                    const orderItems = r.message;
+
+                    if (popupWindow && !popupWindow.closed) {
+                        // Abre un documento HTML en la nueva ventana y muestra los datos
+                        const popupDocument = popupWindow.document;
+                        popupDocument.open();
+                        popupDocument.write("<html><head><title>Pop-up</title></head><body>");
+                        popupDocument.write("<h2>Consolidacion de Platos:</h2>");
+                        popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
+                        popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
+                        orderItems.forEach((item) => {
+                            popupDocument.write("<tr>");
+                            popupDocument.write("<td>[" + item.qty + "]</td>");
+                            popupDocument.write("<td>" + item.item_code + "</td>");
+                            popupDocument.write("<td>" + item.item_name + "</td>");
+                            popupDocument.write("</tr>");
+                        });
+                        popupDocument.write("</table></center>");
+                        popupDocument.write("<button id='refreshButton'>Actualizar</button>");
+                        // Agrega un evento al botón de actualización
+                        const refreshButton = popupDocument.getElementById('refreshButton');
+                        refreshButton.addEventListener('click', () => {
+                            // Llama a la función para cargar y mostrar nuevamente los datos
+                            refreshData();
+                        });
+                        // Función para cargar y mostrar los datos
+                        function refreshData() {
+                            // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
+                            frappe.call({
+                                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
+                                callback: (r) => {
+                                    const orderItems = r.message;
+
+                                    // Encuentra la tabla y actualiza su contenido
+                                    const tableData = popupDocument.getElementById('tableData');
+                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
+
+                                    orderItems.forEach((item) => {
+                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
+                                    });
+                                }
+                            });
+                        }
+                        // Llama a la función de actualización automáticamente cada minuto
+                        setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
+
+
+                        popupDocument.write("</body></html>");
+                        popupDocument.close();
+                    } else {
+                        // Maneja el caso en el que la ventana emergente fue bloqueada
+                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                    }
+                }
+            });
+        });
+    }
+
+    // TIDAX: MUESTRA EN UNA NUEVA VENTANA LOS PLATOS ATENDIDOS DEL DIA
+    agrupacion_platos_atendidos(){
+        // Agrega un evento al botón "Abrir Nueva Ventana"
+        document.getElementById('openPopupButtonAte').addEventListener('click', () => {
+            const popupWindow = window.open("", "Platos Atendidos", "width=600,height=400,top=100,left=100");
+            
+            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
+            frappe.call({
+                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
+                callback: (r) => {
+                    const orderItems = r.message;
+                    const fecha = new Date();
+                    console.log(orderItems);
+                    if (popupWindow && !popupWindow.closed) {
+                        // Abre un documento HTML en la nueva ventana y muestra los datos
+                        const popupDocument = popupWindow.document;
+                        popupDocument.open();
+                        popupDocument.write("<html><head><title>Pop-up</title></head><body>");
+                        popupDocument.write(`<h2>Platos Atendidos(${fecha.toLocaleDateString()}):</h2>`);
+                        popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
+                        popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
+                        orderItems.forEach((item) => {
+                            popupDocument.write("<tr>");
+                            popupDocument.write("<td>[" + item.qty + "]</td>");
+                            popupDocument.write("<td>" + item.item_code + "</td>");
+                            popupDocument.write("<td>" + item.item_name + "</td>");
+                            popupDocument.write("</tr>");
+                        });
+                        popupDocument.write("</table></center>");
+                        popupDocument.write("<button id='refreshButtonAte'>Actualizar</button>");
+                        // Agrega un evento al botón de actualización
+                        const refreshButton = popupDocument.getElementById('refreshButtonAte');
+                        refreshButton.addEventListener('click', () => {
+                            // Llama a la función para cargar y mostrar nuevamente los datos
+                            refreshData();
+                        });
+                        // Función para cargar y mostrar los datos
+                        function refreshData() {
+                            // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
+                            frappe.call({
+                                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
+                                callback: (r) => {
+                                    const orderItems = r.message;
+
+                                    // Encuentra la tabla y actualiza su contenido
+                                    const tableData = popupDocument.getElementById('tableData');
+                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
+
+                                    orderItems.forEach((item) => {
+                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
+                                    });
+                                }
+                            });
+                        }
+                        // Llama a la función de actualización automáticamente cada minuto
+                        setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
+
+
+                        popupDocument.write("</body></html>");
+                        popupDocument.close();
+                    } else {
+                        // Maneja el caso en el que la ventana emergente fue bloqueada
+                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                    }
+                }
+            });
+        });
+    }
+
+    // TIDAX: MUESTRA EN UNA NUEVA VENTANA LAS COMANDAS POR ATENDER
+    agrupacion_comandas(){
+        // Agrega un evento al botón "Abrir Nueva Ventana"
+        document.getElementById('openPopupButtonCom').addEventListener('click', () => {
+            const popupWindow = window.open("", "Comandas", "top=100,left=100");
+            
+            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
+            frappe.call({
+                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
+                callback: (r) => {
+                    const ordenes = r.message;
+                    console.log(ordenes);
+                    if (popupWindow && !popupWindow.closed) {
+                        const popupDocument = popupWindow.document;
+                        popupDocument.open();
+                        popupDocument.write(`<html><head><title>Comandas</title>
+                        <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
+                        popupDocument.write("<h2>Información de Comandas</h2>");
+        
+                        let cabeceraMostrada = false;
+                        let compara="";
+                        // Itera sobre las órdenes y muestra la cabecera una vez
+                        // y los detalles debajo de la misma en divs
+                        ordenes.forEach((orden) => {
+                            if ((orden.room_description+orden.table_description) !== compara) {
+                                popupDocument.write(`<div style='float: left;position: relative;width: 20%;margin: 10px;padding: 10px;box-shadow: 3px 3px 5px #888888;
+                                box-sizing: border-box;display:table;'>`);
+                                popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
+                                cabeceraMostrada = true;
+                                
+                            }
+
+                            popupDocument.write("<p><strong>Qty</strong> [" + orden.qty + "]" +" "+orden.item_code+" "+ orden.item_name +"</p>");
+                            if ((orden.room_description+orden.table_description) === compara) {                      
+                                popupDocument.write("</div>");
+                                
+                            }
+                            compara = orden.room_description+orden.table_description;
+                        });
+                        
+                        popupDocument.write("</body></html>");
+                        popupDocument.close();
+                    } else {
+                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                    }
+                }
+            });
+        });
     }
 
     template() {

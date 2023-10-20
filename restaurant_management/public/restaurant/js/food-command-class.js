@@ -84,7 +84,6 @@ class FoodCommand {
         ).css([
             { prop: "background-color", value: psd.color }
         ]);
-        RM.sound_submit()
     }
 
     execute() {
@@ -181,8 +180,9 @@ class FoodCommand {
 
         return `			
 		<div class="food-command">
+            <div style= "display: none;">${$("#sound-submit").trigger('play')}</div>
 			<div class="food-command-title">
-            ${$("#sound-submit").trigger('play')}${this.title.html()}
+            ${this.title.html()}
 			</div>
 			${this.detail.html()}
 			<div class="row" style="height: auto">

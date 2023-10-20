@@ -249,7 +249,7 @@ class ProductItem {
 			</div>`
         }
     }
-    // TIDAX : Adicion de campos en Items
+    // TIDAX : Adicion de campos en Items: unit_value, ordered_finish
     add_item_in_order(item) {
         const base_item = {
             name: null,
@@ -270,7 +270,8 @@ class ProductItem {
             serial_no: null,
             has_batch_no: 0,
             batch_no: null,
-            unit_value: 0
+            unit_value: 0,
+            ordered_finish: 0
         };
 
         const current_order = this.order_manage.current_order;

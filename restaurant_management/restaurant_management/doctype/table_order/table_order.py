@@ -512,6 +512,7 @@ class TableOrder(Document):
                 serial_no=entry_item["serial_no"],
                 # TIDAX : Adicion
                 unit_value=entry_item["unit_value"],
+                ordered_finish=entry_item["ordered_finish"],
             ))
             item.serial_no = None
 
@@ -578,6 +579,7 @@ class TableOrder(Document):
                     "has_serial_no",
                     "serial_no",
                     "unit_value",
+                    "ordered_finish",
                 ]}
 
                 row["order_name"] = item.parent
@@ -649,6 +651,7 @@ class TableOrder(Document):
                     has_serial_no=item.has_serial_no,
                     serial_no=item.serial_no,
                     unit_value=item.unit_value,
+                    ordered_finish=item.ordered_finish,
                 ))
         self.save()
 
