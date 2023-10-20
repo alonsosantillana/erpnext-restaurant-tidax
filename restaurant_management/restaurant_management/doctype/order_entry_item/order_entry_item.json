@@ -188,13 +188,13 @@
   {
    "fieldname": "ordered_finish",
    "fieldtype": "Int",
-   "label": "Ordered Finish"
+   "label": "Ordered Finish (min)"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2023-10-19 03:57:00.921118",
+ "modified": "2023-10-20 15:40:08.513489",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Order Entry Item",

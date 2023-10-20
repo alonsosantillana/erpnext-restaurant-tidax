@@ -7,6 +7,7 @@ from datetime import date
 import frappe
 from frappe import _
 from frappe.model.document import Document
+import re
 
 
 class RestaurantObject(Document):
@@ -221,16 +222,41 @@ class RestaurantObject(Document):
             "room": self.name, "type": t
         })
 
-    def set_status_command(self, identifier):
+    def set_status_command(self, identifier, tiempo):
         last_status = frappe.db.get_value("Order Entry Item", {"identifier": identifier}, "status")
         status = self.next_status(last_status)
 
         frappe.db.set_value("Order Entry Item", {"identifier": identifier}, "status", status)
+        # TIDAX: GUARDA TIEMPO DE DEMORA DEL PLATO
+        numero =self.tiempo_demora(tiempo)
+        frappe.db.set_value("Order Entry Item", {"identifier": identifier}, "ordered_finish", int(numero))
+
         self.reload()
         item = self.commands_food(identifier, last_status)
         order = frappe.get_doc("Table Order", item[0]["order_name"])
 
         order.synchronize(dict(items=item, status=[last_status, status]))
+    
+    # TIDAX: GUARDA TIEMPO DE DEMORA DEL PLATO
+    def tiempo_demora(self, tiempo):
+        if(tiempo):
+            # Usamos una expresión regular para dividir la cadena
+            resultado = re.match(r'(\d+) ([a-zA-Z]+)', tiempo)
+            if resultado:
+                if(resultado.group(1)):
+                    numero = int(resultado.group(1))  # Obtenemos la parte numérica
+                if(resultado.group(2)):
+                    letra = resultado.group(2)  # Obtenemos la parte de letras
+            else:
+                print("No se encontró una coincidencia válida en la cadena.")
+            
+            if(letra == "m"):
+                numero = numero
+            elif(letra == "h"):
+                numero = numero * 60
+            else:
+                numero = 1
+        return numero
 
     def command_data(self, command):
         item = self.commands_food(command)

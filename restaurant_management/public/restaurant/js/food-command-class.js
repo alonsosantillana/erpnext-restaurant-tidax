@@ -91,13 +91,13 @@ class FoodCommand {
             return;
         }
         RM.working(this.data.next_action_message, false);
-
         frappeHelper.api.call({
             model: "Restaurant Object",
             name: this.process_manage.table.data.name,
             method: "set_status_command",
             args: {
-                identifier: this.data.identifier
+                identifier: this.data.identifier,
+                tiempo: this._time_elapsed.value
             },
             always: () => {
                 RM.ready(false, "success");

@@ -52,8 +52,7 @@ ProcessManage = class ProcessManage {
         );
         this.agrupacion_platos();
         this.agrupacion_comandas();
-        this.agrupacion_platos_atendidos();
-        
+        this.agrupacion_platos_atendidos();        
     }
     // TIDAX: Agrupa los platos pendientes y los muestra en una nueva ventana
     agrupacion_platos(){
@@ -180,7 +179,6 @@ ProcessManage = class ProcessManage {
                         // Llama a la función de actualización automáticamente cada minuto
                         setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
 
-
                         popupDocument.write("</body></html>");
                         popupDocument.close();
                     } else {
@@ -196,48 +194,57 @@ ProcessManage = class ProcessManage {
     agrupacion_comandas(){
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButtonCom').addEventListener('click', () => {
-            const popupWindow = window.open("", "Comandas", "top=100,left=100");
+            // Función para obtener la información y actualizar el popup
+            function obtenerInformacionYActualizarPopup() {
+                const popupWindow = window.open("", "Comandas", "top=100,left=100");
+                
+                // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
+                frappe.call({
+                    method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
+                    callback: (r) => {
+                        const ordenes = r.message;
+                        if (popupWindow && !popupWindow.closed) {
+                            const popupDocument = popupWindow.document;
+                            popupDocument.open();
+                            popupDocument.write(`<html><head><title>Comandas</title>
+                            <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
+                            // popupDocument.write('<button id="refreshButtonCom">Actualizar Página</button>');  
+                            popupDocument.write("<h2>Información de Comandas</h2>");
             
-            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
-            frappe.call({
-                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
-                callback: (r) => {
-                    const ordenes = r.message;
-                    console.log(ordenes);
-                    if (popupWindow && !popupWindow.closed) {
-                        const popupDocument = popupWindow.document;
-                        popupDocument.open();
-                        popupDocument.write(`<html><head><title>Comandas</title>
-                        <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
-                        popupDocument.write("<h2>Información de Comandas</h2>");
-        
-                        let compara="";
-                        let compara_ant="";
-                        // Itera sobre las órdenes y muestra la cabecera una vez
-                        // y los detalles debajo de la misma en divs
-                        ordenes.forEach((orden) => {                         
-                            if ((orden.room_description+orden.table_description) !== compara) {
-                                compara_ant = compara;
-                                if (compara === compara_ant && compara_ant !== "") {   
-                                    popupDocument.write("</div>");                                
+                            let compara="";
+                            let compara_ant="";
+                            // Itera sobre las órdenes y muestra la cabecera una vez
+                            // y los detalles debajo de la misma en divs
+                            ordenes.forEach((orden) => {                         
+                                if ((orden.room_description+orden.table_description) !== compara) {
+                                    compara_ant = compara;
+                                    if (compara === compara_ant && compara_ant !== "") {   
+                                        popupDocument.write("</div>");                                
+                                    }
+                                    popupDocument.write(`<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                    box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
+                                    popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
+                                    
+                                    compara = orden.room_description+orden.table_description;
                                 }
-                                popupDocument.write(`<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
-                                box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
-                                popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
-                                
-                                compara = orden.room_description+orden.table_description;
-                            }
-                            if ((orden.room_description+orden.table_description) === compara) {
-                                popupDocument.write("<p><strong>Qty</strong> [" + orden.qty + "]" +" "+orden.item_code+" "+ orden.item_name +"</p>");
-                            }
-                        })
-                        popupDocument.write("</div></body></html>");
-                        popupDocument.close();
-                    } else {
-                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                                if ((orden.room_description+orden.table_description) === compara) {
+                                    popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
+                                }
+                            })
+                            popupDocument.write("</body></html>");
+                            popupDocument.close();
+                        } else {
+                            alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                        }
                     }
-                }
-            });
+                });
+            }
+
+            // Llama a la función inicialmente
+            obtenerInformacionYActualizarPopup();
+    
+            // Establece la actualización automática cada 60 segundos
+            setInterval(obtenerInformacionYActualizarPopup, 60000);
         });
     }
 
