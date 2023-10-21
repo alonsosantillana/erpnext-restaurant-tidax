@@ -191,13 +191,18 @@ ProcessManage = class ProcessManage {
     }
 
     // TIDAX: MUESTRA EN UNA NUEVA VENTANA LAS COMANDAS POR ATENDER
-    agrupacion_comandas(){
+    agrupacion_comandas() {
+        let popupAbierto = false; // Variable para rastrear si el popup está abierto
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButtonCom').addEventListener('click', () => {
+            const popupWindow = window.open("", "Comandas", "top=100,left=100");
+            popupAbierto = true; // Marcar el popup como abierto
             // Función para obtener la información y actualizar el popup
             function obtenerInformacionYActualizarPopup() {
-                const popupWindow = window.open("", "Comandas", "top=100,left=100");
-                
+                // Verificar si el popup está abierto
+                if (!popupAbierto) {
+                    return;
+                }
                 // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
                 frappe.call({
                     method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
@@ -208,29 +213,38 @@ ProcessManage = class ProcessManage {
                             popupDocument.open();
                             popupDocument.write(`<html><head><title>Comandas</title>
                             <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
-                            // popupDocument.write('<button id="refreshButtonCom">Actualizar Página</button>');  
-                            popupDocument.write("<h2>Información de Comandas</h2>");
-            
-                            let compara="";
-                            let compara_ant="";
+                            popupDocument.write('<h2>Información de Comandas</h2><button id="refreshButtonCom" class="btn btn-light">Actualizar Comandas</button>');
+    
+                            let compara = "";
+                            let compara_ant = "";
                             // Itera sobre las órdenes y muestra la cabecera una vez
                             // y los detalles debajo de la misma en divs
-                            ordenes.forEach((orden) => {                         
-                                if ((orden.room_description+orden.table_description) !== compara) {
+                            ordenes.forEach((orden) => {
+                                if ((orden.room_description + orden.table_description) !== compara) {
                                     compara_ant = compara;
-                                    if (compara === compara_ant && compara_ant !== "") {   
-                                        popupDocument.write("</div>");                                
+                                    if (compara === compara_ant && compara_ant !== "") {
+                                        popupDocument.write("</div>");
                                     }
-                                    popupDocument.write(`<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                    popupDocument.write(`<div id="tableData" style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                     box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
                                     popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
-                                    
-                                    compara = orden.room_description+orden.table_description;
+    
+                                    compara = orden.room_description + orden.table_description;
                                 }
-                                if ((orden.room_description+orden.table_description) === compara) {
-                                    popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
+                                if ((orden.room_description + orden.table_description) === compara) {
+                                    popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" + " " + orden.item_code + " " + orden.item_name + "</p>");
                                 }
                             })
+    
+                            const refreshButton = popupDocument.getElementById('refreshButtonCom');
+                            refreshButton.addEventListener('click', () => {
+                                // Llama a la función para cargar y mostrar nuevamente los datos
+                                obtenerInformacionYActualizarPopup();
+                            });
+    
+                            // Llama a la función de actualización automáticamente cada minuto
+                            setInterval(obtenerInformacionYActualizarPopup, 60000); // 60000 milisegundos = 1 minuto
+    
                             popupDocument.write("</body></html>");
                             popupDocument.close();
                         } else {
@@ -238,13 +252,13 @@ ProcessManage = class ProcessManage {
                         }
                     }
                 });
-            }
-
+            }  
             // Llama a la función inicialmente
             obtenerInformacionYActualizarPopup();
-    
-            // Establece la actualización automática cada 60 segundos
-            setInterval(obtenerInformacionYActualizarPopup, 60000);
+            // Evento que se dispara al cerrar el popup
+            popupWindow.addEventListener('beforeunload', () => {
+                popupAbierto = false; // Marcar el popup como cerrado
+            });
         });
     }
 
