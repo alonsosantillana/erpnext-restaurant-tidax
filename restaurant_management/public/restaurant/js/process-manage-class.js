@@ -65,24 +65,26 @@ ProcessManage = class ProcessManage {
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
                 callback: (r) => {
                     const orderItems = r.message;
-
                     if (popupWindow && !popupWindow.closed) {
+                        let cant =0;
                         // Abre un documento HTML en la nueva ventana y muestra los datos
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
-                        popupDocument.write("<html><head><title>Pop-up</title></head><body>");
+                        popupDocument.write("<html><head><title>Platos Consolidados</title></head><body>");
                         popupDocument.write("<h2>Consolidacion de Platos:</h2>");
                         popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
                         popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
                         orderItems.forEach((item) => {
+                            cant = cant + item.qty;
                             popupDocument.write("<tr>");
                             popupDocument.write("<td>[" + item.qty + "]</td>");
                             popupDocument.write("<td>" + item.item_code + "</td>");
                             popupDocument.write("<td>" + item.item_name + "</td>");
                             popupDocument.write("</tr>");
                         });
-                        popupDocument.write("</table></center>");
-                        popupDocument.write("<button id='refreshButton'>Actualizar</button>");
+                        popupDocument.write(`</table></center>`);
+                        popupDocument.write(`<div id='totalqty'><center><b>Platos Totales: [${cant}]</b></center></div>`);
+                        popupDocument.write("<button type='button' style='border-radius: 8px; padding: 8px 20px;' id='refreshButton'>Actualizar</button>");
                         // Agrega un evento al botón de actualización
                         const refreshButton = popupDocument.getElementById('refreshButton');
                         refreshButton.addEventListener('click', () => {
@@ -91,6 +93,7 @@ ProcessManage = class ProcessManage {
                         });
                         // Función para cargar y mostrar los datos
                         function refreshData() {
+                            cant = 0;
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
@@ -99,11 +102,14 @@ ProcessManage = class ProcessManage {
 
                                     // Encuentra la tabla y actualiza su contenido
                                     const tableData = popupDocument.getElementById('tableData');
+                                    const totalqty = popupDocument.getElementById('totalqty');
                                     tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
 
                                     orderItems.forEach((item) => {
+                                        cant = cant + item.qty;
                                         tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
                                     });
+                                    totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
                                 }
                             });
                         }
@@ -134,24 +140,26 @@ ProcessManage = class ProcessManage {
                 callback: (r) => {
                     const orderItems = r.message;
                     const fecha = new Date();
-                    console.log(orderItems);
                     if (popupWindow && !popupWindow.closed) {
+                        let cant =0;
                         // Abre un documento HTML en la nueva ventana y muestra los datos
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
-                        popupDocument.write("<html><head><title>Pop-up</title></head><body>");
+                        popupDocument.write("<html><head><title>Platos Atendidos</title></head><body>");
                         popupDocument.write(`<h2>Platos Atendidos(${fecha.toLocaleDateString()}):</h2>`);
                         popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
                         popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
                         orderItems.forEach((item) => {
+                            cant = cant + item.qty;
                             popupDocument.write("<tr>");
                             popupDocument.write("<td>[" + item.qty + "]</td>");
                             popupDocument.write("<td>" + item.item_code + "</td>");
                             popupDocument.write("<td>" + item.item_name + "</td>");
                             popupDocument.write("</tr>");
                         });
-                        popupDocument.write("</table></center>");
-                        popupDocument.write("<button id='refreshButtonAte'>Actualizar</button>");
+                        popupDocument.write(`</table></center>`);
+                        popupDocument.write(`<div id='totalqty'><center><b>Platos Totales: [${cant}]</b></center></div>`);
+                        popupDocument.write("<button type='button' style='border-radius: 8px; padding: 8px 20px;' id='refreshButtonAte'>Actualizar</button>");
                         // Agrega un evento al botón de actualización
                         const refreshButton = popupDocument.getElementById('refreshButtonAte');
                         refreshButton.addEventListener('click', () => {
@@ -160,6 +168,7 @@ ProcessManage = class ProcessManage {
                         });
                         // Función para cargar y mostrar los datos
                         function refreshData() {
+                            cant = 0;
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
@@ -168,11 +177,14 @@ ProcessManage = class ProcessManage {
 
                                     // Encuentra la tabla y actualiza su contenido
                                     const tableData = popupDocument.getElementById('tableData');
+                                    const totalqty = popupDocument.getElementById('totalqty');
                                     tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
 
                                     orderItems.forEach((item) => {
+                                        cant = cant + item.qty;
                                         tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
                                     });
+                                    totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
                                 }
                             });
                         }
@@ -194,7 +206,7 @@ ProcessManage = class ProcessManage {
     agrupacion_comandas(){
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButtonCom').addEventListener('click', () => {
-            const popupWindow = window.open("", "INformacion Comandas", "top=100,left=100");
+            const popupWindow = window.open("", "Informacion Comandas", "top=100,left=100");
             
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
@@ -217,11 +229,12 @@ ProcessManage = class ProcessManage {
                         ordenes.forEach((orden) => {                         
                             if ((orden.room_description+orden.table_description) !== compara) {
                                 compara_ant = compara;
-                                if (compara === compara_ant && compara_ant !== "") {   
+                                if (compara === compara_ant && compara_ant !== "") {
                                     popupDocument.write("</div>");                                
                                 }
                                 popupDocument.write(`<div id="tableData" style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
+                                popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.name}</button>`);
                                 popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
                                 
                                 compara = orden.room_description+orden.table_description;
@@ -250,13 +263,13 @@ ProcessManage = class ProcessManage {
                                         let cabecera = ""; // Almacena la cabecera actual
                                         let detalles = ""; // Almacena los detalles actuales
                                         let pie = "";
-                        
+
                                         // Obtén el elemento que contiene la información
                                         const tableData = popupDocument.getElementById('divData');
-                        
+
                                         // Limpiar el contenido actual
                                         tableData.innerHTML = '';
-                        
+
                                         // Itera sobre las órdenes y muestra la información formateada
                                         ordenes.forEach((orden) => {
                                             if ((orden.room_description + orden.table_description) !== compara) {
@@ -264,21 +277,47 @@ ProcessManage = class ProcessManage {
                                                     // Si hay una cabecera previa, agrega el contenido
                                                     tableData.innerHTML += cabecera + detalles + pie;
                                                 }
-                        
+
                                                 // Inicia una nueva cabecera
                                                 cabecera = `<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
+                                                <button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'
+                                                data-order-name='${orden.name}'>${orden.name}</button>
                                                 <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description}</p>`;
                                                 detalles = ""; // Inicia una nueva sección de detalles
                                                 compara = orden.room_description + orden.table_description;
                                             }
-                        
+
                                             detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
                                         });
-                        
+
                                         // Agrega el último conjunto de cabecera, detalles y pie
-                                        if(compara) {
+                                        if (compara) {
                                             tableData.innerHTML += cabecera + detalles + pie;
+                                        }
+
+                                        // Agrega un evento al botón "Atendido" si es necesario
+                                        const atendidoButton = popupDocument.getElementById('comandaAtendido');
+                                        atendidoButton.addEventListener('click', () => {
+                                            // Obtiene los valores de los atributos de datos
+                                            const orderName = atendidoButton.dataset.orderName;
+                                            //alert(orderName);
+                                            saveComanda(orderName);
+                                        });
+
+                                        function saveComanda(orderName) {
+                                            // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
+                                            frappe.call({
+                                                method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
+                                                args: {
+                                                    order_name: orderName, // Nombre de la orden
+                                                },
+                                                callback: (r) => {
+                                                    // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
+                                                    //alert("La orden ha sido marcada como 'Atendida'.");
+                                                    refreshData();
+                                                }
+                                            });
                                         }
                                     } else {
                                         alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");

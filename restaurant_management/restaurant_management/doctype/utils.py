@@ -42,11 +42,38 @@ def get_ordenes_cocina_atendidos():
 def get_ordenes_cocina_comandas():
     hoy = datetime.now()
     hoy = hoy.strftime('%Y-%m-%d')
-    ordenes = frappe.db.sql(f"""SELECT taor.table_description, taor.room_description, oei.item_code as item_code, oei.item_name as item_name, 
+    ordenes = frappe.db.sql(f"""SELECT taor.name, taor.table_description, taor.room_description, oei.item_code as item_code, oei.item_name as item_name, 
                             oei.qty FROM `tabTable Order` AS taor INNER JOIN
                             `tabOrder Entry Item` AS oei
                             on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent
                             AND taor.status != 'Invoiced' AND (oei.status != 'Attending' AND oei.status != 'Completed')
-                            ORDER BY taor.room_description, taor.table_description asc;""", as_dict=True)
+                            ORDER BY taor.name asc;""", as_dict=True)
 
     return ordenes
+
+@frappe.whitelist()
+def update_comanda_atendida(order_name):
+    try:
+        # Realiza una búsqueda para obtener todos los registros correspondientes en "Order Entry Item"
+        order_entry_items = frappe.get_all("Order Entry Item", filters={"parent": order_name})
+
+        if order_entry_items:
+            for item in order_entry_items:
+                order_entry_item = frappe.get_doc("Order Entry Item", item['name'])
+                # Actualiza el valor de la columna "status" a "Completed"
+                order_entry_item.status = "Completed"
+                # Guarda los cambios en la base de datos
+                order_entry_item.save()
+
+            frappe.db.commit()
+
+            return "Éxito: Las órdenes han sido marcadas como 'Atendidas'."
+
+        else:
+            return "Error: No se encontraron órdenes correspondientes."
+
+    except Exception as e:
+        frappe.log_error(f"Error al actualizar las órdenes: {str(e)}")
+        return "Error: No se pudieron actualizar las órdenes."
+
+
