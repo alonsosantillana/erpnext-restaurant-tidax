@@ -43,7 +43,7 @@ def get_ordenes_cocina_comandas():
     hoy = datetime.now()
     hoy = hoy.strftime('%Y-%m-%d')
     ordenes = frappe.db.sql(f"""SELECT taor.name, taor.table_description, taor.room_description, oei.item_code as item_code, oei.item_name as item_name, 
-                            oei.qty FROM `tabTable Order` AS taor INNER JOIN
+                            oei.qty, oei.notes FROM `tabTable Order` AS taor INNER JOIN
                             `tabOrder Entry Item` AS oei
                             on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent
                             AND taor.status != 'Invoiced' AND (oei.status != 'Attending' AND oei.status != 'Completed')

@@ -218,7 +218,8 @@ ProcessManage = class ProcessManage {
                         popupDocument.open();
                         popupDocument.write(`<html><head><title>Comandas</title>
                         <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
-                        popupDocument.write('<button id="refreshButtonCom">Actualizar Página</button>');
+                        popupDocument.write('<button id="refreshButtonCom">Sincronizar Comandas</button>');
+                        popupDocument.write('<span id="syncMessage" style="margin-left: 10px; color: green;"></span>'); // Nuevo elemento para mostrar el mensaje
                         popupDocument.write("<h2>Información de Comandas</h2>");
         
                         let compara="";
@@ -241,6 +242,9 @@ ProcessManage = class ProcessManage {
                             }
                             if ((orden.room_description+orden.table_description) === compara) {
                                 popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
+                                if(orden.notes){
+                                    popupDocument.write("N:" + orden.notes);
+                                }
                             }
                         })
                         // Agrega un evento al botón de actualización
@@ -248,6 +252,15 @@ ProcessManage = class ProcessManage {
                         refreshButton.addEventListener('click', () => {
                             // Llama a la función para cargar y mostrar nuevamente los datos
                             refreshData();
+
+                            // Muestra el mensaje "Comandas sincronizadas"
+                            const syncMessage = popupDocument.getElementById('syncMessage');
+                            syncMessage.innerText = 'Comandas sincronizadas';
+
+                            // Oculta el mensaje después de 5 segundos (ajusta el tiempo según tus necesidades)
+                            setTimeout(() => {
+                                syncMessage.innerText = '';
+                            }, 5000);
                         });
 
                         // Función para cargar y mostrar los datos
@@ -281,7 +294,7 @@ ProcessManage = class ProcessManage {
                                                 // Inicia una nueva cabecera
                                                 cabecera = `<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
-                                                <button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'
+                                                <button style='border-radius: 8px; padding: 8px 20px; width: 100%' class='comandaAtendido' 
                                                 data-order-name='${orden.name}'>${orden.name}</button>
                                                 <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description}</p>`;
                                                 detalles = ""; // Inicia una nueva sección de detalles
@@ -289,6 +302,9 @@ ProcessManage = class ProcessManage {
                                             }
 
                                             detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
+                                            if(orden.notes){
+                                                detalles += "N:" + orden.notes;
+                                            }
                                         });
 
                                         // Agrega el último conjunto de cabecera, detalles y pie
@@ -296,14 +312,15 @@ ProcessManage = class ProcessManage {
                                             tableData.innerHTML += cabecera + detalles + pie;
                                         }
 
-                                        // Agrega un evento al botón "Atendido" si es necesario
-                                        const atendidoButton = popupDocument.getElementById('comandaAtendido');
-                                        atendidoButton.addEventListener('click', () => {
-                                            // Obtiene los valores de los atributos de datos
-                                            const orderName = atendidoButton.dataset.orderName;
-                                            //alert(orderName);
-                                            saveComanda(orderName);
-                                        });
+                                        // Agrega eventos a los botones "Atendido"
+                                        const atendidoButtons = popupDocument.getElementsByClassName('comandaAtendido');
+                                        for (let i = 0; i < atendidoButtons.length; i++) {
+                                            atendidoButtons[i].addEventListener('click', (event) => {
+                                                // Obtiene los valores de los atributos de datos del botón clickeado
+                                                const orderName = event.target.dataset.orderName;
+                                                saveComanda(orderName);
+                                            });
+                                        }
 
                                         function saveComanda(orderName) {
                                             // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
