@@ -74,7 +74,8 @@ def update_comanda_atendida(order_name):
                 order_entry_item = frappe.get_doc("Order Entry Item", item['name'])
                 # Actualiza el valor de la columna "status" a "Completed"
                 order_entry_item.status = "Completed"
-                order_entry_item.ordered_finish = int(diferencia_en_minutos)
+                if(order_entry_item.ordered_finish == 0 and order_entry_item.status == "Sent"):
+                    order_entry_item.ordered_finish = int(diferencia_en_minutos)
                 # Guarda los cambios en la base de datos
                 order_entry_item.save()
 

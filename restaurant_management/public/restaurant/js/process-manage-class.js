@@ -337,7 +337,7 @@ ProcessManage = class ProcessManage {
                                             });
                                         }
                                     } else {
-                                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                                        //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
                                     }
                                 }
                             });
@@ -350,7 +350,7 @@ ProcessManage = class ProcessManage {
                         popupDocument.close();
                     } else {
                         // Maneja el caso en el que la ventana emergente fue bloqueada
-                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                        //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
                     }
                 }
             });
