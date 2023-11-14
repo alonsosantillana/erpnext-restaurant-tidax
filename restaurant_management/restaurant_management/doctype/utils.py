@@ -56,12 +56,25 @@ def update_comanda_atendida(order_name):
     try:
         # Realiza una búsqueda para obtener todos los registros correspondientes en "Order Entry Item"
         order_entry_items = frappe.get_all("Order Entry Item", filters={"parent": order_name})
+        order_table = frappe.get_all("Table Order", filters={"name": order_name}, fields=["creation"])
+        fecha_ingresada = order_table[0].get("creation")
+
+        # Obtén la fecha y hora actual
+        fecha_actual = datetime.now()
+
+        # Convierte la fecha ingresada a un objeto datetime si aún no lo es
+        if not isinstance(fecha_ingresada, datetime):
+            fecha_ingresada = datetime.strptime(fecha_ingresada, "%Y-%m-%d %H:%M:%S")
+
+        # Calcula la diferencia de tiempo en minutos
+        diferencia_en_minutos = (fecha_actual - fecha_ingresada).total_seconds() / 60.0
 
         if order_entry_items:
             for item in order_entry_items:
                 order_entry_item = frappe.get_doc("Order Entry Item", item['name'])
                 # Actualiza el valor de la columna "status" a "Completed"
                 order_entry_item.status = "Completed"
+                order_entry_item.ordered_finish = int(diferencia_en_minutos)
                 # Guarda los cambios en la base de datos
                 order_entry_item.save()
 

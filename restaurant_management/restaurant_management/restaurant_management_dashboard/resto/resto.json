@@ -20,6 +20,10 @@
   {
    "chart": "Resto Ventas Tendencias",
    "width": "Half"
+  },
+  {
+   "chart": "Resto Tiempo Grupos Platos",
+   "width": "Full"
   }
  ],
  "creation": "2023-09-22 17:44:36.817895",
@@ -29,7 +33,7 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2023-09-26 14:55:49.998579",
+ "modified": "2023-11-14 01:07:36.556042",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Resto",
