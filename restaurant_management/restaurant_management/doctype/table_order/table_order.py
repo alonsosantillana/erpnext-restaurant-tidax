@@ -128,7 +128,7 @@ class TableOrder(Document):
         if status is not None:
             RestaurantManage.production_center_notify(status)
 
-    def make_invoice(self, mode_of_payment, customer=None, dinners=0):
+    def make_invoice(self, mode_of_payment, customer=None, dinners=0, electronic_invoice=0):
         # TIDAX: obteniendo el perfil del usuario para ver si puede realizar el comprobante
         profile = frappe.db.get_value("User", frappe.session.user, "role_profile_name")
         if profile == "Resto_Mozos" or profile == "Resto_Cocinas":
@@ -176,60 +176,114 @@ class TableOrder(Document):
             total_dicount_lines += (it.discount_amount * it.qty)
             total_free += (it.unit_value * it.qty)
 
-        if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
-            serie = obtener_res_set("serie_boleta")
-            # invoice.naming_series = "BV-BP01-.######"
-            invoice.naming_series = serie[0]["value"]
-            invoice.codigo_comprobante = "03"
-            invoice.tipo_comprobante = "Boleta de Venta"
-            invoice.codigo_tipo_documento = "1"
-            invoice.tipo_documento_identidad = "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
-            invoice.codigo_transaccion_sunat = "1"
-            invoice.tipo_transaccion_sunat = "VENTA INTERNA"
-            invoice.condicion_pago = "CONTADO"
-            invoice.tax_id = self.customer_tax_id
-            invoice.total_amount_discount_lines = total_dicount_lines
-            # Descuento globales
-            if(self.discount > 0 and self.discount < self.amount):
-                invoice.discount_amount = self.discount
-            if(self.discount_global_percent>0 and self.discount_global_percent<100):
-                invoice.additional_discount_percentage = self.discount_global_percent
-            # Casuistica descuento lineal y descuento global
-            if(total_free>0):
-                invoice.total_amount_free = total_free
-            elif(self.discount_global_percent>=100 or self.discount >= self.amount):
-                invoice.total_amount_free = self.amount
-                invoice.is_free_global = 1
-            invoice.table_description = self.table_description
-            invoice.owner = "cajero@resto.pe"
-        # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+        if(dinners==1):
+            if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+                serie = obtener_res_set("serie_boleta_m")
+                # invoice.naming_series = "BV-BP01-.######"
+                invoice.naming_series = serie[0]["value"]
+                invoice.codigo_comprobante = "03"
+                invoice.tipo_comprobante = "Boleta de Venta"
+                invoice.codigo_tipo_documento = "1"
+                invoice.tipo_documento_identidad = "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
+                invoice.codigo_transaccion_sunat = "1"
+                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+                invoice.condicion_pago = "CONTADO"
+                invoice.tax_id = self.customer_tax_id
+                invoice.total_amount_discount_lines = total_dicount_lines
+                # Descuento globales
+                if(self.discount > 0 and self.discount < self.amount):
+                    invoice.discount_amount = self.discount
+                if(self.discount_global_percent>0 and self.discount_global_percent<100):
+                    invoice.additional_discount_percentage = self.discount_global_percent
+                # Casuistica descuento lineal y descuento global
+                if(total_free>0):
+                    invoice.total_amount_free = total_free
+                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
+                    invoice.total_amount_free = self.amount
+                    invoice.is_free_global = 1
+                invoice.table_description = self.table_description
+                invoice.owner = "cajero@resto.pe"
+            # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+            else:
+                serie = obtener_res_set("serie_factura_m")
+                # invoice.naming_series = "FV-FP01-.######"
+                invoice.naming_series = serie[0]["value"]
+                invoice.codigo_comprobante = "01"
+                invoice.tipo_comprobante = "Factura"
+                invoice.codigo_tipo_documento = "6"
+                invoice.tipo_documento_identidad = "REGISTRO ÙNICO DE CONTRIBUYENTES"
+                invoice.codigo_transaccion_sunat = "1"
+                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+                invoice.condicion_pago = "CONTADO"
+                invoice.tax_id = self.customer_tax_id
+                invoice.total_amount_discount_lines = total_dicount_lines
+                # Descuento globales
+                if(self.discount > 0 and self.discount < self.amount):
+                    invoice.discount_amount = self.discount
+                if(self.discount_global_percent>0 and self.discount_global_percent<100):
+                    invoice.additional_discount_percentage = self.discount_global_percent
+                # Casuistica descuento lineal y descuento global
+                if(total_free>0):
+                    invoice.total_amount_free = total_free
+                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
+                    invoice.total_amount_free = self.amount
+                    invoice.is_free_global = 1
+                invoice.table_description = self.table_description
+                invoice.owner = "cajero@resto.pe"
         else:
-            serie = obtener_res_set("serie_factura")
-            # invoice.naming_series = "FV-FP01-.######"
-            invoice.naming_series = serie[0]["value"]
-            invoice.codigo_comprobante = "01"
-            invoice.tipo_comprobante = "Factura"
-            invoice.codigo_tipo_documento = "6"
-            invoice.tipo_documento_identidad = "REGISTRO ÙNICO DE CONTRIBUYENTES"
-            invoice.codigo_transaccion_sunat = "1"
-            invoice.tipo_transaccion_sunat = "VENTA INTERNA"
-            invoice.condicion_pago = "CONTADO"
-            invoice.tax_id = self.customer_tax_id
-            invoice.total_amount_discount_lines = total_dicount_lines
-            # Descuento globales
-            if(self.discount > 0 and self.discount < self.amount):
-                invoice.discount_amount = self.discount
-            if(self.discount_global_percent>0 and self.discount_global_percent<100):
-                invoice.additional_discount_percentage = self.discount_global_percent
-            # Casuistica descuento lineal y descuento global
-            if(total_free>0):
-                invoice.total_amount_free = total_free
-            elif(self.discount_global_percent>=100 or self.discount >= self.amount):
-                invoice.total_amount_free = self.amount
-                invoice.is_free_global = 1
-            invoice.table_description = self.table_description
-            invoice.owner = "cajero@resto.pe"
-
+            if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+                serie = obtener_res_set("serie_boleta")
+                # invoice.naming_series = "BV-BP01-.######"
+                invoice.naming_series = serie[0]["value"]
+                invoice.codigo_comprobante = "03"
+                invoice.tipo_comprobante = "Boleta de Venta"
+                invoice.codigo_tipo_documento = "1"
+                invoice.tipo_documento_identidad = "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
+                invoice.codigo_transaccion_sunat = "1"
+                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+                invoice.condicion_pago = "CONTADO"
+                invoice.tax_id = self.customer_tax_id
+                invoice.total_amount_discount_lines = total_dicount_lines
+                # Descuento globales
+                if(self.discount > 0 and self.discount < self.amount):
+                    invoice.discount_amount = self.discount
+                if(self.discount_global_percent>0 and self.discount_global_percent<100):
+                    invoice.additional_discount_percentage = self.discount_global_percent
+                # Casuistica descuento lineal y descuento global
+                if(total_free>0):
+                    invoice.total_amount_free = total_free
+                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
+                    invoice.total_amount_free = self.amount
+                    invoice.is_free_global = 1
+                invoice.table_description = self.table_description
+                invoice.owner = "cajero@resto.pe"
+            # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
+            else:
+                serie = obtener_res_set("serie_factura")
+                # invoice.naming_series = "FV-FP01-.######"
+                invoice.naming_series = serie[0]["value"]
+                invoice.codigo_comprobante = "01"
+                invoice.tipo_comprobante = "Factura"
+                invoice.codigo_tipo_documento = "6"
+                invoice.tipo_documento_identidad = "REGISTRO ÙNICO DE CONTRIBUYENTES"
+                invoice.codigo_transaccion_sunat = "1"
+                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+                invoice.condicion_pago = "CONTADO"
+                invoice.tax_id = self.customer_tax_id
+                invoice.total_amount_discount_lines = total_dicount_lines
+                # Descuento globales
+                if(self.discount > 0 and self.discount < self.amount):
+                    invoice.discount_amount = self.discount
+                if(self.discount_global_percent>0 and self.discount_global_percent<100):
+                    invoice.additional_discount_percentage = self.discount_global_percent
+                # Casuistica descuento lineal y descuento global
+                if(total_free>0):
+                    invoice.total_amount_free = total_free
+                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
+                    invoice.total_amount_free = self.amount
+                    invoice.is_free_global = 1
+                invoice.table_description = self.table_description
+                invoice.owner = "cajero@resto.pe"
         invoice.validate()
         invoice.save()
         invoice.submit()

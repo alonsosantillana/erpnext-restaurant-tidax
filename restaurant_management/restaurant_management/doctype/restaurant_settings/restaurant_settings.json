@@ -23,6 +23,10 @@
   "serie_factura",
   "col_brk_001",
   "serie_boleta",
+  "col_brk_002",
+  "serie_factura_m",
+  "col_brk_003",
+  "serie_boleta_m",
   "double_click_events_section",
   "double_click_events_info",
   "column_break_10",
@@ -172,7 +176,7 @@
   {
    "fieldname": "serie_factura",
    "fieldtype": "Data",
-   "label": "Serie Factura"
+   "label": "Serie Factura Electronica"
   },
   {
    "fieldname": "col_brk_001",
@@ -181,13 +185,31 @@
   {
    "fieldname": "serie_boleta",
    "fieldtype": "Data",
-   "label": "Serie Boleta"
+   "label": "Serie Boleta Electronica"
+  },
+  {
+   "fieldname": "col_brk_002",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "serie_factura_m",
+   "fieldtype": "Data",
+   "label": "Serie Factura Manual"
+  },
+  {
+   "fieldname": "col_brk_003",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "serie_boleta_m",
+   "fieldtype": "Data",
+   "label": "Serie Boleta Manual"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-09-25 16:03:49.050455",
+ "modified": "2023-11-16 09:03:18.089554",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Settings",

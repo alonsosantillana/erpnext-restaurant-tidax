@@ -219,6 +219,8 @@ class PayForm extends DeskForm {
         const order_manage = this.order.order_manage;
         RM.working("Generating Invoice");
         this.order.data.dinners = this.dinners.val();
+        frappe.msgprint(this.order.data.electronic_invoice);
+        //frappe.msgprint(this.electronic_invoice.val());
         frappeHelper.api.call({
             model: "Table Order",
             name: this.order.data.name,
@@ -226,7 +228,8 @@ class PayForm extends DeskForm {
             args: {
                 mode_of_payment: this.payments_values,
                 customer: this.get_value("customer"),
-                dinners: this.dinners.float_val
+                dinners: this.dinners.float_val,
+                electronic_invoice: this.order.data.electronic_invoice
             },
             always: (r) => {
                 RM.ready();
