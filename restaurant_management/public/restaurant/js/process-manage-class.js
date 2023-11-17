@@ -241,7 +241,8 @@ ProcessManage = class ProcessManage {
                                 compara = orden.room_description+orden.table_description;
                             }
                             if ((orden.room_description+orden.table_description) === compara) {
-                                popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
+                                // popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
+                                popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+ orden.item_name +"</p>");
                                 if(orden.notes){
                                     popupDocument.write("N:" + orden.notes);
                                 }
@@ -301,7 +302,8 @@ ProcessManage = class ProcessManage {
                                                 compara = orden.room_description + orden.table_description;
                                             }
 
-                                            detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
+                                            // detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
+                                            detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_name}</p>`;
                                             if(orden.notes){
                                                 detalles += "N:" + orden.notes;
                                             }
