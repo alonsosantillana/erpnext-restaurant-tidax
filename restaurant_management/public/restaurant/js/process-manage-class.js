@@ -258,10 +258,10 @@ ProcessManage = class ProcessManage {
                             const syncMessage = popupDocument.getElementById('syncMessage');
                             syncMessage.innerText = 'Comandas sincronizadas';
 
-                            // Oculta el mensaje después de 5 segundos (ajusta el tiempo según tus necesidades)
+                            // Oculta el mensaje después de 3 segundos (ajusta el tiempo según tus necesidades)
                             setTimeout(() => {
                                 syncMessage.innerText = '';
-                            }, 5000);
+                            }, 3000);
                         });
 
                         // Función para cargar y mostrar los datos
@@ -271,7 +271,7 @@ ProcessManage = class ProcessManage {
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
                                 callback: (r) => {
                                     const ordenes = r.message;
-                                    if (popupWindow && !popupWindow.closed) {
+                                    //if (popupWindow && !popupWindow.closed) {
                                         const popupDocument = popupWindow.document;
                                         let compara = "";
                                         let cabecera = ""; // Almacena la cabecera actual
@@ -338,9 +338,9 @@ ProcessManage = class ProcessManage {
                                                 }
                                             });
                                         }
-                                    } else {
+                                    //} else {
                                         //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
-                                    }
+                                    //}
                                 }
                             });
                         }
