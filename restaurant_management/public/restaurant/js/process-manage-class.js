@@ -341,10 +341,7 @@ ProcessManage = class ProcessManage {
                                     //} else {
                                         //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
                                     //}
-                                        // Cierra la ventana emergente después de 5 minutos
-                                        setTimeout(() => {
-                                            popupWindow.close();
-                                        }, 5 * 60 * 1000); // 5 minutos en milisegundos
+
                                 }
                             });
                         }
@@ -360,6 +357,10 @@ ProcessManage = class ProcessManage {
                     }
                 }
             });
+            // Cierra la ventana emergente después de 5 minutos
+            setTimeout(() => {
+                popupWindow.close();
+            }, 1 * 60 * 1000); // 5 minutos en milisegundos
         });
     }
 
