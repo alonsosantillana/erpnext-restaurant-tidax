@@ -295,7 +295,7 @@ ProcessManage = class ProcessManage {
                                                 // Inicia una nueva cabecera
                                                 cabecera = `<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
-                                                <button style='border-radius: 8px; padding: 8px 20px; width: 100%' class='comandaAtendido' 
+                                                <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
                                                 data-order-name='${orden.name}'>${orden.name}</button>
                                                 <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description}</p>`;
                                                 detalles = ""; // Inicia una nueva sección de detalles
@@ -347,7 +347,7 @@ ProcessManage = class ProcessManage {
                         }
                         
                         // Llama a la función de actualización automáticamente cada minuto
-                        //setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
+                        setInterval(refreshData, 25000); // 60000 milisegundos = 1 minuto
 
                         popupDocument.write("</div></body></html>");
                         popupDocument.close();
@@ -358,9 +358,9 @@ ProcessManage = class ProcessManage {
                 }
             });
             // Cierra la ventana emergente después de 5 minutos
-            setTimeout(() => {
-                popupWindow.close();
-            }, 1 * 60 * 1000); // 5 minutos en milisegundos
+            // setTimeout(() => {
+            //     popupWindow.close();
+            // }, 1 * 60 * 1000); // 5 minutos en milisegundos
         });
     }
 
