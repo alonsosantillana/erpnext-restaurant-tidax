@@ -347,7 +347,7 @@ ProcessManage = class ProcessManage {
                         }
                         
                         // Llama a la función de actualización automáticamente cada minuto
-                        setInterval(refreshData, 10000); // 60000 milisegundos = 1 minuto
+                        setInterval(refreshData, 18000); // 60000 milisegundos = 1 minuto
 
                         popupDocument.write("</div></body></html>");
                         popupDocument.close();
@@ -358,9 +358,9 @@ ProcessManage = class ProcessManage {
                 }
             });
             // Cierra la ventana emergente después de 5 minutos
-            // setTimeout(() => {
-            //     popupWindow.close();
-            // }, 1 * 60 * 1000); // 5 minutos en milisegundos
+            setTimeout(() => {
+                popupWindow.close();
+            }, 5 * 60 * 1000); // 5 minutos en milisegundos
         });
     }
 
