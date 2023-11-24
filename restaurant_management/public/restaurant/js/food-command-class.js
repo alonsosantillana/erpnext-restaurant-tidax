@@ -40,6 +40,9 @@ class FoodCommand {
 
             this.description = frappe.jshtml({
                 tag: "span",
+                properties: {
+                    style: "text-align: text-top;"
+                },
                 content: `${this.data.table_description} | ${this.data.short_name}`,
             });
 
@@ -138,11 +141,11 @@ class FoodCommand {
     get html_detail() {
         return `
 		<div class="row food-command-detail">
-			<div style="width: 30%; display: inline-block">
-				<h6 style="width: 100%; font-size: 25px">${this.data.qty}</h6>
+			<div style="width: 30%; display: inline-block;">
+				<h6 style="width: 100%; font-size: 25px;">${this.data.qty}</h6>
 			</div>
-			<div style="width: 60%; display: inline-block">
-				<h6 style="width: 90%"><b>${this.data.item_name}</b></h6>
+			<div style="width: 50%; display: inline-block">
+				<h6 style="width: 100%"><b>${this.data.item_name}</b></h6>
 			</div>
 		</div>
 		`
@@ -171,8 +174,7 @@ class FoodCommand {
         this.detail = frappe.jshtml({
             tag: "div",
             properties: {
-                class: "row food-command-detail",
-                style: `background-color: ${this.data.process_status_data.color};`
+                class: "row food-command-detail"
             },
             content: this.html_detail
         });

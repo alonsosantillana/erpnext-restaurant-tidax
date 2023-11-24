@@ -25,7 +25,8 @@ article {
 .food-command-container .food-command-title {
     height: 30px;
     /* height: 40px; */
-    padding: 10px;
+    padding: 2px;
+    /* padding: 10px; */
     background-color: var(--fill_color);
 }
 
@@ -33,7 +34,7 @@ article {
     height: 50px;
     /* height: 70px; */
     display: block;
-    margin-top: 10px
+    margin-top: 10px;
 }
 
 .food-command-container .product-notes {
