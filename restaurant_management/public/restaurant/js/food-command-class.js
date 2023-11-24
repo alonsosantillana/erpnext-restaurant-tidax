@@ -117,7 +117,7 @@ class FoodCommand {
         });
     }
 
-    get html_detail() {
+    get html_detail_oficial() {
         return `
 		<div class="row food-command-detail">
 			<div style="width: 30%; display: inline-block">
@@ -130,6 +130,19 @@ class FoodCommand {
 			<div style="width: 30%; display: inline-block">
 				<h5 style="width: 100%">Total</h5>
 				<h6 style="width: 100%">${RM.format_currency(this.data.amount)}</h6>
+			</div>
+		</div>
+		`
+    }
+
+    get html_detail() {
+        return `
+		<div class="row food-command-detail">
+			<div style="width: 30%; display: inline-block">
+				<h6 style="width: 100%; font-size: 25px">${this.data.qty}</h6>
+			</div>
+			<div style="width: 60%; display: inline-block">
+				<h6 style="width: 90%"><b>${this.data.item_name}</b></h6>
 			</div>
 		</div>
 		`
@@ -158,7 +171,8 @@ class FoodCommand {
         this.detail = frappe.jshtml({
             tag: "div",
             properties: {
-                class: "row food-command-detail"
+                class: "row food-command-detail",
+                style: `background-color: ${this.data.process_status_data.color};`
             },
             content: this.html_detail
         });
@@ -178,6 +192,28 @@ class FoodCommand {
             text: ""
         });
 
+        // return `			
+		// <div class="food-command">
+        //     <div style= "display: none;">${$("#sound-submit").trigger('play')}</div>
+		// 	<div class="food-command-title">
+        //     ${this.title.html()}
+		// 	</div>
+		// 	${this.detail.html()}
+		// 	<div class="row" style="height: auto">
+		// 		<h3 style="width: 100%">${this.data.item_name}</h3>
+		// 	</div>
+		// 	<div class="row" style="height: auto">
+		// 	</div>
+		// 	${this.notes.html()}
+		// 	<div class="food-command-footer">
+		// 		<div style="display: table-cell">
+		// 			${this.status_label.html()}
+		// 		</div>
+		// 		<div style="display: table-cell">
+		// 			${this.action_button.html()}
+		// 		</div>
+		// 	</div>
+		// </div>`
         return `			
 		<div class="food-command">
             <div style= "display: none;">${$("#sound-submit").trigger('play')}</div>
@@ -185,11 +221,6 @@ class FoodCommand {
             ${this.title.html()}
 			</div>
 			${this.detail.html()}
-			<div class="row" style="height: auto">
-				<h3 style="width: 100%">${this.data.item_name}</h3>
-			</div>
-			<div class="row" style="height: auto">
-			</div>
 			${this.notes.html()}
 			<div class="food-command-footer">
 				<div style="display: table-cell">
