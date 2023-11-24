@@ -6,9 +6,10 @@ class FoodCommand {
         this.render();
         RM.object(this.identifier + this.process_manage.identifier, this);
     }
-
+    
     render() {
         if (!this.rendered) {
+            
             this.action_button = frappe.jshtml({
                 tag: "h5",
                 properties: {
@@ -50,7 +51,7 @@ class FoodCommand {
                 tag: "h5",
                 content: `${this.description.html()} ${this._time_elapsed.html()}`,
             });
-
+            
             this.item = frappe.jshtml({
                 tag: "article",
                 properties: {
@@ -68,6 +69,21 @@ class FoodCommand {
 
             this.time_elapsed;
         }
+    }
+
+    // TIDAX: COLOR ALEATORIO
+    getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
+    // Método para actualizar lastShortName
+    updateLastShortName() {
+        this.lastShortName = this.data.short_name;
     }
 
     update_title() {
@@ -140,15 +156,14 @@ class FoodCommand {
 
     get html_detail() {
         return `
-		<div class="row food-command-detail">
-			<div style="width: 30%; display: inline-block;">
-				<h6 style="width: 100%; font-size: 25px;">${this.data.qty}</h6>
-			</div>
-			<div style="width: 50%; display: inline-block">
-				<h6 style="width: 100%"><b>${this.data.item_name}</b></h6>
-			</div>
-		</div>
-		`
+        <div class="row food-command-detail">
+            <div style="width: 30%; display: inline-block;">
+                <h6 style="width: 100%; font-size: 30px;">${this.data.qty}</h6>
+            </div>
+            <div style="width: 50%; display: inline-block">
+                <h6 style="width: 100%"><b>${this.data.item_name}</b></h6>
+            </div>
+        </div>`;
     }
 
     get time_elapsed() {
@@ -169,7 +184,6 @@ class FoodCommand {
         }
     }
 
-
     get template() {
         this.detail = frappe.jshtml({
             tag: "div",
@@ -178,7 +192,7 @@ class FoodCommand {
             },
             content: this.html_detail
         });
-
+        
         this.notes = frappe.jshtml({
             tag: "div",
             properties: { class: "row product-notes", style: "display: none;" },

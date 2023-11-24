@@ -7,9 +7,9 @@ article {
     vertical-align: top;
     display: inline-block;
     margin: var(--margin-grid) !important;
-    width: 235px;
+    width: 233px;
     /* width: 260px; */
-    height: 175px;
+    height: 170px;
     /* height: 250px; */
     border: var(--default_line);
     border-radius: 3px;
@@ -31,7 +31,7 @@ article {
 }
 
 .food-command-container .food-command-detail {
-    height: 50px;
+    height: 45px;
     /* height: 70px; */
     display: block;
     margin-top: 10px;
