@@ -7,9 +7,9 @@ article {
     vertical-align: top;
     display: inline-block;
     margin: var(--margin-grid) !important;
-    width: 233px;
+    width: 230px;
     /* width: 260px; */
-    height: 170px;
+    height: 144px;
     /* height: 250px; */
     border: var(--default_line);
     border-radius: 3px;
@@ -31,7 +31,7 @@ article {
 }
 
 .food-command-container .food-command-detail {
-    height: 45px;
+    height: 40px;
     /* height: 70px; */
     display: block;
     margin-top: 10px;
@@ -45,14 +45,16 @@ article {
 .food-command-container .food-command-footer{
     position: absolute;
     bottom: -1px;
-    height: 40px;
+    height: 32px;
+    /* height: 40px; */
     width: 100%;
     display: table;
 }
 
 .food-command-container .btn-food-command {
     display: block !important;
-    height: 40px;
+    height: 32px;
+    /* height: 40px; */
     margin: 0;
 }
 
@@ -63,7 +65,7 @@ article {
 }
 
 .food-command-container .status-label-icon {
-    font-size: 20px;
+    font-size: 15px;
 }
 
 .food-command-container .product-notes.empty {

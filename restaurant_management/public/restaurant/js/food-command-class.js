@@ -157,11 +157,11 @@ class FoodCommand {
     get html_detail() {
         return `
         <div class="row food-command-detail">
-            <div style="width: 30%; display: inline-block;">
-                <h6 style="width: 100%; font-size: 30px;">${this.data.qty}</h6>
+            <div style="width: 20%; display: inline-block;">
+                <h6 style="width: 100%; font-size: 25px;">${this.data.qty}</h6>
             </div>
-            <div style="width: 50%; display: inline-block">
-                <h6 style="width: 100%"><b>${this.data.item_name}</b></h6>
+            <div style="width: 60%; display: inline-block;">
+                <h6 style="width: 100%;"><b>${this.data.item_name}</b></h6>
             </div>
         </div>`;
     }
@@ -239,7 +239,7 @@ class FoodCommand {
 			${this.detail.html()}
 			${this.notes.html()}
 			<div class="food-command-footer">
-				<div style="display: table-cell">
+				<div style="display: table-cell;">
 					${this.status_label.html()}
 				</div>
 				<div style="display: table-cell">
