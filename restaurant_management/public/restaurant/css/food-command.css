@@ -9,7 +9,7 @@ article {
     margin: var(--margin-grid) !important;
     width: 205px;
     /* width: 260px; */
-    height: 123px;
+    height: 120px;
     /* height: 250px; */
     border: var(--default_line);
     border-radius: 3px;
@@ -30,16 +30,23 @@ article {
     background-color: var(--fill_color);
 }
 
+.food-command-container .food-command-notes {
+    height: 30px;
+    padding: 0px;
+}
+
 .food-command-container .food-command-detail {
     height: 35px;
     /* height: 70px; */
     display: block;
-    margin-top: 5px;
+    margin-top: 2px;
+    padding: 1px;
     /* margin-top: 10px; */
 }
 
 .food-command-container .product-notes {
-    background-color: var(--bg-red);
+    background-color: var(--bg-yellow);
+    opacity: 1 !important;
     padding: 2px;
     /* padding: 5px; */
 }

@@ -73,12 +73,13 @@ ProcessManage = class ProcessManage {
                         popupDocument.write("<html><head><title>Platos Consolidados</title></head><body>");
                         popupDocument.write("<h2>Consolidacion de Platos:</h2>");
                         popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
-                        popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
+                        popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
+                        // popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
                         orderItems.forEach((item) => {
                             cant = cant + item.qty;
                             popupDocument.write("<tr>");
                             popupDocument.write("<td>[" + item.qty + "]</td>");
-                            popupDocument.write("<td>" + item.item_code + "</td>");
+                            // popupDocument.write("<td>" + item.item_code + "</td>");
                             popupDocument.write("<td>" + item.item_name + "</td>");
                             popupDocument.write("</tr>");
                         });
@@ -103,11 +104,13 @@ ProcessManage = class ProcessManage {
                                     // Encuentra la tabla y actualiza su contenido
                                     const tableData = popupDocument.getElementById('tableData');
                                     const totalqty = popupDocument.getElementById('totalqty');
-                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
+                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Nombre</th></tr>";
+                                    // tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
 
                                     orderItems.forEach((item) => {
                                         cant = cant + item.qty;
-                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
+                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
+                                        // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
                                     });
                                     totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
                                 }

@@ -237,7 +237,8 @@ class FoodCommand {
             ${this.title.html()}
 			</div>
 			${this.detail.html()}
-			${this.notes.html()}
+            <div class="food-command-notes">
+			${this.notes.html()}</div>
 			<div class="food-command-footer">
 				<div style="display: table-cell;">
 					${this.status_label.html()}
