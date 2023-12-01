@@ -14,7 +14,7 @@ class FoodCommand {
                 tag: "h5",
                 properties: {
                     class: `btn btn-default btn-flat btn-food-command`,
-                    style: 'border-radius: 0 !important'
+                    style: 'border-radius: 0 !important; font-size: 10px;'
                 },
                 content: '{{text}}<i class="fa fa-chevron-right pull-right" style="font-size: 16px; padding-top: 2px;"></i>',
                 text: this.data.process_status_data.next_action_message,
@@ -26,7 +26,7 @@ class FoodCommand {
                 tag: "h5",
                 properties: {
                     class: "btn btn-flat btn-food-command status-label",
-                    style: `background-color: ${this.data.process_status_data.color};`
+                    style: `background-color: ${this.data.process_status_data.color}; font-size: 10px;`
                 },
                 content: `<i class="${this.data.process_status_data.icon} pull-left status-label-icon"></i> ${this.data.process_status_data.status_message}`,
             });
@@ -34,7 +34,7 @@ class FoodCommand {
             this._time_elapsed = frappe.jshtml({
                 tag: "strong",
                 properties: {
-                    style: "font-size: 25px; left: 100%; position: sticky;"
+                    style: "font-size: 20px; left: 100%; position: sticky;"
                 },
                 content: ''
             });
@@ -157,11 +157,11 @@ class FoodCommand {
     get html_detail() {
         return `
         <div class="row food-command-detail">
-            <div style="width: 20%; display: inline-block;">
-                <h6 style="width: 100%; font-size: 25px;">${this.data.qty}</h6>
+            <div style="width: 10%; display: inline-block;">
+                <h6 style="width: 100%; font-size: 20px;">${this.data.qty}</h6>
             </div>
-            <div style="width: 60%; display: inline-block;">
-                <h6 style="width: 100%;"><b>${this.data.item_name}</b></h6>
+            <div style="width: 70%; display: inline-block;">
+                <h6 style="width: 100%;  font-size: 10px;"><b>${this.data.item_name}</b></h6>
             </div>
         </div>`;
     }
@@ -196,7 +196,7 @@ class FoodCommand {
         this.notes = frappe.jshtml({
             tag: "div",
             properties: { class: "row product-notes", style: "display: none;" },
-            content: '<h6 style="width: 100%;">{{text}}</h6>',
+            content: '<h6 style="width: 100%; font-size: 8px;">{{text}}</h6>',
             text: ""
         });
         // TIDAX
