@@ -7,9 +7,9 @@ article {
     vertical-align: top;
     display: inline-block;
     margin: var(--margin-grid) !important;
-    width: 205px;
+    width: 180px;
     /* width: 260px; */
-    height: 120px;
+    height: 104px;
     /* height: 250px; */
     border: var(--default_line);
     border-radius: 3px;
@@ -23,24 +23,24 @@ article {
 }
 
 .food-command-container .food-command-title {
-    height: 30px;
+    height: 20px;
     /* height: 40px; */
     padding: 2px;
     /* padding: 10px; */
     background-color: var(--fill_color);
 }
 
-.food-command-container .food-command-notes {
-    height: 30px;
+/* .food-command-container .food-command-notes {
+    height: 20px;
     padding: 0px;
-}
+} */
 
 .food-command-container .food-command-detail {
-    height: 35px;
+    height: 30px;
     /* height: 70px; */
     display: block;
-    margin-top: 2px;
-    padding: 1px;
+    margin-top: 0px;
+    padding: 2px;
     /* margin-top: 10px; */
 }
 
@@ -49,6 +49,7 @@ article {
     opacity: 1 !important;
     padding: 2px;
     /* padding: 5px; */
+    height: 20px;
 }
 
 .food-command-container .food-command-footer{

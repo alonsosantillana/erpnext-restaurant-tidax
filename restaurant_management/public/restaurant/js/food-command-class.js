@@ -26,15 +26,15 @@ class FoodCommand {
                 tag: "h5",
                 properties: {
                     class: "btn btn-flat btn-food-command status-label",
-                    style: `background-color: ${this.data.process_status_data.color}; font-size: 10px;`
+                    style: `background-color: ${this.data.process_status_data.color}; font-size: 8px;`
                 },
-                content: `<i class="${this.data.process_status_data.icon} pull-left status-label-icon"></i> ${this.data.process_status_data.status_message}`,
+                content: `<i class="${this.data.process_status_data.icon} pull-left status-label-icon" style="font-size: 9px;"></i> ${this.data.process_status_data.status_message}`,
             });
 
             this._time_elapsed = frappe.jshtml({
                 tag: "strong",
                 properties: {
-                    style: "font-size: 20px; left: 100%; position: sticky;"
+                    style: "font-size: 14px; left: 100%; position: sticky;"
                 },
                 content: ''
             });
@@ -42,7 +42,7 @@ class FoodCommand {
             this.description = frappe.jshtml({
                 tag: "span",
                 properties: {
-                    style: "text-align: text-top;"
+                    style: "text-align: text-top; font-size: 11px;"
                 },
                 content: `${this.data.table_description} | ${this.data.short_name}`,
             });
@@ -99,7 +99,7 @@ class FoodCommand {
         this.show_notes();
 
         this.status_label.val(
-            `<i class="${psd.icon} pull-left" style="font-size: 22px"></i> ${psd.status_message}`
+            `<i class="${psd.icon} pull-left" style="font-size: 16px"></i> ${psd.status_message}`
         ).css([
             { prop: "background-color", value: psd.color }
         ]);
@@ -158,10 +158,10 @@ class FoodCommand {
         return `
         <div class="row food-command-detail">
             <div style="width: 10%; display: inline-block;">
-                <h6 style="width: 100%; font-size: 20px;">${this.data.qty}</h6>
+                <h6 style="width: 100%; font-size: 18px;">${this.data.qty}</h6>
             </div>
             <div style="width: 70%; display: inline-block;">
-                <h6 style="width: 100%;  font-size: 10px;"><b>${this.data.item_name}</b></h6>
+                <h6 style="width: 100%;  font-size: 9px;"><b>${this.data.item_name}</b></h6>
             </div>
         </div>`;
     }
@@ -196,7 +196,7 @@ class FoodCommand {
         this.notes = frappe.jshtml({
             tag: "div",
             properties: { class: "row product-notes", style: "display: none;" },
-            content: '<h6 style="width: 100%; font-size: 8px;">{{text}}</h6>',
+            content: '<h6 style="width: 93%; font-size: 8px;"><center>{{text}}</center></h6>',
             text: ""
         });
         // TIDAX
@@ -237,7 +237,7 @@ class FoodCommand {
             ${this.title.html()}
 			</div>
 			${this.detail.html()}
-            <div class="food-command-notes">
+            <div>
 			${this.notes.html()}</div>
 			<div class="food-command-footer">
 				<div style="display: table-cell;">
