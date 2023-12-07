@@ -14,7 +14,7 @@ class FoodCommand {
                 tag: "h5",
                 properties: {
                     class: `btn btn-default btn-flat btn-food-command`,
-                    style: 'border-radius: 0 !important; font-size: 10px;'
+                    style: 'border-radius: 0 !important; font-size: 8px;'
                 },
                 content: '{{text}}<i class="fa fa-chevron-right pull-right" style="font-size: 16px; padding-top: 2px;"></i>',
                 text: this.data.process_status_data.next_action_message,
@@ -237,13 +237,12 @@ class FoodCommand {
             ${this.title.html()}
 			</div>
 			${this.detail.html()}
-            <div>
-			${this.notes.html()}</div>
+			${this.notes.html()}
 			<div class="food-command-footer">
 				<div style="display: table-cell;">
 					${this.status_label.html()}
 				</div>
-				<div style="display: table-cell">
+				<div style="display: table-cell;">
 					${this.action_button.html()}
 				</div>
 			</div>

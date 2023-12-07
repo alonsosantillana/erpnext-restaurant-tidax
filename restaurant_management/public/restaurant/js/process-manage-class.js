@@ -52,6 +52,7 @@ ProcessManage = class ProcessManage {
         );
         this.agrupacion_platos();
         this.agrupacion_comandas();
+
         this.agrupacion_platos_atendidos();        
     }
     // TIDAX: Agrupa los platos pendientes y los muestra en una nueva ventana
@@ -151,12 +152,12 @@ ProcessManage = class ProcessManage {
                         popupDocument.write("<html><head><title>Platos Atendidos</title></head><body>");
                         popupDocument.write(`<h2>Platos Atendidos(${fecha.toLocaleDateString()}):</h2>`);
                         popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
-                        popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
+                        popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
                         orderItems.forEach((item) => {
                             cant = cant + item.qty;
                             popupDocument.write("<tr>");
                             popupDocument.write("<td>[" + item.qty + "]</td>");
-                            popupDocument.write("<td>" + item.item_code + "</td>");
+                            // popupDocument.write("<td>" + item.item_code + "</td>");
                             popupDocument.write("<td>" + item.item_name + "</td>");
                             popupDocument.write("</tr>");
                         });
@@ -181,11 +182,12 @@ ProcessManage = class ProcessManage {
                                     // Encuentra la tabla y actualiza su contenido
                                     const tableData = popupDocument.getElementById('tableData');
                                     const totalqty = popupDocument.getElementById('totalqty');
-                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
+                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Nombre</th></tr>";
 
                                     orderItems.forEach((item) => {
                                         cant = cant + item.qty;
-                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
+                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
+                                        // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
                                     });
                                     totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
                                 }
@@ -236,7 +238,7 @@ ProcessManage = class ProcessManage {
                                 if (compara === compara_ant && compara_ant !== "") {
                                     popupDocument.write("</div>");                                
                                 }
-                                popupDocument.write(`<div id="tableData" style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                popupDocument.write(`<div id="tableData" style='line-height: 30%; float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
                                 popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.name}</button>`);
                                 popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
@@ -247,7 +249,7 @@ ProcessManage = class ProcessManage {
                                 // popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
                                 popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+ orden.item_name +"</p>");
                                 if(orden.notes){
-                                    popupDocument.write("N:" + orden.notes);
+                                    popupDocument.write("<p style='font-size: 0.8em; color: red'>N:" + orden.notes + "</p>");
                                 }
                             }
                         })
@@ -296,7 +298,7 @@ ProcessManage = class ProcessManage {
                                                 }
 
                                                 // Inicia una nueva cabecera
-                                                cabecera = `<div style='float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                                cabecera = `<div style='line-height: 30%; float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
                                                 <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
                                                 data-order-name='${orden.name}'>${orden.name}</button>
@@ -308,7 +310,7 @@ ProcessManage = class ProcessManage {
                                             // detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
                                             detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_name}</p>`;
                                             if(orden.notes){
-                                                detalles += "N:" + orden.notes;
+                                                detalles += "<p style='font-size: 0.8em; color: red'>N:" + orden.notes + "</p>";
                                             }
                                         });
 
@@ -365,6 +367,7 @@ ProcessManage = class ProcessManage {
                 popupWindow.close();
             }, 5 * 60 * 1000); // 5 minutos en milisegundos
         });
+        setInterval(this.reload(), 150);
     }
 
     template() {
