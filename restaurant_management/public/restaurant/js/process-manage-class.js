@@ -343,7 +343,7 @@ ProcessManage = class ProcessManage {
                                                     // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
                                                     //alert("La orden ha sido marcada como 'Atendida'.");
                                                     refreshData();
-                                                    this.show();
+                                                    this.reload();
                                                 }
                                             });
                                         }
