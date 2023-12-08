@@ -16,7 +16,7 @@ class FoodCommand {
                     class: `btn btn-default btn-flat btn-food-command`,
                     style: 'border-radius: 0 !important; font-size: 8px;'
                 },
-                content: '{{text}}<i class="fa fa-chevron-right pull-right" style="font-size: 16px; padding-top: 2px;"></i>',
+                content: '{{text}}<i class="fa fa-chevron-right pull-right" style="font-size: 14px; padding-top: 0px;"></i>',
                 text: this.data.process_status_data.next_action_message,
             }).on("click", () => {
                 this.execute();

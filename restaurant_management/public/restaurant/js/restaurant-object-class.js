@@ -330,7 +330,7 @@ RestaurantObject = class RestaurantObject {
 		</div>
 		${this.no_of_seats.html()}`
     }
-
+    // INGRESA A UNA MESA O A UNA COCINA
     select() {
         if (!RM.editing) {
             this.open_modal();

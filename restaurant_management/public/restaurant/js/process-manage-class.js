@@ -238,7 +238,7 @@ ProcessManage = class ProcessManage {
                                 if (compara === compara_ant && compara_ant !== "") {
                                     popupDocument.write("</div>");                                
                                 }
-                                popupDocument.write(`<div id="tableData" style='line-height: 30%; float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                popupDocument.write(`<div id="tableData" style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
                                 popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.name}</button>`);
                                 popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
@@ -247,9 +247,9 @@ ProcessManage = class ProcessManage {
                             }
                             if ((orden.room_description+orden.table_description) === compara) {
                                 // popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
-                                popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+ orden.item_name +"</p>");
+                                popupDocument.write("<strong>[" + orden.qty + "]</strong>" +" "+ orden.item_name +"<br>");
                                 if(orden.notes){
-                                    popupDocument.write("<p style='font-size: 0.8em; color: red'>N:" + orden.notes + "</p>");
+                                    popupDocument.write("<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>");
                                 }
                             }
                         })
@@ -270,7 +270,8 @@ ProcessManage = class ProcessManage {
                         });
 
                         // Función para cargar y mostrar los datos
-                        function refreshData() {
+                        // function refreshData() {
+                        const refreshData = () => {
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
@@ -298,7 +299,7 @@ ProcessManage = class ProcessManage {
                                                 }
 
                                                 // Inicia una nueva cabecera
-                                                cabecera = `<div style='line-height: 30%; float: left; position: relative;font-size: 1em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                                cabecera = `<div style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
                                                 <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
                                                 data-order-name='${orden.name}'>${orden.name}</button>
@@ -308,9 +309,9 @@ ProcessManage = class ProcessManage {
                                             }
 
                                             // detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
-                                            detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_name}</p>`;
+                                            detalles += `<strong>[${orden.qty}]</strong> ${orden.item_name}</br>`;
                                             if(orden.notes){
-                                                detalles += "<p style='font-size: 0.8em; color: red'>N:" + orden.notes + "</p>";
+                                                detalles += "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>";
                                             }
                                         });
 
@@ -328,8 +329,10 @@ ProcessManage = class ProcessManage {
                                                 saveComanda(orderName);
                                             });
                                         }
-
-                                        function saveComanda(orderName) {
+                                        
+                                        // Función para guardar la comanda
+                                        // function saveComanda(orderName) {
+                                        const saveComanda = (orderName) => {
                                             // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
                                             frappe.call({
                                                 method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
@@ -340,6 +343,7 @@ ProcessManage = class ProcessManage {
                                                     // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
                                                     //alert("La orden ha sido marcada como 'Atendida'.");
                                                     refreshData();
+                                                    this.show();
                                                 }
                                             });
                                         }
@@ -367,7 +371,6 @@ ProcessManage = class ProcessManage {
                 popupWindow.close();
             }, 5 * 60 * 1000); // 5 minutos en milisegundos
         });
-        setInterval(this.reload(), 150);
     }
 
     template() {
