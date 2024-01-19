@@ -222,8 +222,11 @@ ProcessManage = class ProcessManage {
                         popupDocument.open();
                         // Mantener esta parte inalterada
                         popupDocument.write(`<html><head><title>Comandas</title>
-                        <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
-                        popupDocument.write('<button id="refreshButtonCom">Sincronizar Comandas</button>');
+                        <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head>
+                        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+                        
+                        <body>`);
+                        popupDocument.write('<button id="refreshButtonCom" class="btn btn-outline-secondary">Sincronizar Comandas</button>');
                         popupDocument.write('<span id="syncMessage" style="margin-left: 10px; color: green;"></span>'); // Nuevo elemento para mostrar el mensaje
                         popupDocument.write("<h3>Información de Comandas</h3>");
                         // Crea botones por cada grupo
@@ -232,9 +235,9 @@ ProcessManage = class ProcessManage {
                         popupDocument.write('<div id="pagination">');
                         for (let i = 0; i < numeroDeGrupos; i++) {
                             const buttonText = `Grupo ${i + 1}`;
-                            popupDocument.write(`<button id="botonAgrupacion${i}" >${buttonText}</button>`);
+                            popupDocument.write(`<button id="botonAgrupacion${i}" class="btn btn-outline-success">${buttonText}</button>`);
                         }
-                        popupDocument.write(`<button id="refreshButtonCom1">Todo</button>`);
+                        popupDocument.write(`<button id="refreshButtonCom1" class="btn btn-outline-success">Todo</button>`);
                         popupDocument.write('</div>');
                         // Agrega evento a los botones de agrupación
                         for (let i = 0; i < numeroDeGrupos; i++) {
@@ -247,8 +250,7 @@ ProcessManage = class ProcessManage {
                         let compara = "";
                         let compara_ant = "";
     
-                        // Itera sobre las órdenes y muestra la cabecera una vez
-                        // y los detalles debajo de la misma en divs
+                        // Itera sobre las órdenes y muestra la cabecera una vez y los detalles debajo de la misma en divs
                         popupDocument.write('<div id="divData">');
                         ordenes.forEach((orden, index) => {
                             if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
@@ -317,9 +319,7 @@ ProcessManage = class ProcessManage {
                                 atendidoButtons[i].addEventListener('click', (event) => {
                                     // Obtiene los valores de los atributos de datos del botón clickeado
                                     const orderName = event.target.dataset.orderName;
-                                    console.log(orderName);
                                     const orderedTime = event.target.dataset.orderedTime;
-                                    console.log(orderedTime);
                                     saveComanda(orderName, orderedTime);
                                 });
                             }
@@ -336,7 +336,6 @@ ProcessManage = class ProcessManage {
                                         // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
                                         //alert("La orden ha sido marcada como 'Atendida'.");
                                         refreshData();
-                                        //his.agrupacion_comandas();
                                         this.reload();
                                     }
                                 });
@@ -418,9 +417,9 @@ ProcessManage = class ProcessManage {
 
                                     for (let i = 0; i < numeroDeGrupos; i++) {
                                         const buttonText = `Grupo ${i + 1}`;
-                                        botones += `<button id="botonAgrupacion${i}" >${buttonText}</button>`;
+                                        botones += `<button id="botonAgrupacion${i}" class="btn btn-outline-success" >${buttonText}</button>`;
                                     }
-                                    botones += `<button id="refreshButtonCom1">Todo</button>`;
+                                    botones += `<button id="refreshButtonCom1" class="btn btn-outline-success">Todo</button>`;
                                     tableData1.innerHTML += botones;
                                     // Agrega evento a los botones de agrupación
                                     for (let i = 0; i < numeroDeGrupos; i++) {
@@ -513,7 +512,7 @@ ProcessManage = class ProcessManage {
                             });
                         }
                         // Llama a la función de actualización automáticamente cada minuto
-                        setInterval(refreshData, 18000); // 60000 milisegundos = 1 minuto
+                        // setInterval(refreshData, 18000); // 60000 milisegundos = 1 minuto
 
                         //popupDocument.write("</div></body></html>");
                         popupDocument.write("</body></html>");
