@@ -42,20 +42,72 @@ def get_ordenes_cocina_atendidos():
 def get_ordenes_cocina_comandas():
     hoy = datetime.now()
     hoy = hoy.strftime('%Y-%m-%d')
-    ordenes = frappe.db.sql(f"""SELECT taor.name, taor.table_description, taor.room_description, oei.item_code as item_code, oei.item_name as item_name, 
-                            oei.qty, oei.notes FROM `tabTable Order` AS taor INNER JOIN
-                            `tabOrder Entry Item` AS oei
-                            on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent
-                            AND taor.status != 'Invoiced' AND (oei.status != 'Attending' AND oei.status != 'Completed')
-                            ORDER BY taor.name asc;""", as_dict=True)
+
+    ordenes = frappe.db.sql(f"""
+    SELECT 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code AS item_code, 
+        oei.item_name AS item_name, 
+        oei.qty, 
+        oei.notes,
+        LEFT(oei.ordered_time, 19) as ordered_time,
+        CONCAT(
+            taor.name,
+            CASE
+                WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 19)) > 0
+                THEN CONCAT(
+                    '-',
+                    DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 19))
+                )
+                ELSE ''
+            END
+        ) AS sub_name
+    FROM 
+        `tabTable Order` AS taor 
+    INNER JOIN
+        `tabOrder Entry Item` AS oei
+        ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
+        AND taor.name = oei.parent
+        AND taor.status != 'Invoiced' 
+        AND (oei.status != 'Attending' AND oei.status != 'Completed')
+    GROUP BY 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code, 
+        oei.item_name, 
+        oei.qty, 
+        oei.notes, 
+        oei.ordered_time
+    ORDER BY 
+        oei.ordered_time, sub_name ASC, taor.name ASC;
+    """, as_dict=True)
 
     return ordenes
 
 @frappe.whitelist()
-def update_comanda_atendida(order_name):
+def update_comanda_atendida(order_name, ordered_time):
     try:
-        # Realiza una búsqueda para obtener todos los registros correspondientes en "Order Entry Item"
-        order_entry_items = frappe.get_all("Order Entry Item", filters={"parent": order_name})
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        print(ordered_time)
+        print(order_name)
+        # Convertir la cadena a un objeto de fecha y hora para manejar la comparación adecuadamente
+        ordered_time_dt = datetime.strptime(ordered_time, "%Y-%m-%d %H:%M:%S")
+
+        # Obtener datos de la base de datos sin tener en cuenta milisegundos
+        query = f"""
+            SELECT *
+            FROM `tabOrder Entry Item`
+            WHERE `parent` = '{order_name}'
+            AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i:%s') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M:%S')}'
+        """
+
+        order_entry_items = frappe.db.sql(query, as_dict=True)
+        print("oooooooooooooooooooooooooooooooooooooooooooo")
+        print(order_entry_items)
+        
         order_table = frappe.get_all("Table Order", filters={"name": order_name}, fields=["creation"])
         fecha_ingresada = order_table[0].get("creation")
 

@@ -42,7 +42,7 @@ ProcessManage = class ProcessManage {
     }
 
     make_dom() {
-        
+
         this.modal.container.empty().append(this.template());
         this.modal.title_container.empty().append(
             RMHelper.return_main_button(this.title, () => this.modal.hide()).html(),
@@ -52,22 +52,21 @@ ProcessManage = class ProcessManage {
         );
         this.agrupacion_platos();
         this.agrupacion_comandas();
-
-        this.agrupacion_platos_atendidos();        
+        this.agrupacion_platos_atendidos();
     }
     // TIDAX: Agrupa los platos pendientes y los muestra en una nueva ventana
-    agrupacion_platos(){
+    agrupacion_platos() {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButton').addEventListener('click', () => {
             const popupWindow = window.open("", "Consolidacion de Platos", "width=600,height=400,top=100,left=100");
-            
+
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
                 callback: (r) => {
                     const orderItems = r.message;
                     if (popupWindow && !popupWindow.closed) {
-                        let cant =0;
+                        let cant = 0;
                         // Abre un documento HTML en la nueva ventana y muestra los datos
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
@@ -133,11 +132,11 @@ ProcessManage = class ProcessManage {
     }
 
     // TIDAX: MUESTRA EN UNA NUEVA VENTANA LOS PLATOS ATENDIDOS DEL DIA
-    agrupacion_platos_atendidos(){
+    agrupacion_platos_atendidos() {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButtonAte').addEventListener('click', () => {
             const popupWindow = window.open("", "Platos Atendidos", "width=600,height=400,top=100,left=100");
-            
+
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
@@ -145,7 +144,7 @@ ProcessManage = class ProcessManage {
                     const orderItems = r.message;
                     const fecha = new Date();
                     if (popupWindow && !popupWindow.closed) {
-                        let cant =0;
+                        let cant = 0;
                         // Abre un documento HTML en la nueva ventana y muestra los datos
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
@@ -208,51 +207,153 @@ ProcessManage = class ProcessManage {
     }
 
     // TIDAX: MUESTRA EN UNA NUEVA VENTANA LAS COMANDAS POR ATENDER
-    agrupacion_comandas(){
+    agrupacion_comandas() {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButtonCom').addEventListener('click', () => {
             const popupWindow = window.open("", "Informacion Comandas", "top=100,left=100");
-            
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
                 callback: (r) => {
                     const ordenes = r.message;
+                    console.log(ordenes);
                     if (popupWindow && !popupWindow.closed) {
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
+                        // Mantener esta parte inalterada
                         popupDocument.write(`<html><head><title>Comandas</title>
                         <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head><body>`);
                         popupDocument.write('<button id="refreshButtonCom">Sincronizar Comandas</button>');
                         popupDocument.write('<span id="syncMessage" style="margin-left: 10px; color: green;"></span>'); // Nuevo elemento para mostrar el mensaje
-                        popupDocument.write("<h2>Información de Comandas</h2>");
-        
-                        let compara="";
-                        let compara_ant="";
+                        popupDocument.write("<h3>Información de Comandas</h3>");
+                        // Crea botones por cada grupo
+                        const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
+                        const numeroDeGrupos = Math.ceil(subNamesUnicos.length / 4);
+                        popupDocument.write('<div id="pagination">');
+                        for (let i = 0; i < numeroDeGrupos; i++) {
+                            const buttonText = `Grupo ${i + 1}`;
+                            popupDocument.write(`<button id="botonAgrupacion${i}" >${buttonText}</button>`);
+                        }
+                        popupDocument.write(`<button id="refreshButtonCom1">Todo</button>`);
+                        popupDocument.write('</div>');
+                        // Agrega evento a los botones de agrupación
+                        for (let i = 0; i < numeroDeGrupos; i++) {
+                            const botonAgrupacion = popupDocument.getElementById(`botonAgrupacion${i}`);
+                            botonAgrupacion.addEventListener('click', () => {
+                                mostrarPedidos2(i + 1, subNamesUnicos.length, ordenes);
+                            });
+                        }
+    
+                        let compara = "";
+                        let compara_ant = "";
+    
                         // Itera sobre las órdenes y muestra la cabecera una vez
                         // y los detalles debajo de la misma en divs
-                        popupDocument.write('<div id="divData">');  
-                        ordenes.forEach((orden) => {                         
-                            if ((orden.room_description+orden.table_description) !== compara) {
+                        popupDocument.write('<div id="divData">');
+                        ordenes.forEach((orden, index) => {
+                            if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
                                 compara_ant = compara;
                                 if (compara === compara_ant && compara_ant !== "") {
-                                    popupDocument.write("</div>");                                
+                                    popupDocument.write("</div>");
                                 }
                                 popupDocument.write(`<div id="tableData" style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
-                                popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.name}</button>`);
+                                popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.sub_name}</button>`);
                                 popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
-                                
-                                compara = orden.room_description+orden.table_description;
+                                compara = orden.room_description + orden.table_description + orden.sub_name;
                             }
-                            if ((orden.room_description+orden.table_description) === compara) {
+                            if ((orden.room_description + orden.table_description + orden.sub_name) === compara) {
                                 // popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
-                                popupDocument.write("<strong>[" + orden.qty + "]</strong>" +" "+ orden.item_name +"<br>");
-                                if(orden.notes){
+                                popupDocument.write("<strong>[" + orden.qty + "]</strong>" + " " + orden.item_name + "<br>");
+                                if (orden.notes) {
                                     popupDocument.write("<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>");
                                 }
                             }
-                        })
+                        });
+
+
+                        const mostrarPedidos2 = (numeroDeGrupo, subNamesUnicos, ordenes) => {
+                            // Obtén el elemento que contiene la información
+                            const tableData = popupDocument.getElementById('divData');
+                        
+                            // Limpiar el contenido actual
+                            tableData.innerHTML = '';
+
+                            const syncMessage = popupDocument.getElementById('syncMessage');
+                            syncMessage.innerText = `Grupo ${numeroDeGrupo}`;
+                        
+                            // Agrupa las órdenes por sub_name
+                            const ordenesAgrupadas = agruparPorSubName(ordenes);
+                        
+                            // Calcula el rango de pedidos a mostrar en función del grupo
+                            let inicio = (numeroDeGrupo - 1) * 4;
+                            let fin = Math.min(numeroDeGrupo * 4, subNamesUnicos);
+                        
+                            for (let i = inicio; i < fin && i < ordenesAgrupadas.length; i++) {
+                                const grupo = ordenesAgrupadas[i];
+                        
+                                // Muestra la cabecera solo si es diferente de la anterior
+                                const cuadro = `<div  style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+                                    box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`;
+                                //const boton = `<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${grupo[0].sub_name}</button>`;
+                                const boton = `<button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
+                                            data-order-name='${grupo[0].name}' data-ordered-time='${grupo[0].ordered_time}'>${grupo[0].sub_name}</button>`
+
+
+                                const cabecera = "<p>Sala: " + grupo[0].room_description + " - Mesa: " + grupo[0].table_description + "</p>";
+                        
+                                // Muestra los detalles de la orden
+                                const detalles = grupo.map(orden => "<strong>[" + orden.qty + "]</strong>" + " " + orden.item_name + "<br>").join('');
+                        
+                                const pie = grupo.map(orden => orden.notes ? "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>" : '').join('');
+                        
+                                // Concatena las partes y agrega al contenedor
+                                tableData.innerHTML += cuadro + boton + cabecera + detalles + pie + "</div>";
+                            }
+
+                            // Agrega eventos a los botones "Atendido"
+                            const atendidoButtons = popupDocument.getElementsByClassName('comandaAtendido');
+                            for (let i = 0; i < atendidoButtons.length; i++) {
+                                atendidoButtons[i].addEventListener('click', (event) => {
+                                    // Obtiene los valores de los atributos de datos del botón clickeado
+                                    const orderName = event.target.dataset.orderName;
+                                    console.log(orderName);
+                                    const orderedTime = event.target.dataset.orderedTime;
+                                    console.log(orderedTime);
+                                    saveComanda(orderName, orderedTime);
+                                });
+                            }
+                            // Función para guardar la comanda
+                            const saveComanda = (orderName, orderedTime) => {
+                                // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
+                                frappe.call({
+                                    method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
+                                    args: {
+                                        order_name: orderName, // Nombre de la orden
+                                        ordered_time: orderedTime, // Hora de la orden
+                                    },
+                                    callback: (r) => {
+                                        // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
+                                        //alert("La orden ha sido marcada como 'Atendida'.");
+                                        refreshData();
+                                        //his.agrupacion_comandas();
+                                        this.reload();
+                                    }
+                                });
+                            }
+                        }
+
+                        // Función para agrupar las órdenes por sub_name
+                        const agruparPorSubName = (ordenes) => {
+                            const ordenesAgrupadas = [];
+                            const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
+                            subNamesUnicos.forEach(subName => {
+                                const grupo = ordenes.filter(orden => orden.sub_name === subName);
+                                ordenesAgrupadas.push(grupo);
+                            });
+                            return ordenesAgrupadas;
+                        };                        
+                        
                         // Agrega un evento al botón de actualización
                         const refreshButton = popupDocument.getElementById('refreshButtonCom');
                         refreshButton.addEventListener('click', () => {
@@ -269,8 +370,23 @@ ProcessManage = class ProcessManage {
                             }, 3000);
                         });
 
+                        // Agrega un evento al botón de actualización - Todo
+                        const refreshButton1 = popupDocument.getElementById('refreshButtonCom1');
+                        refreshButton1.addEventListener('click', () => {
+                            // Llama a la función para cargar y mostrar nuevamente los datos
+                            refreshData();
+
+                            // Muestra el mensaje "Comandas sincronizadas"
+                            const syncMessage = popupDocument.getElementById('syncMessage');
+                            syncMessage.innerText = 'Comandas sincronizadas';
+
+                            // Oculta el mensaje después de 3 segundos (ajusta el tiempo según tus necesidades)
+                            setTimeout(() => {
+                                syncMessage.innerText = '';
+                            }, 3000);
+                        });
+
                         // Función para cargar y mostrar los datos
-                        // function refreshData() {
                         const refreshData = () => {
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
@@ -278,87 +394,129 @@ ProcessManage = class ProcessManage {
                                 callback: (r) => {
                                     const ordenes = r.message;
                                     //if (popupWindow && !popupWindow.closed) {
-                                        const popupDocument = popupWindow.document;
-                                        let compara = "";
-                                        let cabecera = ""; // Almacena la cabecera actual
-                                        let detalles = ""; // Almacena los detalles actuales
-                                        let pie = "";
+                                    //const popupDocument = popupWindow.document;
+                                    let compara = "";
+                                    let cabecera = ""; // Almacena la cabecera actual
+                                    let detalles = ""; // Almacena los detalles actuales
+                                    let pie = "";
 
-                                        // Obtén el elemento que contiene la información
-                                        const tableData = popupDocument.getElementById('divData');
+                                    let botones = "";
 
-                                        // Limpiar el contenido actual
-                                        tableData.innerHTML = '';
+                                    // Obtén el elemento que contiene la información
+                                    const tableData = popupDocument.getElementById('divData');
+                                    const tableData1 = popupDocument.getElementById('pagination');
 
-                                        // Itera sobre las órdenes y muestra la información formateada
-                                        ordenes.forEach((orden) => {
-                                            if ((orden.room_description + orden.table_description) !== compara) {
-                                                if (compara) {
-                                                    // Si hay una cabecera previa, agrega el contenido
-                                                    tableData.innerHTML += cabecera + detalles + pie;
-                                                }
+                                    // Limpiar el contenido actual
+                                    tableData.innerHTML = '';
+                                    tableData1.innerHTML = '';
 
-                                                // Inicia una nueva cabecera
-                                                cabecera = `<div style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
-                                                box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
-                                                <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
-                                                data-order-name='${orden.name}'>${orden.name}</button>
-                                                <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description}</p>`;
-                                                detalles = ""; // Inicia una nueva sección de detalles
-                                                compara = orden.room_description + orden.table_description;
+
+
+                                    // Crea botones por cada grupo
+                                    const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
+                                    const numeroDeGrupos = Math.ceil(subNamesUnicos.length / 4);
+
+                                    for (let i = 0; i < numeroDeGrupos; i++) {
+                                        const buttonText = `Grupo ${i + 1}`;
+                                        botones += `<button id="botonAgrupacion${i}" >${buttonText}</button>`;
+                                    }
+                                    botones += `<button id="refreshButtonCom1">Todo</button>`;
+                                    tableData1.innerHTML += botones;
+                                    // Agrega evento a los botones de agrupación
+                                    for (let i = 0; i < numeroDeGrupos; i++) {
+                                        const botonAgrupacionxxx = popupDocument.getElementById(`botonAgrupacion${i}`);
+                                        botonAgrupacionxxx.addEventListener('click', () => {
+                                            mostrarPedidos2(i + 1, subNamesUnicos.length, ordenes);
+                                        });
+                                    }
+
+                                    // Agrega un evento al botón de actualización - Todo
+                                    const refreshButton1 = popupDocument.getElementById('refreshButtonCom1');
+                                    refreshButton1.addEventListener('click', () => {
+                                        // Llama a la función para cargar y mostrar nuevamente los datos
+                                        refreshData();
+
+                                        // Muestra el mensaje "Comandas sincronizadas"
+                                        const syncMessage = popupDocument.getElementById('syncMessage');
+                                        syncMessage.innerText = 'Comandas sincronizadas';
+
+                                        // Oculta el mensaje después de 3 segundos (ajusta el tiempo según tus necesidades)
+                                        setTimeout(() => {
+                                            syncMessage.innerText = '';
+                                        }, 3000);
+                                    });
+
+                                    // Itera sobre las órdenes y muestra la información formateada
+                                    ordenes.forEach((orden) => {
+                                        if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
+                                            if (compara) {
+                                                // Si hay una cabecera previa, agrega el contenido
+                                                tableData.innerHTML += cabecera + detalles + pie;
                                             }
 
-                                            // detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
-                                            detalles += `<strong>[${orden.qty}]</strong> ${orden.item_name}</br>`;
-                                            if(orden.notes){
-                                                detalles += "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>";
+                                            // Inicia una nueva cabecera
+                                            cabecera = `<div style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
+    box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
+    <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
+    data-order-name='${orden.name}' data-ordered-time='${orden.ordered_time}'>${orden.sub_name}</button>
+    <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description}</p>`;
+                                            detalles = ""; // Inicia una nueva sección de detalles
+                                            compara = orden.room_description + orden.table_description + orden.sub_name;
+                                        }
+
+                                        // detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
+                                        detalles += `<strong>[${orden.qty}]</strong> ${orden.item_name}</br>`;
+                                        if (orden.notes) {
+                                            detalles += "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>";
+                                        }
+                                    });
+
+                                    // Agrega el último conjunto de cabecera, detalles y pie
+                                    if (compara) {
+                                        tableData.innerHTML += cabecera + detalles + pie;
+                                    }
+
+                                    // Agrega eventos a los botones "Atendido"
+                                    const atendidoButtons = popupDocument.getElementsByClassName('comandaAtendido');
+                                    for (let i = 0; i < atendidoButtons.length; i++) {
+                                        atendidoButtons[i].addEventListener('click', (event) => {
+                                            // Obtiene los valores de los atributos de datos del botón clickeado
+                                            const orderName = event.target.dataset.orderName;
+                                            console.log(orderName);
+                                            const orderedTime = event.target.dataset.orderedTime;
+                                            console.log(orderedTime);
+                                            saveComanda(orderName, orderedTime);
+                                        });
+                                    }
+                                    // Función para guardar la comanda
+                                    const saveComanda = (orderName, orderedTime) => {
+                                        // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
+                                        frappe.call({
+                                            method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
+                                            args: {
+                                                order_name: orderName, // Nombre de la orden
+                                                ordered_time: orderedTime, // Hora de la orden
+                                            },
+                                            callback: (r) => {
+                                                // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
+                                                //alert("La orden ha sido marcada como 'Atendida'.");
+                                                refreshData();
+                                                this.reload();
                                             }
                                         });
-
-                                        // Agrega el último conjunto de cabecera, detalles y pie
-                                        if (compara) {
-                                            tableData.innerHTML += cabecera + detalles + pie;
-                                        }
-
-                                        // Agrega eventos a los botones "Atendido"
-                                        const atendidoButtons = popupDocument.getElementsByClassName('comandaAtendido');
-                                        for (let i = 0; i < atendidoButtons.length; i++) {
-                                            atendidoButtons[i].addEventListener('click', (event) => {
-                                                // Obtiene los valores de los atributos de datos del botón clickeado
-                                                const orderName = event.target.dataset.orderName;
-                                                saveComanda(orderName);
-                                            });
-                                        }
-                                        
-                                        // Función para guardar la comanda
-                                        // function saveComanda(orderName) {
-                                        const saveComanda = (orderName) => {
-                                            // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
-                                            frappe.call({
-                                                method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
-                                                args: {
-                                                    order_name: orderName, // Nombre de la orden
-                                                },
-                                                callback: (r) => {
-                                                    // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
-                                                    //alert("La orden ha sido marcada como 'Atendida'.");
-                                                    refreshData();
-                                                    this.reload();
-                                                }
-                                            });
-                                        }
+                                    }
                                     //} else {
-                                        //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
+                                    //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
                                     //}
 
                                 }
                             });
                         }
-                        
                         // Llama a la función de actualización automáticamente cada minuto
                         setInterval(refreshData, 18000); // 60000 milisegundos = 1 minuto
 
-                        popupDocument.write("</div></body></html>");
+                        //popupDocument.write("</div></body></html>");
+                        popupDocument.write("</body></html>");
                         popupDocument.close();
                     } else {
                         // Maneja el caso en el que la ventana emergente fue bloqueada
@@ -372,6 +530,10 @@ ProcessManage = class ProcessManage {
             }, 5 * 60 * 1000); // 5 minutos en milisegundos
         });
     }
+
+
+
+
 
     template() {
         return `
