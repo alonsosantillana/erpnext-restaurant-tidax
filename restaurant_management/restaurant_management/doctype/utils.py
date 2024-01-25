@@ -45,68 +45,72 @@ def get_ordenes_cocina_comandas():
 
     ordenes = frappe.db.sql(f"""
     SELECT 
-        taor.name, 
-        taor.table_description, 
-        taor.room_description, 
-        oei.item_code AS item_code, 
-        oei.item_name AS item_name, 
-        oei.qty, 
-        oei.notes,
-        LEFT(oei.ordered_time, 19) as ordered_time,
-        CONCAT(
-            taor.name,
-            CASE
-                WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 19)) > 0
-                THEN CONCAT(
-                    '-',
-                    DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 19))
-                )
-                ELSE ''
-            END
-        ) AS sub_name
+    taor.name, 
+    taor.table_description, 
+    taor.room_description, 
+    oei.item_code AS item_code, 
+    oei.item_name AS item_name, 
+    oei.qty, 
+    oei.notes,
+    LEFT(oei.ordered_time, 19) as ordered_time,
+    CONCAT(
+    taor.name,
+    CASE
+    WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16)) > 0
+    THEN CONCAT(
+    '-',
+    DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16))
+    )
+    ELSE ''
+    END
+    ) AS sub_name
     FROM 
-        `tabTable Order` AS taor 
+    `tabTable Order` AS taor 
     INNER JOIN
-        `tabOrder Entry Item` AS oei
-        ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
-        AND taor.name = oei.parent
-        AND taor.status != 'Invoiced' 
-        AND (oei.status != 'Attending' AND oei.status != 'Completed')
+    `tabOrder Entry Item` AS oei
+    ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
+    AND taor.name = oei.parent
+    AND taor.status != 'Invoiced' 
+    AND (oei.status != 'Attending' AND oei.status != 'Completed')
     GROUP BY 
-        taor.name, 
-        taor.table_description, 
-        taor.room_description, 
-        oei.item_code, 
-        oei.item_name, 
-        oei.qty, 
-        oei.notes, 
-        oei.ordered_time
+    taor.name, 
+    taor.table_description, 
+    taor.room_description, 
+    oei.item_code, 
+    oei.item_name, 
+    oei.qty, 
+    oei.notes, 
+    oei.ordered_time
     ORDER BY 
-        oei.ordered_time, sub_name ASC, taor.name ASC;
+    oei.ordered_time, sub_name ASC, taor.name ASC;
     """, as_dict=True)
 
     return ordenes
 
+
+
 @frappe.whitelist()
 def update_comanda_atendida(order_name, ordered_time):
     try:
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-        print(ordered_time)
-        print(order_name)
         # Convertir la cadena a un objeto de fecha y hora para manejar la comparación adecuadamente
         ordered_time_dt = datetime.strptime(ordered_time, "%Y-%m-%d %H:%M:%S")
+        # ordered_time_dt = datetime.strptime(ordered_time, "%Y-%m-%d %H:%M")
 
         # Obtener datos de la base de datos sin tener en cuenta milisegundos
+        # query = f"""
+        #     SELECT *
+        #     FROM `tabOrder Entry Item`
+        #     WHERE `parent` = '{order_name}'
+        #     AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i:%s') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M:%S')}'
+        # """
         query = f"""
             SELECT *
             FROM `tabOrder Entry Item`
             WHERE `parent` = '{order_name}'
-            AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i:%s') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M:%S')}'
+            AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M')}'
         """
 
         order_entry_items = frappe.db.sql(query, as_dict=True)
-        print("oooooooooooooooooooooooooooooooooooooooooooo")
-        print(order_entry_items)
         
         order_table = frappe.get_all("Table Order", filters={"name": order_name}, fields=["creation"])
         fecha_ingresada = order_table[0].get("creation")
@@ -117,6 +121,7 @@ def update_comanda_atendida(order_name, ordered_time):
         # Convierte la fecha ingresada a un objeto datetime si aún no lo es
         if not isinstance(fecha_ingresada, datetime):
             fecha_ingresada = datetime.strptime(fecha_ingresada, "%Y-%m-%d %H:%M:%S")
+            # fecha_ingresada = datetime.strptime(fecha_ingresada, "%Y-%m-%d %H:%M")
 
         # Calcula la diferencia de tiempo en minutos
         diferencia_en_minutos = (fecha_actual - fecha_ingresada).total_seconds() / 60.0

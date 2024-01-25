@@ -297,6 +297,7 @@ class RestaurantObject(Document):
             last_status=las_status,
             notes=entry.notes,
             ordered_time=entry.ordered_time or frappe.utils.now_datetime(),#frappe.format_value(entry.creation, {"fieldtype": "Datetime"}),
+            ordered_nro=entry.ordered_nro or 1,
             process_status_data=self.process_status_data(entry)
         )
 

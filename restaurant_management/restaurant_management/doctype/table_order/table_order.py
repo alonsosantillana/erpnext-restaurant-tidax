@@ -88,6 +88,7 @@ class TableOrder(Document):
                     batch_no=item.batch_no,
                     has_serial_no=item.has_serial_no,
                     serial_no=item.serial_no,
+                    unit_value=item.unit_value
                 ))
 
             status.append(item.status)
@@ -496,7 +497,34 @@ class TableOrder(Document):
             PrCeGr = frappe.db.sql(f"""SELECT ro.description FROM `tabRestaurant Object` as ro inner join
                                     `tabProduction Center Group` as pcg on ro.name = pcg.parent and ro.type = 'Production Center' and item_group = '{item.item_group}' 
                                     order by item_group asc;""", as_dict=True)
+            
+            # # TIDAX : Obtencion de ordered_nro
+            # identifier = entry["identifier"]
+            # # Obtener parent como una lista de resultados
+            # parent_result = frappe.db.sql(f"""SELECT DISTINCT(oei.parent) as parent FROM `tabOrder Entry Item` as oei 
+            #                   WHERE oei.identifier = '{identifier}';""", as_dict=True)
+            # # Verificar si se obtuvieron resultados antes de acceder a parent
+            # if parent_result:
+            #     parent = parent_result[0]["parent"]
+
+            #     # Obtener el valor máximo de ordered_nro para el parent obtenido
+            #     nro_orden_result = frappe.db.sql(f"""SELECT MAX(oei.ordered_nro) as max_parent 
+            #                                     FROM `tabOrder Entry Item` as oei 
+            #                                     WHERE oei.parent = '{parent}';""", as_dict=True)
+
+            #     # Verificar si se obtuvieron resultados antes de imprimir
+            #     if nro_orden_result and nro_orden_result[0]["max_parent"] is not None:
+            #         print(nro_orden_result[0]["max_parent"])
+            #     else:
+            #         print("No se encontraron resultados para ordered_nro.")
+            # else:
+            #     print("No se encontraron resultados para el identificador proporcionado.")
+            #     nro_orden_result = [{"max_parent": 1}]
+            #     print(nro_orden_result[0]["max_parent"])
+
+
             centro_pro = ""
+
             for pt in PrCeGr:
                 centro_pro += pt.description + "| "
 
@@ -516,6 +544,8 @@ class TableOrder(Document):
                 notes=entry["notes"],
                 table_description=f'{self.room_description} ({self.table_description})',
                 ordered_time=entry["ordered_time"] or frappe.utils.now_datetime(),
+                # ordered_nro=nro_orden_result[0]["max_parent"] + 1 if (entry["status"] in ["Attending"]) else nro_orden_result[0]["max_parent"],
+                ordered_nro=1,
                 has_batch_no=entry["has_batch_no"],
                 batch_no=entry["batch_no"],
                 has_serial_no=entry["has_serial_no"],
@@ -567,6 +597,7 @@ class TableOrder(Document):
                 # TIDAX : Adicion
                 unit_value=entry_item["unit_value"],
                 ordered_finish=entry_item["ordered_finish"],
+                ordered_nro=entry_item["ordered_nro"]
             ))
             item.serial_no = None
 
@@ -628,6 +659,7 @@ class TableOrder(Document):
                     "status",
                     "notes",
                     "ordered_time",
+                    "ordered_nro",
                     "has_batch_no",
                     "batch_no",
                     "has_serial_no",
@@ -700,6 +732,7 @@ class TableOrder(Document):
                     identifier=item.identifier,
                     notes=item.notes,
                     ordered_time=item.ordered_time,
+                    ordered_nro=item.ordered_nro,
                     has_batch_no=item.has_batch_no,
                     batch_no=item.batch_no,
                     has_serial_no=item.has_serial_no,

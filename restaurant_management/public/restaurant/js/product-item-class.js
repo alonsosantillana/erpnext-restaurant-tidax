@@ -249,7 +249,7 @@ class ProductItem {
 			</div>`
         }
     }
-    // TIDAX : Adicion de campos en Items: unit_value, ordered_finish
+    // TIDAX : Adicion de campos en Items: unit_value, ordered_finish, ordered_nro
     add_item_in_order(item) {
         const base_item = {
             name: null,
@@ -266,6 +266,7 @@ class ProductItem {
             item_invoice: null,
             item_invoice_name: null,
             ordered_time: null,
+            ordered_nro: item.ordered_nro,
             has_serial_no: 0,
             serial_no: null,
             has_batch_no: 0,
