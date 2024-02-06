@@ -249,6 +249,7 @@ class RestaurantObject(Document):
                     letra = resultado.group(2)  # Obtenemos la parte de letras
             else:
                 print("No se encontró una coincidencia válida en la cadena.")
+                letra = "Now"
             
             if(letra == "m"):
                 numero = numero

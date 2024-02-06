@@ -21,7 +21,8 @@ def get_posinv_summary(from_date, to_date):
             "posting_date": ["between", [desde_fecha, hasta_fecha]]
         },
         fields=["posting_date", "name", "docstatus", "status", "customer", "customer_name", 
-                "tax_id", "address_display", "currency", "net_total", "total_taxes_and_charges", "total",
+                "tax_id", "address_display", "currency", "net_total", "total_taxes_and_charges", "total", "total_amount_discount_lines",
+                "additional_discount_percentage", "discount_amount",
                 "codigo_Qr_sunat", "codigo_hash_sunat", "enlace_pdf", "enlace_xml"]
     )
 
@@ -49,7 +50,7 @@ def get_posinv_items(from_date, to_date):
     hasta_fecha = getdate(to_date)
 
     productos = frappe.db.sql(f"""SELECT pii.parent, pii.docstatus, pii.item_code, pii.item_name, pii.item_group, 
-                                    pii.qty, pii.stock_uom, pii.amount FROM `tabPOS Invoice` as pi INNER JOIN
+                                    pii.qty, pii.stock_uom, pii.amount, pii.price_list_rate, pii.discount_percentage, pii.discount_amount FROM `tabPOS Invoice` as pi INNER JOIN
                                     `tabPOS Invoice Item` as pii on pi.name = pii.parent
                                     WHERE pi.posting_date BETWEEN %s AND %s
                                     ORDER BY pii.parent, pii.idx asc""", (desde_fecha, hasta_fecha), as_dict=True)
