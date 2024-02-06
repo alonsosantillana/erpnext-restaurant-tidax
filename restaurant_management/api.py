@@ -21,7 +21,7 @@ def get_posinv_summary(from_date, to_date):
             "posting_date": ["between", [desde_fecha, hasta_fecha]]
         },
         fields=["posting_date", "name", "docstatus", "status", "customer", "customer_name", 
-                "tax_id", "address_display", "currency", "net_total", "total_taxes_and_charges", "total", "total_amount_discount_lines",
+                "tax_id", "address_display", "currency", "net_total", "total_taxes_and_charges", "grand_total", "total", "total_amount_discount_lines",
                 "additional_discount_percentage", "discount_amount",
                 "codigo_Qr_sunat", "codigo_hash_sunat", "enlace_pdf", "enlace_xml"]
     )
