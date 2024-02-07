@@ -33,12 +33,16 @@ after_install = "restaurant_management.setup.install.after_install"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/{app_name}/css/{app_name}.css"
 
+fixtures = [
+    "Custom Field Material Request Item"
+]
+
 app_include_js = [
     '/assets/restaurant_management/js/clusterize.min.js',
     '/assets/restaurant_management/js/interact.min.js',
     '/assets/restaurant_management/js/drag.js',
     '/assets/restaurant_management/js/RM.helper.js',
-    '/assets/restaurant_management/js/object-manage.js'
+    '/assets/restaurant_management/js/object-manage.js',
 ]
 
 # include js, css files in header of web template
@@ -53,6 +57,10 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
+# include js in doctype views
+doctype_js = {
+    "Material Request" : "public/js/material_request.js",
+}
 # doctype_js = {{"doctype" : "public/js/doctype.js"}}
 # doctype_list_js = {{"doctype" : "public/js/doctype_list.js"}}
 # doctype_tree_js = {{"doctype" : "public/js/doctype_tree.js"}}
