@@ -26,4 +26,56 @@ frappe.ui.form.on("Material Request", {
 			}
 		});
 	},
+
+	clear_item_no_manufacturing: function(frm, cdt, cdn) {
+		// Obtén la lista de elementos de la tabla secundaria
+		const items = frm.doc.items || [];
+	
+		// Inicializa una lista para almacenar los elementos que cumplen con la condición
+		const itemsCumplenCondicion = [];
+	
+		// Contador para llevar un seguimiento de las llamadas a la API
+		let apiCallCounter = 0;
+	
+		// Función para actualizar el formulario después de que se completen todas las llamadas a la API
+		function actualizarFormulario() {
+			// Actualiza el campo 'items' con los elementos que cumplen con la condición
+			frm.set_value('items', itemsCumplenCondicion);
+	
+			// Recarga el formulario para reflejar los cambios
+			frm.refresh();
+		}
+	
+		// Recorre los elementos de la tabla secundaria
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+	
+			// Accede al campo 'item_code' en tu tabla secundaria
+			const itemCode = item.item_code;
+	
+			// Realiza una llamada a la API de Frappe para obtener la información de la tabla maestra 'Items'
+			frappe.call({
+				method: "frappe.client.get",
+				args: {
+					doctype: "Item",
+					name: itemCode
+				},
+				callback: (r) => {
+					// Verifica si 'default_bom' no está vacío y guarda el registro si cumple con la condición
+					const defaultBom = r.message.default_bom;
+					if (defaultBom) {
+						itemsCumplenCondicion.push(item);
+					}
+	
+					// Incrementa el contador de llamadas a la API
+					apiCallCounter++;
+	
+					// Si se han completado todas las llamadas a la API, actualiza el formulario
+					if (apiCallCounter === items.length) {
+						actualizarFormulario();
+					}
+				}
+			});
+		}
+	},
 });
