@@ -15,7 +15,7 @@
     "fetch_from": null,
     "fetch_if_empty": 0,
     "fieldname": "pos_invoice",
-    "fieldtype": "Link",
+    "fieldtype": "Small Text",
     "hidden": 0,
     "ignore_user_permissions": 0,
     "ignore_xss_filter": 0,
@@ -28,7 +28,7 @@
     "modified": "2018-11-19 08:32:50.687870",
     "name": "Material Request Item-pos_invoice",
     "no_copy": 0,
-    "options": "POS Invoice",
+    "options": null,
     "parent": null,
     "parentfield": null,
     "parenttype": null,
@@ -88,7 +88,6 @@
     "reqd": 0,
     "search_index": 0,
     "translatable": 0,
-    "unique": 1,
     "width": null
   }
 ]

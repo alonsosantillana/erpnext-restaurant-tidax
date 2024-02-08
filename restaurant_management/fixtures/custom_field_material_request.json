@@ -23,7 +23,7 @@
     "in_list_view": 0,
     "in_standard_filter": 0,
     "insert_after": "set_warehouse",
-    "label": "Limpiar platos sin produccion",
+    "label": "Platos a producir y agrupacion",
     "length": 0,
     "modified": "2024-01-24 00:39:37.549578",
     "name": "Material Request-clear_item_no_manufacturing",
