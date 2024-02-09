@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"s5pXpGLdkx\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Restaurant Management</span>\",\"col\":12}},{\"id\":\"hRP5CGZTdn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"POS Restaurant\",\"col\":3}},{\"id\":\"PKKl3hJxrD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tablero\",\"col\":3}},{\"id\":\"XeZ7JpnXpW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"f9pyLDHT6e\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuraci\u00f3n\",\"col\":4}},{\"id\":\"TakfKRxIpo\",\"type\":\"card\",\"data\":{\"card_name\":\"Shift\",\"col\":4}},{\"id\":\"XlyWsLAxBs\",\"type\":\"card\",\"data\":{\"card_name\":\"Restaurant\",\"col\":4}},{\"id\":\"KCJy-gOQ2S\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Ventas Anuales\",\"col\":4}},{\"id\":\"LAAhFSBc26\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas Completadas\",\"col\":4}},{\"id\":\"kMUc6fBPyb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas en Proceso\",\"col\":4}},{\"id\":\"yj7gKVZVCR\",\"type\":\"card\",\"data\":{\"card_name\":\"Reportes\",\"col\":4}}]",
+ "content": "[{\"id\":\"s5pXpGLdkx\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Restaurant Management</span>\",\"col\":12}},{\"id\":\"hRP5CGZTdn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"POS Restaurant\",\"col\":3}},{\"id\":\"PKKl3hJxrD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tablero\",\"col\":3}},{\"id\":\"XeZ7JpnXpW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"f9pyLDHT6e\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuraci\u00f3n\",\"col\":4}},{\"id\":\"TakfKRxIpo\",\"type\":\"card\",\"data\":{\"card_name\":\"Caja\",\"col\":4}},{\"id\":\"XlyWsLAxBs\",\"type\":\"card\",\"data\":{\"card_name\":\"Restaurant\",\"col\":4}},{\"id\":\"KCJy-gOQ2S\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Ventas Anuales\",\"col\":4}},{\"id\":\"LAAhFSBc26\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas Completadas\",\"col\":4}},{\"id\":\"kMUc6fBPyb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas en Proceso\",\"col\":4}},{\"id\":\"YXord2YU7o\",\"type\":\"card\",\"data\":{\"card_name\":\"Logistica\",\"col\":4}},{\"id\":\"yj7gKVZVCR\",\"type\":\"card\",\"data\":{\"card_name\":\"Reportes\",\"col\":4}}]",
  "creation": "2023-04-26 17:15:35.609631",
  "custom_blocks": [],
  "docstatus": 0,
@@ -151,36 +151,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Shift",
-   "link_count": 2,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Opening Entry",
-   "link_count": 0,
-   "link_to": "POS Opening Entry",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asiento de cierre",
-   "link_count": 0,
-   "link_to": "POS Closing Entry",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Configuraci\u00f3n",
-   "link_count": 6,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -243,9 +215,85 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Recetas",
+   "link_count": 0,
+   "link_to": "BOM",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Caja",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Opening Entry",
+   "link_count": 0,
+   "link_to": "POS Opening Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asiento de cierre",
+   "link_count": 0,
+   "link_to": "POS Closing Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Logistica",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compras",
+   "link_count": 0,
+   "link_to": "Purchase Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pase a produccion",
+   "link_count": 0,
+   "link_to": "Material Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Produccion",
+   "link_count": 0,
+   "link_to": "Work Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2023-09-25 12:37:51.159443",
+ "modified": "2024-02-08 19:55:14.158326",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Management",
