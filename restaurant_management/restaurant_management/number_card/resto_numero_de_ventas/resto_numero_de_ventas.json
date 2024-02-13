@@ -6,7 +6,7 @@
  "doctype": "Number Card",
  "document_type": "POS Invoice",
  "dynamic_filters_json": "[]",
- "filters_json": "[[\"POS Invoice\",\"posting_date\",\"Between\",[\"2023-01-01\",\"2023-12-31\"],false],[\"POS Invoice\",\"docstatus\",\"=\",\"1\",false],[\"POS Invoice\",\"status\",\"!=\",\"Return\",false],[\"POS Invoice\",\"have_nc\",\"=\",0,false]]",
+ "filters_json": "[[\"POS Invoice\",\"posting_date\",\"Between\",[\"2024-01-01\",\"2024-12-31\"],false],[\"POS Invoice\",\"docstatus\",\"=\",\"1\",false],[\"POS Invoice\",\"status\",\"!=\",\"Return\",false],[\"POS Invoice\",\"have_nc\",\"=\",0,false]]",
  "function": "Count",
  "idx": 0,
  "is_public": 1,

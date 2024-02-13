@@ -6,7 +6,7 @@
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "dynamic_filters_json": "",
- "filters_json": "{\"period\":\"Monthly\",\"based_on\":\"Item Group\",\"fiscal_year\":\"2023\",\"company\":\"Demo\"}",
+ "filters_json": "{\"period\":\"Monthly\",\"based_on\":\"Item Group\",\"fiscal_year\":\"2024\",\"company\":\"Demo\"}",
  "group_by_type": "Count",
  "idx": 0,
  "is_public": 0,
