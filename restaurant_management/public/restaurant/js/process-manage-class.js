@@ -232,7 +232,7 @@ ProcessManage = class ProcessManage {
                         // Crea botones por cada grupo
                         const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
                         const numeroDeGrupos = Math.ceil(subNamesUnicos.length / 4);
-                        popupDocument.write('<div id="pagination">');
+                        popupDocument.write('<div id="pagination" align = "center">');
                         for (let i = 0; i < numeroDeGrupos; i++) {
                             const buttonText = `Grupo ${i + 1}`;
                             popupDocument.write(`<button id="botonAgrupacion${i}" class="btn btn-outline-success">${buttonText}</button>`);
@@ -251,7 +251,7 @@ ProcessManage = class ProcessManage {
                         let compara_ant = "";
     
                         // Itera sobre las órdenes y muestra la cabecera una vez y los detalles debajo de la misma en divs
-                        popupDocument.write('<div id="divData">');
+                        popupDocument.write(`<div id="divData" style="justify-content: space-around; display: flex; flex-wrap: wrap;">`);
                         ordenes.forEach((orden, index) => {
                             if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
                                 compara_ant = compara;
