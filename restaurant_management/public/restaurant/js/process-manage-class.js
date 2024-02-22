@@ -276,7 +276,7 @@ ProcessManage = class ProcessManage {
                                 popupDocument.write(`<div id="tableData" style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
                                 popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.sub_name}</button>`);
-                                popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + "</p>");
+                                popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + " - Mozo: " + orden.owner + "</p>");
                                 compara = orden.room_description + orden.table_description + orden.sub_name;
                             }
                             if ((orden.room_description + orden.table_description + orden.sub_name) === compara) {

@@ -109,6 +109,7 @@ def get_ordenes_cocina_comandas(usuario):
         oei.item_name AS item_name, 
         oei.qty, 
         oei.notes,
+        oei.owner,
         LEFT(oei.ordered_time, 19) as ordered_time,
         CONCAT(
         taor.name,
@@ -152,6 +153,7 @@ def get_ordenes_cocina_comandas(usuario):
         oei.item_name AS item_name, 
         oei.qty, 
         oei.notes,
+        oei.owner,
         LEFT(oei.ordered_time, 19) as ordered_time,
         CONCAT(
         taor.name,
@@ -195,6 +197,7 @@ def get_ordenes_cocina_comandas(usuario):
         oei.item_name AS item_name, 
         oei.qty, 
         oei.notes,
+        oei.owner,
         LEFT(oei.ordered_time, 19) as ordered_time,
         CONCAT(
         taor.name,
