@@ -51,10 +51,20 @@ def obtener_res_set(filtro):
     return res_set
 
 @frappe.whitelist()
-def get_ordenes_cocina_resumen():
-    ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
+def get_ordenes_cocina_resumen(usuario):
+    if usuario.startswith("cocin"):
+        ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
+                            where (status != 'Attending' AND status != 'Completed') and item_pt like '%COCINA%'
+                            group by item_code;""", as_dict=True)
+    elif usuario.startswith("bar"):
+        ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
+                            where (status != 'Attending' AND status != 'Completed') and item_pt like '%BAR%'
+                            group by item_code;""", as_dict=True)
+    else:
+        ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed')
                             group by item_code;""", as_dict=True)
+    
 
     return ordenes
 

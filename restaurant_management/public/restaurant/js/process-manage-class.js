@@ -59,10 +59,13 @@ ProcessManage = class ProcessManage {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButton').addEventListener('click', () => {
             const popupWindow = window.open("", "Consolidacion de Platos", "width=600,height=400,top=100,left=100");
-
+            console.log(frappe.session.user);
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
+                args: {
+                    usuario: frappe.session.user
+                },
                 callback: (r) => {
                     const orderItems = r.message;
                     if (popupWindow && !popupWindow.closed) {
@@ -98,6 +101,9 @@ ProcessManage = class ProcessManage {
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
+                                args: {
+                                    usuario: frappe.session.user
+                                },
                                 callback: (r) => {
                                     const orderItems = r.message;
 

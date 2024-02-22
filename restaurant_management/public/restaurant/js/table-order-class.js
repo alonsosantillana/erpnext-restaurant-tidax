@@ -505,8 +505,8 @@ class TableOrder {
                 this.data = r.message.order.data;
                 this.render();
                 this.check_items({ items: r.message.items });
-                this.print_order();
-                //this.print_order_silent();
+                //this.print_order();
+                this.print_order_silent();
             },
         });
     }
@@ -551,11 +551,11 @@ class TableOrder {
     }
     // TIDAX
     print_account_tdx(){
-        this.print_account();
-        //this.print_account_silent();
+        //this.print_account();
+        this.print_account_silent();
     }
 
-    // TIDAX
+    // TIDAX: IMPRESION DE PRE-CUENTA
     print_account_silent(){
         var formato_impresion;
         frappe.call({
@@ -632,7 +632,7 @@ class TableOrder {
         }
         this.print_account_silent();// TIDAX   ----> PDF + IMPRIMIR
     }
-    // TIDAX
+    // TIDAX: IMPRESION DE ORDEN
     print_order_silent(){
         var formato_impresion;
         frappe.call({
