@@ -69,69 +69,171 @@ def get_ordenes_cocina_resumen(usuario):
     return ordenes
 
 @frappe.whitelist()
-def get_ordenes_cocina_atendidos():
-    hoy = datetime.now()
-    hoy = hoy.strftime('%Y-%m-%d')
-    ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
-                            `tabOrder Entry Item` AS oei
-                            on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed'
-                            group by item_code;""", as_dict=True)
-    # Invoiced = Totalmente facturado          Completed = Cocina termino de acer el pedido
-    return ordenes
-
-@frappe.whitelist()
-def get_ordenes_cocina_comandas():
+def get_ordenes_cocina_atendidos(usuario):
     hoy = datetime.now()
     hoy = hoy.strftime('%Y-%m-%d')
 
-    ordenes = frappe.db.sql(f"""
-    SELECT 
-    taor.name, 
-    taor.table_description, 
-    taor.room_description, 
-    oei.item_code AS item_code, 
-    oei.item_name AS item_name, 
-    oei.qty, 
-    oei.notes,
-    LEFT(oei.ordered_time, 19) as ordered_time,
-    CONCAT(
-    taor.name,
-    CASE
-    WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16)) > 0
-    THEN CONCAT(
-    '-',
-    DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16))
-    )
-    ELSE ''
-    END
-    ) AS sub_name
-    FROM 
-    `tabTable Order` AS taor 
-    INNER JOIN
-    `tabOrder Entry Item` AS oei
-    ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
-    AND taor.name = oei.parent
-    AND taor.status != 'Invoiced' 
-    AND (oei.status != 'Attending' AND oei.status != 'Completed')
-    GROUP BY 
-    taor.name, 
-    taor.table_description, 
-    taor.room_description, 
-    oei.item_code, 
-    oei.item_name, 
-    oei.qty, 
-    oei.notes, 
-    oei.ordered_time
-    ORDER BY 
-    oei.ordered_time, sub_name ASC, taor.name ASC;
-    """, as_dict=True)
+    if usuario.startswith("cocin"):
+        ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
+                                `tabOrder Entry Item` AS oei
+                                on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
+                                item_pt like '%COCINA%'
+                                group by item_code;""", as_dict=True)
+    if usuario.startswith("bar"):
+        ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
+                                `tabOrder Entry Item` AS oei
+                                on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
+                                item_pt like '%BAR%'
+                                group by item_code;""", as_dict=True)
+    else:
+        ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
+                                `tabOrder Entry Item` AS oei
+                                on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed'
+                                group by item_code;""", as_dict=True)
+        # Invoiced = Totalmente facturado          Completed = Cocina termino de acer el pedido
+    return ordenes
+
+@frappe.whitelist()
+def get_ordenes_cocina_comandas(usuario):
+    hoy = datetime.now()
+    hoy = hoy.strftime('%Y-%m-%d')
+
+
+    if usuario.startswith("cocin"):
+        ordenes = frappe.db.sql(f"""
+        SELECT 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code AS item_code, 
+        oei.item_name AS item_name, 
+        oei.qty, 
+        oei.notes,
+        LEFT(oei.ordered_time, 19) as ordered_time,
+        CONCAT(
+        taor.name,
+        CASE
+        WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16)) > 0
+        THEN CONCAT(
+        '-',
+        DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16))
+        )
+        ELSE ''
+        END
+        ) AS sub_name
+        FROM 
+        `tabTable Order` AS taor 
+        INNER JOIN
+        `tabOrder Entry Item` AS oei
+        ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
+        AND taor.name = oei.parent
+        AND taor.status != 'Invoiced' 
+        AND (oei.status != 'Attending' AND oei.status != 'Completed')
+        AND oei.item_pt like '%COCINA%'
+        GROUP BY 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code, 
+        oei.item_name, 
+        oei.qty, 
+        oei.notes, 
+        oei.ordered_time
+        ORDER BY 
+        oei.ordered_time, sub_name ASC, taor.name ASC;
+        """, as_dict=True)
+    elif usuario.startswith("bar"):
+        ordenes = frappe.db.sql(f"""
+        SELECT 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code AS item_code, 
+        oei.item_name AS item_name, 
+        oei.qty, 
+        oei.notes,
+        LEFT(oei.ordered_time, 19) as ordered_time,
+        CONCAT(
+        taor.name,
+        CASE
+        WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16)) > 0
+        THEN CONCAT(
+        '-',
+        DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16))
+        )
+        ELSE ''
+        END
+        ) AS sub_name
+        FROM 
+        `tabTable Order` AS taor 
+        INNER JOIN
+        `tabOrder Entry Item` AS oei
+        ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
+        AND taor.name = oei.parent
+        AND taor.status != 'Invoiced' 
+        AND (oei.status != 'Attending' AND oei.status != 'Completed')
+        AND oei.item_pt like '%BAR%'
+        GROUP BY 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code, 
+        oei.item_name, 
+        oei.qty, 
+        oei.notes, 
+        oei.ordered_time
+        ORDER BY 
+        oei.ordered_time, sub_name ASC, taor.name ASC;
+        """, as_dict=True)
+    else:
+        ordenes = frappe.db.sql(f"""
+        SELECT 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code AS item_code, 
+        oei.item_name AS item_name, 
+        oei.qty, 
+        oei.notes,
+        LEFT(oei.ordered_time, 19) as ordered_time,
+        CONCAT(
+        taor.name,
+        CASE
+        WHEN DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16)) > 0
+        THEN CONCAT(
+        '-',
+        DENSE_RANK() OVER (PARTITION BY taor.name ORDER BY LEFT(oei.ordered_time, 16))
+        )
+        ELSE ''
+        END
+        ) AS sub_name
+        FROM 
+        `tabTable Order` AS taor 
+        INNER JOIN
+        `tabOrder Entry Item` AS oei
+        ON DATE(taor.creation) BETWEEN '{hoy}' AND '{hoy}' 
+        AND taor.name = oei.parent
+        AND taor.status != 'Invoiced' 
+        AND (oei.status != 'Attending' AND oei.status != 'Completed')
+        GROUP BY 
+        taor.name, 
+        taor.table_description, 
+        taor.room_description, 
+        oei.item_code, 
+        oei.item_name, 
+        oei.qty, 
+        oei.notes, 
+        oei.ordered_time
+        ORDER BY 
+        oei.ordered_time, sub_name ASC, taor.name ASC;
+        """, as_dict=True)
 
     return ordenes
 
 
 
 @frappe.whitelist()
-def update_comanda_atendida(order_name, ordered_time):
+def update_comanda_atendida(order_name, ordered_time, usuario):
     try:
         # Convertir la cadena a un objeto de fecha y hora para manejar la comparación adecuadamente
         ordered_time_dt = datetime.strptime(ordered_time, "%Y-%m-%d %H:%M:%S")
@@ -144,12 +246,30 @@ def update_comanda_atendida(order_name, ordered_time):
         #     WHERE `parent` = '{order_name}'
         #     AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i:%s') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M:%S')}'
         # """
-        query = f"""
-            SELECT *
-            FROM `tabOrder Entry Item`
-            WHERE `parent` = '{order_name}'
-            AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M')}'
-        """
+
+        if usuario.startswith("cocin"):
+            query = f"""
+                SELECT *
+                FROM `tabOrder Entry Item`
+                WHERE `parent` = '{order_name}'
+                AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M')}'
+                AND item_pt like '%COCINA%'
+            """
+        elif usuario.startswith("bar"):
+            query = f"""
+                SELECT *
+                FROM `tabOrder Entry Item`
+                WHERE `parent` = '{order_name}'
+                AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M')}'
+                AND item_pt like '%BAR%'
+            """
+        else:
+            query = f"""
+                SELECT *
+                FROM `tabOrder Entry Item`
+                WHERE `parent` = '{order_name}'
+                AND DATE_FORMAT(`ordered_time`, '%Y-%m-%d %H:%i') = '{ordered_time_dt.strftime('%Y-%m-%d %H:%M')}'
+            """
 
         order_entry_items = frappe.db.sql(query, as_dict=True)
         

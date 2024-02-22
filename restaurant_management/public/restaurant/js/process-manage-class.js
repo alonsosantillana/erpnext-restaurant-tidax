@@ -123,7 +123,7 @@ ProcessManage = class ProcessManage {
                             });
                         }
                         // Llama a la función de actualización automáticamente cada minuto
-                        setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
+                        //setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
 
 
                         popupDocument.write("</body></html>");
@@ -146,6 +146,9 @@ ProcessManage = class ProcessManage {
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
+                args: {
+                    usuario: frappe.session.user
+                },
                 callback: (r) => {
                     const orderItems = r.message;
                     const fecha = new Date();
@@ -181,6 +184,9 @@ ProcessManage = class ProcessManage {
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
+                                args: {
+                                    usuario: frappe.session.user
+                                },
                                 callback: (r) => {
                                     const orderItems = r.message;
 
@@ -199,7 +205,7 @@ ProcessManage = class ProcessManage {
                             });
                         }
                         // Llama a la función de actualización automáticamente cada minuto
-                        setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
+                        //setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
 
                         popupDocument.write("</body></html>");
                         popupDocument.close();
@@ -220,6 +226,9 @@ ProcessManage = class ProcessManage {
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
+                args: {
+                    usuario: frappe.session.user
+                },
                 callback: (r) => {
                     const ordenes = r.message;
                     console.log(ordenes);
@@ -337,6 +346,7 @@ ProcessManage = class ProcessManage {
                                     args: {
                                         order_name: orderName, // Nombre de la orden
                                         ordered_time: orderedTime, // Hora de la orden
+                                        usuario: frappe.session.user
                                     },
                                     callback: (r) => {
                                         // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
@@ -396,6 +406,9 @@ ProcessManage = class ProcessManage {
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
+                                args: {
+                                    usuario: frappe.session.user
+                                },
                                 callback: (r) => {
                                     const ordenes = r.message;
                                     //if (popupWindow && !popupWindow.closed) {
@@ -501,6 +514,7 @@ ProcessManage = class ProcessManage {
                                             args: {
                                                 order_name: orderName, // Nombre de la orden
                                                 ordered_time: orderedTime, // Hora de la orden
+                                                usuario: frappe.session.user
                                             },
                                             callback: (r) => {
                                                 // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
