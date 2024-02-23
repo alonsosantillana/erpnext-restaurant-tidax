@@ -319,7 +319,7 @@ class PayForm extends DeskForm {
                         }
                     });
                     // this.print_invoice_silent(r.message.invoice_name);
-                    this.print(r.message.invoice_name);
+                    // this.print(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }

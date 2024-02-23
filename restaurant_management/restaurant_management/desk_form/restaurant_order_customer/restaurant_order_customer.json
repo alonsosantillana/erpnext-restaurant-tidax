@@ -29,6 +29,7 @@
   {
    "allow_read_on_all_link_options": 0,
    "collapsible": 0,
+   "default": "",
    "extra_field": 0,
    "fetch_from": "customer.customer_name",
    "fetch_if_empty": 0,
@@ -45,6 +46,7 @@
   {
    "allow_read_on_all_link_options": 0,
    "collapsible": 0,
+   "default": "",
    "extra_field": 0,
    "fetch_from": "customer.tax_id",
    "fetch_if_empty": 0,
@@ -66,7 +68,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2024-02-13 10:49:33.399350",
+ "modified": "2024-02-23 06:40:01.655268",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-customer",

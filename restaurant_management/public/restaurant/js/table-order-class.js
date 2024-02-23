@@ -506,7 +506,7 @@ class TableOrder {
                 this.render();
                 this.check_items({ items: r.message.items });
                 //this.print_order();
-                this.print_order_silent();
+                //this.print_order_silent();
             },
         });
     }

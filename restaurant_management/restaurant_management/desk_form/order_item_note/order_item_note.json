@@ -34,7 +34,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2024-02-13 10:49:32.267225",
+ "modified": "2024-02-23 05:19:39.727396",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "order-item-note",

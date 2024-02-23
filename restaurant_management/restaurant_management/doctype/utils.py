@@ -52,17 +52,23 @@ def obtener_res_set(filtro):
 
 @frappe.whitelist()
 def get_ordenes_cocina_resumen(usuario):
+    hoy = datetime.now()
+    hoy = hoy.strftime('%Y-%m-%d')
+
     if usuario.startswith("cocin"):
         ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed') and item_pt like '%COCINA%'
+                            AND DATE(creation) between '{hoy}' and '{hoy}'
                             group by item_code;""", as_dict=True)
     elif usuario.startswith("bar"):
         ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed') and item_pt like '%BAR%'
+                            AND DATE(creation) between '{hoy}' and '{hoy}'
                             group by item_code;""", as_dict=True)
     else:
         ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed')
+                            AND DATE(creation) between '{hoy}' and '{hoy}'
                             group by item_code;""", as_dict=True)
     
 
