@@ -1,0 +1,32 @@
+{
+ "add_total_row": 1,
+ "columns": [],
+ "creation": "2024-02-23 18:34:03.612490",
+ "disable_prepared_report": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "modified": "2024-02-23 18:41:52.129147",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "Propinas Resumen",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "POS Invoice",
+ "report_name": "Propinas Resumen",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Admin Resto"
+  },
+  {
+   "role": "Cajero"
+  },
+  {
+   "role": "Administrator"
+  }
+ ]
+}
