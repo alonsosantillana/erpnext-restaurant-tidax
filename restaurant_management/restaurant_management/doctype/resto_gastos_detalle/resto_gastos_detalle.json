@@ -1,0 +1,49 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-25 15:00:20.213162",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_gto",
+  "gasto_gto",
+  "importe_gto"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_gto",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Codigo",
+   "options": "Item"
+  },
+  {
+   "depends_on": "item",
+   "fetch_from": "item_gto.item_name",
+   "fieldname": "gasto_gto",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Gasto"
+  },
+  {
+   "fieldname": "importe_gto",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Importe",
+   "options": "Currency"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-25 15:13:16.374704",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "Resto Gastos Detalle",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

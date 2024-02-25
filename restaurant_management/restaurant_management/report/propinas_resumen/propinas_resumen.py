@@ -20,17 +20,19 @@ def get_data(filters):
 	if(mozo):
 		data = frappe.db.sql("""SELECT
 					    `tabPOS Invoice`.`posting_date` AS fecha,
-						`tabTable Order`.`owner` AS codigo_mozo,
-						`tabUser`.`full_name` AS mozo,
+						`tabTable Order`.`owner` AS mozo,
+						`tabUser`.`full_name` AS nombre,
 						`tabPOS Invoice`.`name` AS comprobante,
-						`tabSales Invoice Payment`.`amount` AS propina,
-						`tabSales Invoice Payment`.`mode_of_payment` AS metodo_pago
+						`tabSales Invoice Payment`.`amount` AS propinas,
+						`tabSales Invoice Payment`.`mode_of_payment` AS metodo_de_pago
 					FROM
 						`tabTable Order`
 					INNER JOIN
 						`tabPOS Invoice` ON `tabTable Order`.`link_invoice` = `tabPOS Invoice`.`name`
-					INNER JOIN `tabSales Invoice Payment` ON `tabSales Invoice Payment`.`parent` = `tabPOS Invoice`.`name`
-					INNER JOIN `tabUser` ON `tabUser`.`name` = `tabTable Order`.`owner`
+					INNER JOIN 
+					   	`tabSales Invoice Payment` ON `tabSales Invoice Payment`.`parent` = `tabPOS Invoice`.`name`
+					INNER JOIN 
+					   	`tabUser` ON `tabUser`.`name` = `tabTable Order`.`owner`
 					WHERE
 						`tabSales Invoice Payment`.`mode_of_payment` = 'Propinas'
 						AND DATE(`tabPOS Invoice`.`posting_date`) = %s
@@ -40,11 +42,11 @@ def get_data(filters):
 	else:
 		data = frappe.db.sql("""SELECT
 					`tabPOS Invoice`.`posting_date` AS fecha,
-					`tabTable Order`.`owner` AS codigo_mozo,
-					`tabUser`.`full_name` AS mozo,
+					`tabTable Order`.`owner` AS mozo,
+					`tabUser`.`full_name` AS nombre,
 					`tabPOS Invoice`.`name` AS comprobante,
-					`tabSales Invoice Payment`.`amount` AS propina,
-					`tabSales Invoice Payment`.`mode_of_payment` AS metodo_pago
+					`tabSales Invoice Payment`.`amount` AS propinas,
+					`tabSales Invoice Payment`.`mode_of_payment` AS metodo_de_pago
 				FROM
 					`tabTable Order`
 				INNER JOIN
@@ -55,15 +57,16 @@ def get_data(filters):
 					`tabSales Invoice Payment`.`mode_of_payment` = 'Propinas'
 					AND DATE(`tabPOS Invoice`.`posting_date`) = %s
 					AND `tabPOS Invoice`.`docstatus` != 2;""",(to), as_dict=True)
+		print(data)
 		return data
 
 def get_columns(filters=None):
     columns = [
 		"Fecha:Date:100",
         "Mozo:Data:200",
-        "Mozo Nombre:Date:200",
+        "Nombre:Data:200",
         "Comprobante:Data:200",
-        "Propinas:Float:50",
+        "Propinas:Data:50",
         "Metodo de pago:Data:100",
     ]
 

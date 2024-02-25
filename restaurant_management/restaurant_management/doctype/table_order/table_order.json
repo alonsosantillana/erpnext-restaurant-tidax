@@ -30,7 +30,8 @@
   "company",
   "customer_name",
   "customer_tax_id",
-  "customer_tipo_documento_identidad"
+  "customer_tipo_documento_identidad",
+  "personas"
  ],
  "fields": [
   {
@@ -187,12 +188,17 @@
    "fieldtype": "Currency",
    "label": "Total Amount Free",
    "options": "currency"
+  },
+  {
+   "fieldname": "personas",
+   "fieldtype": "Int",
+   "label": "Personas"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-11-16 10:14:15.633617",
+ "modified": "2024-02-25 14:33:25.096553",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order",

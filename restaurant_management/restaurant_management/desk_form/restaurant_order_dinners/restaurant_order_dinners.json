@@ -9,6 +9,22 @@
  "creation": "2022-08-23 16:06:44.909532",
  "desk_form_fields": [
   {
+   "allow_read_on_all_link_options": 0,
+   "collapsible": 0,
+   "default": "1",
+   "extra_field": 0,
+   "fetch_if_empty": 0,
+   "fieldname": "personas",
+   "fieldtype": "Int",
+   "hidden": 0,
+   "label": "Personas",
+   "max_length": 0,
+   "max_value": 0,
+   "read_only": 0,
+   "reqd": 0,
+   "show_in_filter": 0
+  },
+  {
    "allow_read_on_all_link_options": 1,
    "collapsible": 0,
    "default": "1",
@@ -33,7 +49,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2024-02-23 05:19:40.206378",
+ "modified": "2024-02-25 14:37:32.265820",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-dinners",

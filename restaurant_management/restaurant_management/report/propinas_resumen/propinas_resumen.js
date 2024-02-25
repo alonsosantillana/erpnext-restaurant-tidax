@@ -4,12 +4,6 @@
 
 frappe.query_reports["Propinas Resumen"] = {
 	"filters": [
-
-	]
-};
-
-frappe.query_reports["Propinas Resumen"] = {
-	"filters": [
 		{
 			"fieldname": "company",
 			"label": __("Company"),
