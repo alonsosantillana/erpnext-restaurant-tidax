@@ -663,7 +663,8 @@ class OrderManage extends ObjectManage {
         objects.Minus.prop("disabled", !item_is_enabled_to_edit);
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
         objects.Trash.prop("disabled", !item.is_enabled_to_delete);
-        if(item.data.status == "Completed"){
+        // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
+        if(item.data.status == "Completed" || item.data.status == "Sent"){
             this.#components.discount_global.enable().show();
         }
         item.check_status();

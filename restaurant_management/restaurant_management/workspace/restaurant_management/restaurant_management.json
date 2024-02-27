@@ -209,8 +209,66 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Logistica",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Entradas Inventario",
+   "link_count": 0,
+   "link_to": "Stock Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compras",
+   "link_count": 0,
+   "link_to": "Purchase Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Gastos Caja",
+   "link_count": 0,
+   "link_to": "Resto Gastos",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pase a produccion",
+   "link_count": 0,
+   "link_to": "Material Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Produccion",
+   "link_count": 0,
+   "link_to": "Work Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Reportes",
-   "link_count": 8,
+   "link_count": 10,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -296,64 +354,26 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
-   "label": "Logistica",
-   "link_count": 5,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Entradas Inventario",
+   "is_query_report": 1,
+   "label": "Mozos vs Platos",
    "link_count": 0,
-   "link_to": "Stock Entry",
-   "link_type": "DocType",
+   "link_to": "Mozos vs Platos",
+   "link_type": "Report",
    "onboard": 0,
    "type": "Link"
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
-   "label": "Compras",
+   "is_query_report": 1,
+   "label": "Mozos Resumen",
    "link_count": 0,
-   "link_to": "Purchase Invoice",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Gastos Caja",
-   "link_count": 0,
-   "link_to": "Resto Gastos",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Pase a produccion",
-   "link_count": 0,
-   "link_to": "Material Request",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Produccion",
-   "link_count": 0,
-   "link_to": "Work Order",
-   "link_type": "DocType",
+   "link_to": "Mozos Resumen",
+   "link_type": "Report",
    "onboard": 0,
    "type": "Link"
   }
  ],
- "modified": "2024-02-25 15:06:01.012770",
+ "modified": "2024-02-26 22:35:11.403797",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Management",
