@@ -9,6 +9,22 @@
  "creation": "2022-08-23 16:06:44.888594",
  "desk_form_fields": [
   {
+   "allow_read_on_all_link_options": 0,
+   "collapsible": 0,
+   "extra_field": 0,
+   "fetch_if_empty": 0,
+   "fieldname": "personas",
+   "fieldtype": "Select",
+   "hidden": 0,
+   "label": "Personas",
+   "max_length": 0,
+   "max_value": 0,
+   "options": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20",
+   "read_only": 0,
+   "reqd": 0,
+   "show_in_filter": 0
+  },
+  {
    "allow_read_on_all_link_options": 1,
    "collapsible": 0,
    "default": "",
@@ -68,7 +84,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2024-02-23 06:40:01.655268",
+ "modified": "2024-02-27 20:56:21.109400",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-customer",
