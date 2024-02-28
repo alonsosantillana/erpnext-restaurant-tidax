@@ -68,11 +68,10 @@ def get_data(filters):
 def get_columns(filters=None):
     columns = [
 		"Fecha:Date:100",
-        "Mozo:Data:200",
+        "Cajero:Data:200",
         "Nombre:Data:200",
-        "QTY Mesas Atendidas:Data:100",
-        "Monto Mesas Atendidas:Data:100",
-        "QTY Platos Atendidos:Data:100"
+        "Metodo_Pago:Data:100",
+        "Monto:Data:100"
     ]
 
     return columns
