@@ -8,6 +8,8 @@
  "field_order": [
   "item_gto",
   "gasto_gto",
+  "clm_brk_01",
+  "grupo_gto",
   "importe_gto"
  ],
  "fields": [
@@ -19,7 +21,6 @@
    "options": "Item"
   },
   {
-   "depends_on": "item",
    "fetch_from": "item_gto.item_name",
    "fieldname": "gasto_gto",
    "fieldtype": "Data",
@@ -32,12 +33,24 @@
    "in_list_view": 1,
    "label": "Importe",
    "options": "Currency"
+  },
+  {
+   "fieldname": "clm_brk_01",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "item_gto.item_group",
+   "fieldname": "grupo_gto",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Grupo",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-02-25 15:13:16.374704",
+ "modified": "2024-02-29 15:49:08.642272",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Resto Gastos Detalle",

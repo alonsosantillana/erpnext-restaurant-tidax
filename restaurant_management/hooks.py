@@ -60,6 +60,7 @@ app_include_js = [
 # include js in doctype views
 doctype_js = {
     "Material Request" : "public/js/material_request.js",
+    "Resto Gastos" : "public/js/resto_gastos.js",
 }
 # doctype_js = {{"doctype" : "public/js/doctype.js"}}
 # doctype_list_js = {{"doctype" : "public/js/doctype_list.js"}}

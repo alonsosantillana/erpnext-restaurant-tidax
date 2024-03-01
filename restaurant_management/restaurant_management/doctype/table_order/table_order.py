@@ -196,6 +196,8 @@ class TableOrder(Document):
                     invoice.discount_amount = self.discount
                 if(self.discount_global_percent>0 and self.discount_global_percent<100):
                     invoice.additional_discount_percentage = self.discount_global_percent
+                if(self.discount_global_percent == 100 or self.discount == self.amount):
+                    invoice.additional_discount_percentage = 100
                 # Casuistica descuento lineal y descuento global
                 if(total_free>0):
                     invoice.total_amount_free = total_free
@@ -223,6 +225,8 @@ class TableOrder(Document):
                     invoice.discount_amount = self.discount
                 if(self.discount_global_percent>0 and self.discount_global_percent<100):
                     invoice.additional_discount_percentage = self.discount_global_percent
+                if(self.discount_global_percent == 100 or self.discount == self.amount):
+                    invoice.additional_discount_percentage = 100
                 # Casuistica descuento lineal y descuento global
                 if(total_free>0):
                     invoice.total_amount_free = total_free
@@ -250,6 +254,8 @@ class TableOrder(Document):
                     invoice.discount_amount = self.discount
                 if(self.discount_global_percent>0 and self.discount_global_percent<100):
                     invoice.additional_discount_percentage = self.discount_global_percent
+                if(self.discount_global_percent == 100 or self.discount == self.amount):
+                    invoice.additional_discount_percentage = 100
                 # Casuistica descuento lineal y descuento global
                 if(total_free>0):
                     invoice.total_amount_free = total_free
@@ -277,6 +283,8 @@ class TableOrder(Document):
                     invoice.discount_amount = self.discount
                 if(self.discount_global_percent>0 and self.discount_global_percent<100):
                     invoice.additional_discount_percentage = self.discount_global_percent
+                if(self.discount_global_percent == 100 or self.discount == self.amount):
+                    invoice.additional_discount_percentage = 100
                 # Casuistica descuento lineal y descuento global
                 if(total_free>0):
                     invoice.total_amount_free = total_free
