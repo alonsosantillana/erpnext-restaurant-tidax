@@ -127,7 +127,7 @@ class OrderManage extends ObjectManage {
         this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
         this.#components.discount_global = RMHelper.default_button("Discount", 'discount', () => this.update_current_order('discount')); //TIDAX
-
+        
         this.modal.title_container.empty().append(
             RMHelper.return_main_button(this.title, () => this.modal.hide()).html()
         )
@@ -664,7 +664,7 @@ class OrderManage extends ObjectManage {
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
         objects.Trash.prop("disabled", !item.is_enabled_to_delete);
         // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
-        if(item.data.status == "Completed" || item.data.status == "Sent"){
+        if ((item.data.status == "Completed" || item.data.status == "Sent") && frappe.session.user.includes("cajero")) {
             this.#components.discount_global.enable().show();
         }
         item.check_status();

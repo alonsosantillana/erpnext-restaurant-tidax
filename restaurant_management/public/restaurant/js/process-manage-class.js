@@ -50,9 +50,11 @@ ProcessManage = class ProcessManage {
             `<button id="openPopupButtonCom" class="btn btn-default btn-flat">Comandas</button>`,
             `<button id="openPopupButtonAte" class="btn btn-default btn-flat">Pedidos Atendidos</button>`
         );
-        this.agrupacion_platos();
-        this.agrupacion_comandas();
-        this.agrupacion_platos_atendidos();
+        if (frappe.session.user.includes("cocin")) {
+            this.agrupacion_platos();
+            this.agrupacion_comandas();
+            this.agrupacion_platos_atendidos();
+        }
     }
     // TIDAX: Agrupa los platos pendientes y los muestra en una nueva ventana
     agrupacion_platos() {

@@ -21,6 +21,9 @@ class FoodCommand {
             }).on("click", () => {
                 this.execute();
             }, !RM.restrictions.to_change_status_order ? DOUBLE_CLICK : null)
+            if (frappe.session.user.includes("mozo")) {
+                this.action_button.prop('disabled', true);
+            }
 
             this.status_label = frappe.jshtml({
                 tag: "h5",
