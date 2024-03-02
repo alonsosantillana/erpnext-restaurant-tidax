@@ -25,7 +25,7 @@ def get_data(filters):
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						`tabOrder Entry Item`.`item_group` AS grupo_platos,
-						`tabOrder Entry Item`.`item_code` AS codigo_Platos,
+						`tabOrder Entry Item`.`item_code` AS codigo_platos,
 						`tabOrder Entry Item`.`item_name` AS nombre_platos,
 						SUM(`tabOrder Entry Item`.`qty`) AS qty_platos_atendidos
 					FROM
@@ -80,7 +80,7 @@ def get_columns(filters=None):
         "Grupo Platos:Data:200",
         "Codigo Platos:Data:100",
         "Nombre Platos:Data:200",
-		"QTY Platos Atendidos:Data:50"
+		"QTY Platos Atendidos:Data:100"
     ]
 
     return columns

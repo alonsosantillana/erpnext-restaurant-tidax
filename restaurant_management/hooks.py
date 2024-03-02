@@ -34,7 +34,8 @@ after_install = "restaurant_management.setup.install.after_install"
 # app_include_css = "/assets/{app_name}/css/{app_name}.css"
 
 fixtures = [
-    "Custom Field Material Request Item"
+    "Custom Field Material Request Item",
+    "Custom Field Material Request",
 ]
 
 app_include_js = [
