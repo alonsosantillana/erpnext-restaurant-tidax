@@ -21,15 +21,15 @@ def get_data(filters):
 	data = frappe.db.sql("""
 				SELECT
 					pce.posting_date AS fecha,  
-					SUM(pce.grand_total) AS total_ingreso, 
+					SUM(pce.grand_total) AS total_ingreso,
+					SUM(pced.expected_amount) AS propinas,
 					SUM(rg.gto_total) AS total_gasto,
-					SUM(pced.opening_amount) AS propinas,
-					(SUM(pce.grand_total) + SUM(pced.opening_amount) - SUM(rg.gto_total)) as cierre
+					(SUM(pce.grand_total) + SUM(pced.expected_amount) - SUM(rg.gto_total)) as cierre
 				FROM
 					`tabPOS Closing Entry` as pce
 				LEFT JOIN
 					`tabResto Gastos` AS rg ON pce.posting_date = rg.date_gto
-				LEFT JOIN
+				inner JOIN
 					`tabPOS Closing Entry Detail` AS pced ON pce.name = pced.parent
 				WHERE
 					DATE(pce.posting_date) BETWEEN %s AND %s AND
