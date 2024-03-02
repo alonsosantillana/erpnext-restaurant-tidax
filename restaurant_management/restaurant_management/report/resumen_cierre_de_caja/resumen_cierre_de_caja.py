@@ -18,7 +18,6 @@ def get_data(filters):
 	from_d = str(filters.get('report_date_from'))
 	to_d = str(filters.get('report_date_to'))
 
-
 	data = frappe.db.sql("""
 				SELECT
 					pce.posting_date AS fecha,  
@@ -27,15 +26,17 @@ def get_data(filters):
 					(SUM(pce.grand_total) - SUM(rg.gto_total)) as cierre
 				FROM
 					`tabPOS Closing Entry` as pce
-				INNER JOIN
-					`tabResto Gastos` AS rg ON rg.date_gto = pce.posting_date
-				WHERE
+				LEFT JOIN
+					`tabResto Gastos` AS rg 
+				ON
+					pce.posting_date = rg.date_gto
+					WHERE
 					DATE(pce.posting_date) BETWEEN %s AND %s AND
-					DATE(rg.date_gto) BETWEEN %s AND %s AND 
 					pce.docstatus = 1 AND
 					rg.docstatus = 1
+					  
 				GROUP BY pce.posting_date;
-			""", (from_d, to_d, from_d, to_d), as_dict=True)
+			""", (from_d, to_d), as_dict=True)
 
 	return data
 

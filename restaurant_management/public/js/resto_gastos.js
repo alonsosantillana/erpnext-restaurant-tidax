@@ -14,3 +14,12 @@ var set_total_qty = function(frm){
     frm.doc.gto_total = total_qty;
     //frm.refresh();
 };
+
+cur_frm.fields_dict['gto_detalle'].grid.get_field('item_gto').get_query = function(doc, cdt, cdn){
+	//var d = locals[cdt][cdn]
+	return {
+		filters: {
+			"item_group": "GASTOS"
+		}
+	}
+}
