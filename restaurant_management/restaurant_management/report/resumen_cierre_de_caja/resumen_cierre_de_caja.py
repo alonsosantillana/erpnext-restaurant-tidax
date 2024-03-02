@@ -33,7 +33,8 @@ def get_data(filters):
 					DATE(pce.posting_date) BETWEEN %s AND %s AND
 					DATE(rg.date_gto) BETWEEN %s AND %s AND 
 					pce.docstatus = 1 AND
-					rg.docstatus = 1;
+					rg.docstatus = 1
+				GROUP BY pce.posting_date;
 			""", (from_d, to_d, from_d, to_d), as_dict=True)
 
 	return data
