@@ -506,7 +506,9 @@ class TableOrder {
                 this.render();
                 this.check_items({ items: r.message.items });
                 //this.print_order();
-                //this.print_order_silent();
+                if(this.order_manage.table.data.description.includes("D")){
+                    this.print_order_silent();
+                }
             },
         });
     }

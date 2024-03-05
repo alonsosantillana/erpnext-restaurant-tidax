@@ -51,7 +51,9 @@ def get_data(filters):
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`grand_total`) AS monto_mesas_atendidas,
-						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos
+						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
+					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
+					    (SUM(`tabPOS Invoice`.`grand_total`)/SUM(`tabTable Order`.`personas`)) AS ticket_promedio
 					FROM
 						`tabTable Order`
 					LEFT JOIN
@@ -74,7 +76,9 @@ def get_columns(filters=None):
         "Nombre:Data:200",
         "QTY Mesas Atendidas:Data:100",
         "Monto Mesas Atendidas:Data:100",
-        "QTY Platos Atendidos:Data:100"
+        "QTY Platos Atendidos:Data:100",
+		"QTY Personas Atendidas:Data:100",
+		"Ticket Promedio:Data:100"
     ]
 
     return columns

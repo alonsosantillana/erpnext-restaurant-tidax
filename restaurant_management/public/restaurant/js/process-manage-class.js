@@ -279,6 +279,7 @@ ProcessManage = class ProcessManage {
                                 box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
                                 popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.sub_name}</button>`);
                                 popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + " - Mozo: " + orden.owner + "</p>");
+                                popupDocument.write("<p>" + orden.comentario + "</p>");
                                 compara = orden.room_description + orden.table_description + orden.sub_name;
                             }
                             if ((orden.room_description + orden.table_description + orden.sub_name) === compara) {
@@ -479,7 +480,8 @@ ProcessManage = class ProcessManage {
     box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
     <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
     data-order-name='${orden.name}' data-ordered-time='${orden.ordered_time}'>${orden.sub_name}</button>
-    <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description}</p>`;
+    <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description} - Mozo: ${orden.owner}</p>
+    <p>${orden.comentario}</p>`;
                                             detalles = ""; // Inicia una nueva sección de detalles
                                             compara = orden.room_description + orden.table_description + orden.sub_name;
                                         }
