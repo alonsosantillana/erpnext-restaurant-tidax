@@ -170,6 +170,19 @@ class PayForm extends DeskForm {
     }
 
     make_payment_button() {
+        // TIDAX: MOSTRAR EN BOTON EL IMPORTE DE PAGO
+        let importe;
+        if(this.doc.discount_global_percent){
+            importe = parseFloat(this.doc.amount)*(1-parseFloat(this.doc.discount_global_percent)/100);
+            importe = importe.toFixed(2);
+        }else if(this.doc.discount){
+            importe = parseFloat(this.doc.amount)-(parseFloat(this.doc.discount));
+            importe = importe.toFixed(2);
+        }else{
+            importe = parseFloat(this.doc.amount);
+            importe = importe.toFixed(2);
+        }
+
         this.button_payment = frappe.jshtml({
             tag: "button",
             wrapper: this.get_field("payment_button").$wrapper,
@@ -178,8 +191,8 @@ class PayForm extends DeskForm {
                 class: `btn btn-primary btn-lg btn-flat`,
                 style: "width: 100%; height: 60px;"
             },
-            // content: `<span style="font-size: 25px; font-weight: 400">{{text}} ${this.order.total_money}</span>`,
-            content: `<span style="font-size: 25px; font-weight: 400">{{text}}</span>`,
+            //content: `<span style="font-size: 25px; font-weight: 400">{{text}} ${this.order.total_money}</span>`,
+            content: `<span style="font-size: 25px; font-weight: 400">{{text}} S/ ${importe}</span>`,
             text: `${__("Pay")}`
         }).on("click", () => {
             if (!RM.can_pay) return;
