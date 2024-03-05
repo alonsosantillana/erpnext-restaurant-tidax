@@ -116,6 +116,7 @@ def get_ordenes_cocina_comandas(usuario):
         oei.qty, 
         oei.notes,
         oei.owner,
+        taor.comentario,
         LEFT(oei.ordered_time, 19) as ordered_time,
         CONCAT(
         taor.name,
