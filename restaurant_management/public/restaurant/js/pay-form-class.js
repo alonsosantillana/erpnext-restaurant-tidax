@@ -94,17 +94,17 @@ class PayForm extends DeskForm {
 
             if (mode_of_payment.default === 1) {
                 // TIDAX
-                if(this.doc.discount > 0) {
-                    total_con_desc = this.order.data.amount - this.doc.discount
-                    this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
-                }
-                else if(this.doc.discount_global_percent > 0){
-                    total_con_desc = this.order.data.amount*(1-(this.doc.discount_global_percent/100));
-                    this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
-                }
-                else{
-                    this.payment_methods[mode_of_payment.mode_of_payment].val(this.order.data.amount);
-                }
+                // if(this.doc.discount > 0) {
+                //     total_con_desc = this.order.data.amount - this.doc.discount
+                //     this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
+                // }
+                // else if(this.doc.discount_global_percent > 0){
+                //     total_con_desc = this.order.data.amount*(1-(this.doc.discount_global_percent/100));
+                //     this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
+                // }
+                // else{
+                //     this.payment_methods[mode_of_payment.mode_of_payment].val(this.order.data.amount);
+                // }
 
                 setTimeout(() => {
                     this.payment_methods[mode_of_payment.mode_of_payment].select();
