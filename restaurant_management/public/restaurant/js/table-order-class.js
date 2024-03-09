@@ -512,10 +512,12 @@ class TableOrder {
                 m2 = RM.restrictions.mesas_2;
                 m3 = RM.restrictions.mesas_3;
                 no_imp = RM.restrictions.no_imprimir;
-                if(this.order_manage.table.data.description.includes(m1) &&
-                    this.order_manage.table.data.description.includes(m2) &&
-                    this.order_manage.table.data.description.includes(m3) &&
+                console.log("ANTES DE ENTRAR");
+                if((this.order_manage.table.data.description.includes(m1) ||
+                    this.order_manage.table.data.description.includes(m2) ||
+                    this.order_manage.table.data.description.includes(m3)) &&
                     no_imp == 0){
+                        console.log("ENTRO!!!!");
                     this.print_order_silent();
                 }
             },
