@@ -25,12 +25,6 @@ frappe.query_reports["Resumen de pago de ventas"] = {
 			"fieldtype": "Date",
 			"reqd": 1,
 			"default": frappe.datetime.get_today()
-		},
-		{
-			"fieldname": "user_mozo",
-			"label": __("Mozo"),
-			"fieldtype": "Link",
-			"options": "User"
 		}
 	]
 };

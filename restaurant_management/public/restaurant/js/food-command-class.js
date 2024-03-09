@@ -21,6 +21,7 @@ class FoodCommand {
             }).on("click", () => {
                 this.execute();
             }, !RM.restrictions.to_change_status_order ? DOUBLE_CLICK : null)
+            // TIDAX: QUITA PERMISO A MOZOS
             if (frappe.session.user.includes("mozo")) {
                 this.action_button.prop('disabled', true);
             }
@@ -62,10 +63,16 @@ class FoodCommand {
                 },
                 content: this.template
             });
-
+            //TIDAX: NO MOSTRAR EN PANTALLA DELIVERYS
+            let cadena = this.data.table_description;
+            let inicio = cadena.indexOf("(") + 1;
+            let fin = cadena.indexOf(")");
+            let resultado = cadena.substring(inicio, fin);
+            
+            if(!resultado.includes("D")){
             $(this.process_manage.command_container()).append(
                 this.item.html()
-            );
+            );}
 
             this.rendered = true;
             this.show_notes();

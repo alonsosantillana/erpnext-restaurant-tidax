@@ -93,7 +93,7 @@ class PayForm extends DeskForm {
             }).float();
 
             if (mode_of_payment.default === 1) {
-                // TIDAX
+                // TIDAX: Poner el pago total en automatico en el metodo de pago por default
                 // if(this.doc.discount > 0) {
                 //     total_con_desc = this.order.data.amount - this.doc.discount
                 //     this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);

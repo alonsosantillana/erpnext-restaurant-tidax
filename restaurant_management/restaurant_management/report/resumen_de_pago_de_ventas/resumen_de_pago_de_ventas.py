@@ -17,53 +17,29 @@ def get_data(filters):
 	company = filters.get('company')
 	from_d = str(filters.get('report_date_from'))
 	to_d = str(filters.get('report_date_to'))
-	mozo = filters.get('user_mozo')
 
-	if(mozo):
-		data = frappe.db.sql("""
-					SELECT
-					   `tabPOS Invoice`.`posting_date` AS fecha, 
-						`tabPOS Invoice`.`owner` AS cajero,
-						`tabUser`.`full_name` AS nombre,
-						`tabSales Invoice Payment`.`mode_of_payment` AS metodo_pago,
-						SUM(`tabSales Invoice Payment`.`amount`) AS monto
-					FROM
-						`tabPOS Invoice`
-					LEFT JOIN
-						`tabSales Invoice Payment` ON  `tabPOS Invoice`.`name` = `tabSales Invoice Payment`.`parent`
-					LEFT JOIN
-						`tabUser` ON `tabUser`.`name` = %s
-					WHERE
-						DATE(`tabPOS Invoice`.`posting_date`) BETWEEN %s AND %s
-						AND `tabPOS Invoice`.`status` = "Consolidated"
-					GROUP BY
-						`tabPOS Invoice`.`owner`,
-					   	`tabSales Invoice Payment`.`mode_of_payment`;
-				""", (mozo, from_d, to_d), as_dict=True)
-		return data
-	else:
-		data = frappe.db.sql("""
-					SELECT
-					   `tabPOS Invoice`.`posting_date` AS fecha, 
-						`tabPOS Invoice`.`owner` AS cajero,
-						`tabUser`.`full_name` AS nombre,
-						`tabSales Invoice Payment`.`mode_of_payment` AS metodo_pago,
-						SUM(`tabSales Invoice Payment`.`amount`) AS monto
-					FROM
-						`tabPOS Invoice`
-					LEFT JOIN
-						`tabSales Invoice Payment` ON  `tabPOS Invoice`.`name` = `tabSales Invoice Payment`.`parent`
-					LEFT JOIN
-						`tabUser` ON `tabUser`.`name` = `tabPOS Invoice`.`owner`
-					WHERE
-						DATE(`tabPOS Invoice`.`posting_date`) BETWEEN %s AND %s
-						AND `tabPOS Invoice`.`status` = "Consolidated"
-					GROUP BY
-						`tabPOS Invoice`.`owner`,
-					   	`tabSales Invoice Payment`.`mode_of_payment`;
-				""", (from_d, to_d), as_dict=True)
+	data = frappe.db.sql("""
+				SELECT
+					`tabPOS Invoice`.`posting_date` AS fecha, 
+					`tabPOS Invoice`.`owner` AS cajero,
+					`tabUser`.`full_name` AS nombre,
+					`tabSales Invoice Payment`.`mode_of_payment` AS metodo_pago,
+					SUM(`tabSales Invoice Payment`.`amount`) AS monto
+				FROM
+					`tabPOS Invoice`
+				LEFT JOIN
+					`tabSales Invoice Payment` ON  `tabPOS Invoice`.`name` = `tabSales Invoice Payment`.`parent`
+				LEFT JOIN
+					`tabUser` ON `tabUser`.`name` = `tabPOS Invoice`.`owner`
+				WHERE
+					DATE(`tabPOS Invoice`.`posting_date`) BETWEEN %s AND %s
+					AND `tabPOS Invoice`.`status` = "Consolidated"
+				GROUP BY
+					`tabPOS Invoice`.`owner`,
+					`tabSales Invoice Payment`.`mode_of_payment`;
+			""", (from_d, to_d), as_dict=True)
 
-		return data
+	return data
 
 def get_columns(filters=None):
     columns = [

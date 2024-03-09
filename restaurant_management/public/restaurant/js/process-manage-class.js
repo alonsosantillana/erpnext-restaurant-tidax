@@ -270,6 +270,7 @@ ProcessManage = class ProcessManage {
                         // Itera sobre las órdenes y muestra la cabecera una vez y los detalles debajo de la misma en divs
                         popupDocument.write(`<div id="divData" style="justify-content: space-around; display: flex; flex-wrap: wrap;">`);
                         ordenes.forEach((orden, index) => {
+                            if(!orden.table_description.includes("D")){
                             if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
                                 compara_ant = compara;
                                 if (compara === compara_ant && compara_ant !== "") {
@@ -288,7 +289,7 @@ ProcessManage = class ProcessManage {
                                 if (orden.notes) {
                                     popupDocument.write("<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>");
                                 }
-                            }
+                            }}
                         });
 
 
@@ -311,6 +312,8 @@ ProcessManage = class ProcessManage {
                         
                             for (let i = inicio; i < fin && i < ordenesAgrupadas.length; i++) {
                                 const grupo = ordenesAgrupadas[i];
+
+                                if(!grupo[0].table_description.includes("D")){
                         
                                 // Muestra la cabecera solo si es diferente de la anterior
                                 const cuadro = `<div  style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
@@ -329,6 +332,7 @@ ProcessManage = class ProcessManage {
                         
                                 // Concatena las partes y agrega al contenedor
                                 tableData.innerHTML += cuadro + boton + cabecera + detalles + pie + "</div>";
+                                }
                             }
 
                             // Agrega eventos a los botones "Atendido"
@@ -469,6 +473,7 @@ ProcessManage = class ProcessManage {
 
                                     // Itera sobre las órdenes y muestra la información formateada
                                     ordenes.forEach((orden) => {
+                                        if(!orden.table_description.includes("D")){
                                         if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
                                             if (compara) {
                                                 // Si hay una cabecera previa, agrega el contenido
@@ -490,7 +495,7 @@ ProcessManage = class ProcessManage {
                                         if (orden.notes) {
                                             detalles += "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>";
                                         }
-                                    });
+                                    }});
 
                                     // Agrega el último conjunto de cabecera, detalles y pie
                                     if (compara) {
