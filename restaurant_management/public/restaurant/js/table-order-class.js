@@ -506,18 +506,15 @@ class TableOrder {
                 this.render();
                 this.check_items({ items: r.message.items });
                 //this.print_order();
-                console.log(RM.restrictions);
                 let m1, m2, m3, no_imp;
                 m1 = RM.restrictions.mesas_1;
                 m2 = RM.restrictions.mesas_2;
                 m3 = RM.restrictions.mesas_3;
                 no_imp = RM.restrictions.no_imprimir;
-                console.log("ANTES DE ENTRAR");
                 if((this.order_manage.table.data.description.includes(m1) ||
                     this.order_manage.table.data.description.includes(m2) ||
                     this.order_manage.table.data.description.includes(m3)) &&
                     no_imp == 0){
-                        console.log("ENTRO!!!!");
                     this.print_order_silent();
                 }
             },

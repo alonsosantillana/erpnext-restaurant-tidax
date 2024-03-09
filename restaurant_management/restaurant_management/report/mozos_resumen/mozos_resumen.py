@@ -53,7 +53,7 @@ def get_data(filters):
 						SUM(`tabPOS Invoice`.`grand_total`) AS monto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
-					    (SUM(`tabPOS Invoice`.`grand_total`)/SUM(`tabTable Order`.`personas`)) AS ticket_promedio
+					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio
 					FROM
 						`tabTable Order`
 					LEFT JOIN
