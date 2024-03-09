@@ -37,7 +37,15 @@
   "to_change_status_order",
   "section_break_11",
   "restaurant_permissions_info",
-  "restaurant_exceptions"
+  "restaurant_exceptions",
+  "sec_brk_002",
+  "no_imprimir",
+  "clm_brk_001",
+  "mesas_1",
+  "clm_brk_002",
+  "mesas_2",
+  "clm_brk_003",
+  "mesas_3"
  ],
  "fields": [
   {
@@ -204,12 +212,54 @@
    "fieldname": "serie_boleta_m",
    "fieldtype": "Data",
    "label": "Serie Boleta Manual"
+  },
+  {
+   "fieldname": "sec_brk_002",
+   "fieldtype": "Section Break",
+   "label": "Impresion"
+  },
+  {
+   "default": "0",
+   "description": "Sigla inicial de las mesas, las cuales no se mostraran en los ambientes de cocinas. El check es si no se quiere imprimir en ticketera",
+   "fieldname": "no_imprimir",
+   "fieldtype": "Check",
+   "label": "No imprimir"
+  },
+  {
+   "fieldname": "clm_brk_001",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "clm_brk_002",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "clm_brk_003",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Z",
+   "fieldname": "mesas_1",
+   "fieldtype": "Data",
+   "label": "Mesas 1"
+  },
+  {
+   "default": "Z",
+   "fieldname": "mesas_2",
+   "fieldtype": "Data",
+   "label": "Mesas 2"
+  },
+  {
+   "default": "Z",
+   "fieldname": "mesas_3",
+   "fieldtype": "Data",
+   "label": "Mesas 3"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-11-16 09:03:18.089554",
+ "modified": "2024-03-09 03:37:46.726544",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Settings",
