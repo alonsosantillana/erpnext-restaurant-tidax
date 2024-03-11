@@ -25,6 +25,12 @@ frappe.query_reports["Mozos Resumen"] = {
 			"fieldtype": "Date",
 			"reqd": 1,
 			"default": frappe.datetime.get_today()
+		},
+		{
+			"fieldname": "user_mozo",
+			"label": __("Mozo"),
+			"fieldtype": "Link",
+			"options": "User"
 		}
 	]
 };

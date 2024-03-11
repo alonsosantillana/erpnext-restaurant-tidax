@@ -36,13 +36,15 @@ def get_data(filters):
 						`tabUser` ON `tabUser`.`name` = %s
 					WHERE
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
+					    AND `tabTable Order`.`owner` = %s
 						AND `tabTable Order`.`docstatus` = 1
 					GROUP BY
+					    `tabTable Order`.`creation`,
 						`tabTable Order`.`owner`,
 						`tabOrder Entry Item`.`item_code`                
 					HAVING
 						qty_platos_atendidos > 0;
-				""", (mozo, from_d, to_d), as_dict=True)
+				""", (mozo, from_d, to_d, mozo), as_dict=True)
 		return data
 	else:
 		data = frappe.db.sql("""
@@ -64,6 +66,7 @@ def get_data(filters):
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 						AND `tabTable Order`.`docstatus` = 1
 					GROUP BY
+					    `tabTable Order`.`creation`,
 						`tabTable Order`.`owner`,
 						`tabOrder Entry Item`.`item_code`                
 					HAVING

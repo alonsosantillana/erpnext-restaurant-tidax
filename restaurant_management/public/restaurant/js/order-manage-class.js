@@ -608,7 +608,8 @@ class OrderManage extends ObjectManage {
                 }
 
                 this.#components.Divide.prop("disabled", this.current_order.items_count === 0);
-                this.#components.new_customer.enable().show(); //TIDAX
+                //this.#components.new_customer.enable().show(); //TIDAX
+                this.#components.new_customer.disable().show(); //TIDAX
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
                 //this.#components.discount_global.enable().show(); //TIDAX
@@ -663,10 +664,14 @@ class OrderManage extends ObjectManage {
         objects.Minus.prop("disabled", !item_is_enabled_to_edit);
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
         objects.Trash.prop("disabled", !item.is_enabled_to_delete);
-        // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
-        if ((item.data.status == "Completed" || item.data.status == "Sent") && frappe.session.user.includes("cajero")) {
-            this.#components.discount_global.enable().show();
+        if (frappe.session.user.includes("cajero")) {
+            this.#components.new_customer.enable().show();
+            // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
+            if ((item.data.status == "Completed" || item.data.status == "Sent")) {
+                this.#components.discount_global.enable().show();
+            }
         }
+        
         item.check_status();
     }
 
