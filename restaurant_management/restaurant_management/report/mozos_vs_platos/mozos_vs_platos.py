@@ -39,9 +39,10 @@ def get_data(filters):
 					    AND `tabTable Order`.`owner` = %s
 						AND `tabTable Order`.`docstatus` = 1
 					GROUP BY
-					    `tabTable Order`.`creation`,
-						`tabTable Order`.`owner`,
-						`tabOrder Entry Item`.`item_code`                
+					    `tabTable Order`.`owner`,
+					    `tabOrder Entry Item`.`item_group`,
+						`tabOrder Entry Item`.`item_code`,
+					    `tabOrder Entry Item`.`item_name`               
 					HAVING
 						qty_platos_atendidos > 0;
 				""", (mozo, from_d, to_d, mozo), as_dict=True)
@@ -65,10 +66,11 @@ def get_data(filters):
 					WHERE
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 						AND `tabTable Order`.`docstatus` = 1
-					GROUP BY
-					    `tabTable Order`.`creation`,
+					GROUP BY					    
 						`tabTable Order`.`owner`,
-						`tabOrder Entry Item`.`item_code`                
+					    `tabOrder Entry Item`.`item_group`,
+						`tabOrder Entry Item`.`item_code`,
+					    `tabOrder Entry Item`.`item_name`           
 					HAVING
 						qty_platos_atendidos > 0;
 				""", (from_d, to_d), as_dict=True)

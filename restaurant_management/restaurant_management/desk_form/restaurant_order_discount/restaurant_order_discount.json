@@ -61,7 +61,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2024-03-05 02:20:27.765439",
+ "modified": "2024-03-11 21:04:35.587137",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-discount",
