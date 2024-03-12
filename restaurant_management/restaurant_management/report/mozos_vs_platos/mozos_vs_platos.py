@@ -21,7 +21,7 @@ def get_data(filters):
 	if(mozo):
 		data = frappe.db.sql("""
 					SELECT
-						`tabTable Order`.`creation` AS fecha, 
+						DATE(`tabTable Order`.`creation`) AS fecha, 
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						`tabOrder Entry Item`.`item_group` AS grupo_platos,
@@ -39,10 +39,11 @@ def get_data(filters):
 					    AND `tabTable Order`.`owner` = %s
 						AND `tabTable Order`.`docstatus` = 1
 					GROUP BY
-					    `tabTable Order`.`owner`,
+					    DATE(`tabTable Order`.`creation`),				    
+						`tabTable Order`.`owner`,
 					    `tabOrder Entry Item`.`item_group`,
 						`tabOrder Entry Item`.`item_code`,
-					    `tabOrder Entry Item`.`item_name`               
+					    `tabOrder Entry Item`.`item_name`              
 					HAVING
 						qty_platos_atendidos > 0;
 				""", (mozo, from_d, to_d, mozo), as_dict=True)
@@ -50,7 +51,7 @@ def get_data(filters):
 	else:
 		data = frappe.db.sql("""
 					SELECT
-						`tabTable Order`.`creation` AS fecha, 
+						DATE(`tabTable Order`.`creation`) AS fecha, 
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						`tabOrder Entry Item`.`item_group` AS grupo_platos,
@@ -66,7 +67,8 @@ def get_data(filters):
 					WHERE
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 						AND `tabTable Order`.`docstatus` = 1
-					GROUP BY					    
+					GROUP BY	
+					    DATE(`tabTable Order`.`creation`),				    
 						`tabTable Order`.`owner`,
 					    `tabOrder Entry Item`.`item_group`,
 						`tabOrder Entry Item`.`item_code`,
