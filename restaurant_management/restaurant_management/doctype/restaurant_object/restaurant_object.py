@@ -169,7 +169,7 @@ class RestaurantObject(Document):
         if self.type == "Production Center":
             data["status_managed"] = self._status_managed
             data["items_group"] = self._items_group
-
+        print(self.__dict__)
         return data
 
     @property

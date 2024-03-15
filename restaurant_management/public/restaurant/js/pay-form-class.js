@@ -209,7 +209,7 @@ class PayForm extends DeskForm {
                 payment_values[mode_of_payment.mode_of_payment] = value;
             }
         });
-
+        
         return payment_values;
     }
 
@@ -230,6 +230,28 @@ class PayForm extends DeskForm {
     #send_payment() {
         if (!RM.can_pay) return;
         const order_manage = this.order.order_manage;
+
+        // this.payments_values es un objeto JSON
+        let suma_valor = 0; // Inicializa la variable suma_valor
+        for (let key in this.payments_values) {
+            if (this.payments_values.hasOwnProperty(key)) {
+                if (key !== "Propinas") {
+                    // Accede al valor utilizando la clave (key)
+                    let value = this.payments_values[key];
+                    suma_valor += value; // Agrega el valor al acumulador suma_valor
+                    //alert(`Clave: ${key}, Valor: ${value}, Suma_valor: ${suma_valor}, Total:  ${this.doc.amount}`);
+                }
+            }
+        }
+        if(suma_valor == 0.01){
+            suma_valor = 0;
+        }
+        if(suma_valor !== this.doc.amount){
+            alert(`El pago debe ser ${this.doc.amount}`);
+            this.reset_payment_button();
+        }
+        else{
+
         RM.working("Generating Invoice");
         this.order.data.dinners = this.dinners.val();
         frappe.msgprint(this.order.data.electronic_invoice);
@@ -338,7 +360,7 @@ class PayForm extends DeskForm {
                 }
             },
             freeze: true
-        });
+        });}
     }
 
     make_pad() {
