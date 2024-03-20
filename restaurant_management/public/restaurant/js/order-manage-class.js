@@ -667,7 +667,7 @@ class OrderManage extends ObjectManage {
         if (frappe.session.user.includes("cajero")) {
             this.#components.new_customer.enable().show();
             // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
-            if ((item.data.status == "Completed" || item.data.status == "Sent")) {
+            if ((item.data.status == "Completed" || item.data.status == "Sent" || item.data.status == "Processing")) {
                 this.#components.discount_global.enable().show();
             }
         }

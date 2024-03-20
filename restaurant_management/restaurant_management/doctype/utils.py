@@ -398,7 +398,7 @@ def update_estado_platos():
 		frappe.db.sql(
 			"""
 		UPDATE `tabOrder Entry Item` SET status = 'Completed'
-        WHERE status = 'Sent'
+        WHERE status != 'Completed'
 			and DATE(creation) = %s
 	""",
 			fecha_anterior
