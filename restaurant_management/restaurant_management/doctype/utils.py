@@ -393,16 +393,21 @@ def update_estado_platos():
 
     # Calcular la fecha anterior restando un día usando timedelta
     fecha_anterior = fecha_actual - timedelta(days=1)
-    return frappe._dict(
+    fecha_anterior = fecha_anterior.strftime('%Y-%m-%d')
+    resultado = frappe._dict(
 		frappe.db.sql(
 			"""
 		UPDATE `tabOrder Entry Item` SET status = 'Completed'
         WHERE status = 'Sent'
 			and DATE(creation) = %s
 	""",
-			fecha_anterior,
+			fecha_anterior
 		)
 	)
+    return {
+			"success": True,
+			"msg": "Actualizado Platos"
+		}
 
 # @frappe.whitelist()
 # def get_pos_invoices(start, end, pos_profile, user):

@@ -29,11 +29,11 @@ def get_data(filters):
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`grand_total`) AS monto_neto_mesas_atendidas,
-					    (SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) AS monto_bruto_mesas_atendidas,
+					    SUM(`tabTable Order`.`amount`) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
 					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_neto,
-					    ROUND((SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
+					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
 					FROM
 						`tabTable Order`
 					LEFT JOIN
@@ -56,11 +56,11 @@ def get_data(filters):
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`grand_total`) AS monto_neto_mesas_atendidas,
-					    (SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) AS monto_bruto_mesas_atendidas,
+					    SUM(`tabTable Order`.`amount`) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
 					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_neto,
-					    ROUND((SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
+					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
 					FROM
 						`tabTable Order`
 					LEFT JOIN
