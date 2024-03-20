@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 
 import frappe
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import json
 import frappe.utils
@@ -381,6 +381,26 @@ def get_requested_item_qty(sales_order):
 		group by item_code
 	""",
 			sales_order,
+		)
+	)
+
+@frappe.whitelist()
+def update_estado_platos():
+    # Actualizar el estado de platos
+
+    # Obtener la fecha y hora actual
+    fecha_actual = datetime.now()
+
+    # Calcular la fecha anterior restando un día usando timedelta
+    fecha_anterior = fecha_actual - timedelta(days=1)
+    return frappe._dict(
+		frappe.db.sql(
+			"""
+		UPDATE `tabOrder Entry Item` SET status = 'Completed'
+        WHERE status = 'Sent'
+			and DATE(creation) = %s
+	""",
+			fecha_anterior,
 		)
 	)
 

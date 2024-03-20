@@ -127,7 +127,7 @@ doctype_js = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {{
+scheduler_events = {
 # 	"all": [
 # 		"{app_name}.tasks.all"
 # 	],
@@ -143,7 +143,12 @@ doctype_js = {
 # 	"monthly": [
 # 		"{app_name}.tasks.monthly"
 # 	]
-# }}
+    "cron": {
+        "0 3 * * *":[
+            "restaurant_management.restaurant_management.doctype.utils.update_estado_platos"
+        ]
+    }
+}
 
 # Testing
 # -------

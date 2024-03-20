@@ -28,8 +28,12 @@ def get_data(filters):
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
-						SUM(`tabPOS Invoice`.`grand_total`) AS monto_mesas_atendidas,
-						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos
+						SUM(`tabPOS Invoice`.`grand_total`) AS monto_neto_mesas_atendidas,
+					    (SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) AS monto_bruto_mesas_atendidas,
+						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
+					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
+					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_neto,
+					    ROUND((SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
 					FROM
 						`tabTable Order`
 					LEFT JOIN
@@ -51,10 +55,12 @@ def get_data(filters):
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
-						SUM(`tabPOS Invoice`.`grand_total`) AS monto_mesas_atendidas,
+						SUM(`tabPOS Invoice`.`grand_total`) AS monto_neto_mesas_atendidas,
+					    (SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
-					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio
+					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_neto,
+					    ROUND((SUM(`tabTable Order`.`amount`) + SUM(`tabTable Order`.`total_amount_discount_lines`)) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
 					FROM
 						`tabTable Order`
 					LEFT JOIN
@@ -76,10 +82,12 @@ def get_columns(filters=None):
         "Mozo:Data:200",
         "Nombre:Data:200",
         "QTY Mesas Atendidas:Data:100",
-        "Monto Mesas Atendidas:Data:100",
+        "Monto Neto Mesas Atendidas:Data:100",
+		"Monto Bruto Mesas Atendidas:Data:100",
         "QTY Platos Atendidos:Data:100",
 		"QTY Personas Atendidas:Data:100",
-		"Ticket Promedio:Data:100"
+		"Ticket Promedio Neto:Data:100",
+		"Ticket Promedio Bruto:Data:100"
     ]
 
     return columns
