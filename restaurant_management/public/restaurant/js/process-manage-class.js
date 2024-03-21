@@ -125,7 +125,7 @@ ProcessManage = class ProcessManage {
                             });
                         }
                         // Llama a la función de actualización automáticamente cada minuto
-                        //setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
+                        setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
 
 
                         popupDocument.write("</body></html>");
