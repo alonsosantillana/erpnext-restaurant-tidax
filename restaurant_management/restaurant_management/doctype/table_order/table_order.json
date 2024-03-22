@@ -32,7 +32,9 @@
   "customer_tax_id",
   "customer_tipo_documento_identidad",
   "personas",
-  "comentario"
+  "comentario",
+  "cambio_mozo",
+  "cambio_mozo_nombre"
  ],
  "fields": [
   {
@@ -200,12 +202,25 @@
    "fieldname": "comentario",
    "fieldtype": "Data",
    "label": "Comentario"
+  },
+  {
+   "fieldname": "cambio_mozo",
+   "fieldtype": "Link",
+   "label": "Cambio Mozo",
+   "options": "User"
+  },
+  {
+   "fetch_from": "cambio_mozo.full_name",
+   "fieldname": "cambio_mozo_nombre",
+   "fieldtype": "Data",
+   "label": "Cambio Mozo Nombre",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-02-27 20:55:28.950682",
+ "modified": "2024-03-21 18:14:41.660694",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order",

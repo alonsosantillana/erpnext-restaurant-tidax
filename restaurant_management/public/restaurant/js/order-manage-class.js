@@ -121,7 +121,8 @@ class OrderManage extends ObjectManage {
         });
 
         this.modal.container.append(this.template());
-
+        
+        this.#components.change_mozo = RMHelper.default_button("Mozo", 'edit', () => this.update_current_order('mozo')); //TIDAX
         this.#components.customer = RMHelper.default_button("Customer", 'people', () => this.update_current_order('customer'));
         this.#components.new_customer = RMHelper.default_button("", 'addpeople', () => this.consultar_cliente()); //TIDAX
         this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
@@ -134,6 +135,7 @@ class OrderManage extends ObjectManage {
 
         this.modal.buttons_container.prepend(`
 			${this.components.delete.html()}
+            ${this.components.change_mozo.html()} 
             ${this.components.new_customer.html()} 
             ${this.components.customer.html()}
 			${this.components.dinners.html()}
@@ -609,6 +611,7 @@ class OrderManage extends ObjectManage {
 
                 this.#components.Divide.prop("disabled", this.current_order.items_count === 0);
                 //this.#components.new_customer.enable().show(); //TIDAX
+                this.#components.change_mozo.enable().show(); //TIDAX
                 this.#components.new_customer.disable().show(); //TIDAX
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
@@ -617,6 +620,7 @@ class OrderManage extends ObjectManage {
                 this.#components.Transfer.enable();
             } else {
                 this.#components.new_customer.disable().hide(); //TIDAX
+                this.#components.change_mozo.disable().hide(); //TIDAX
                 this.#components.customer.disable().hide();
                 this.#components.dinners.disable().hide();
                 this.#components.discount_global.disable().hide(); //TIDAX
@@ -671,6 +675,7 @@ class OrderManage extends ObjectManage {
                 this.#components.discount_global.enable().show();
             }
         }
+        this.#components.change_mozo.enable().show();
         
         item.check_status();
     }

@@ -409,6 +409,8 @@ def update_estado_platos():
 			"msg": "Actualizado Platos"
 		}
 
+
+
 # @frappe.whitelist()
 # def get_pos_invoices(start, end, pos_profile, user):
 # 	data = frappe.db.sql(
