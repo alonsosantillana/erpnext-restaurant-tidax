@@ -612,7 +612,9 @@ class OrderManage extends ObjectManage {
                 this.#components.Divide.prop("disabled", this.current_order.items_count === 0);
                 //this.#components.new_customer.enable().show(); //TIDAX
                 this.#components.change_mozo.enable().show(); //TIDAX
-                this.#components.new_customer.disable().show(); //TIDAX
+                if (frappe.session.user.includes("cajero")) {
+                    this.#components.new_customer.enable().show(); //TIDAX
+                }
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
                 //this.#components.discount_global.enable().show(); //TIDAX
