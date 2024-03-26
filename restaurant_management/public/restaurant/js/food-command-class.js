@@ -7,7 +7,7 @@ class FoodCommand {
         Object.assign(this, options);
         this.rendered = false;
         this.item = null;
-        this.render1();
+        this.render();
         RM.object(this.identifier + this.process_manage.identifier, this);
     }
     render() {
