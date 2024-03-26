@@ -43,7 +43,7 @@ def get_columns(filters=None):
 		"Fecha:Date:100",
         "Total Ingreso:Float:150",
 		"Propinas:Float:150",
-        "Total Gasto:Float:150",
+        "Total Gastos:Float:150",
 		"Cierre:Float:150"
     ]
 
