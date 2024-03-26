@@ -23,21 +23,17 @@ def get_data(filters):
 					pce.posting_date AS fecha,  
 					SUM(pce.grand_total) AS total_ingreso,
 					SUM(pced.expected_amount) AS propinas,
-					SUM(rg.gto_total) AS total_gasto,
-					(SUM(pce.grand_total) + SUM(pced.expected_amount) - SUM(rg.gto_total)) as cierre
-				FROM
-					`tabPOS Closing Entry` as pce
-				LEFT JOIN
-					`tabResto Gastos` AS rg ON pce.posting_date = rg.date_gto
-				inner JOIN
+					(SELECT SUM(gto_total) FROM `tabResto Gastos` WHERE DATE(pce.posting_date) = DATE(date_gto) AND docstatus = 1) as total_gastos,
+					(SUM(pce.grand_total) + SUM(pced.expected_amount) - (SELECT SUM(gto_total) FROM `tabResto Gastos` WHERE DATE(pce.posting_date) = DATE(date_gto) AND docstatus = 1)) as cierre
+				FROM `tabPOS Closing Entry` as pce
+				INNER JOIN
 					`tabPOS Closing Entry Detail` AS pced ON pce.name = pced.parent
 				WHERE
-					DATE(pce.posting_date) BETWEEN %s AND %s AND
-					pce.docstatus = 1 AND
-					rg.docstatus = 1 AND
-					pced.mode_of_payment = 'Propinas'
-					  
-				GROUP BY pce.posting_date;
+					DATE(pce.posting_date) BETWEEN %s AND %s
+					AND pce.docstatus = 1
+					AND pced.mode_of_payment = 'Propinas'
+				GROUP BY
+					pce.posting_date;
 			""", (from_d, to_d), as_dict=True)
 
 	return data

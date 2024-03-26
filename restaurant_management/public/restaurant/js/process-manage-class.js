@@ -61,7 +61,7 @@ ProcessManage = class ProcessManage {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButton').addEventListener('click', () => {
             const popupWindow = window.open("", "Consolidacion de Platos", "width=600,height=400,top=100,left=100");
-            console.log(frappe.session.user);
+            //console.log(frappe.session.user);
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
@@ -136,6 +136,10 @@ ProcessManage = class ProcessManage {
                     }
                 }
             });
+            // Cierra la ventana emergente después de 5 minutos
+            // setTimeout(() => {
+            //     popupWindow.close();
+            // }, 5 * 60 * 1000); // 5 minutos en milisegundos
         });
     }
 
@@ -233,7 +237,7 @@ ProcessManage = class ProcessManage {
                 },
                 callback: (r) => {
                     const ordenes = r.message;
-                    console.log(ordenes);
+                    //console.log(ordenes);
                     if (popupWindow && !popupWindow.closed) {
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
@@ -508,9 +512,9 @@ ProcessManage = class ProcessManage {
                                         atendidoButtons[i].addEventListener('click', (event) => {
                                             // Obtiene los valores de los atributos de datos del botón clickeado
                                             const orderName = event.target.dataset.orderName;
-                                            console.log(orderName);
+                                            //console.log(orderName);
                                             const orderedTime = event.target.dataset.orderedTime;
-                                            console.log(orderedTime);
+                                            //console.log(orderedTime);
                                             saveComanda(orderName, orderedTime);
                                         });
                                     }

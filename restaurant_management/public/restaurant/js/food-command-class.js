@@ -1,9 +1,13 @@
+let ant_id = "";
+let resultado = "<div></div>";
+let titulo = "";
+let descripcion = "";
 class FoodCommand {
     constructor(options) {
         Object.assign(this, options);
         this.rendered = false;
         this.item = null;
-        this.render();
+        this.render1();
         RM.object(this.identifier + this.process_manage.identifier, this);
     }
     render() {
@@ -85,7 +89,6 @@ class FoodCommand {
     }
     render1() {
         if (!this.rendered) {
-            
             this.action_button = frappe.jshtml({
                 tag: "h5",
                 properties: {
@@ -363,6 +366,7 @@ class FoodCommand {
 		// 		</div>
 		// 	</div>
 		// </div>`
+
         return `			
 		<div class="food-command">
             <div style= "display: none;">${$("#sound-submit").trigger('play')}</div>

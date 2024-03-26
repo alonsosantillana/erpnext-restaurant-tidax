@@ -265,7 +265,7 @@ RestaurantObject = class RestaurantObject {
     get template() {
         const block_style = !RM.can_open_order_manage(this) && this.data.type === "Table" ? RM.restrictions.color : "";
         const hide_class = this.data.orders_count <= 0 ? " hide" : "";
-        console.log((this.data));
+        //console.log((this.data));
         this.indicator = frappe.jshtml({
             tag: "span",
             properties: {

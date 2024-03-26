@@ -58,19 +58,18 @@ def get_ordenes_cocina_resumen(usuario):
     if usuario.startswith("cocin"):
         ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed') and item_pt like '%COCINA%'
-                            AND DATE(creation) between '{hoy}' and '{hoy}'
-                            group by item_code;""", as_dict=True)
+                            AND DATE(creation) = '{hoy}'
+                            group by item_name;""", as_dict=True)
     elif usuario.startswith("bar"):
         ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed') and item_pt like '%BAR%'
-                            AND DATE(creation) between '{hoy}' and '{hoy}'
-                            group by item_code;""", as_dict=True)
+                            AND DATE(creation) = '{hoy}'
+                            group by item_name;""", as_dict=True)
     else:
         ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
                             where (status != 'Attending' AND status != 'Completed')
-                            AND DATE(creation) between '{hoy}' and '{hoy}'
-                            group by item_code;""", as_dict=True)
-    
+                            AND DATE(creation) = '{hoy}'
+                            group by item_name;""", as_dict=True)
 
     return ordenes
 
@@ -82,20 +81,20 @@ def get_ordenes_cocina_atendidos(usuario):
     if usuario.startswith("cocin"):
         ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
                                 `tabOrder Entry Item` AS oei
-                                on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
+                                on DATE(taor.creation) = '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
                                 item_pt like '%COCINA%'
-                                group by item_code;""", as_dict=True)
+                                group by item_name;""", as_dict=True)
     if usuario.startswith("bar"):
         ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
                                 `tabOrder Entry Item` AS oei
-                                on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
+                                on DATE(taor.creation) = '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
                                 item_pt like '%BAR%'
-                                group by item_code;""", as_dict=True)
+                                group by item_name;""", as_dict=True)
     else:
         ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
                                 `tabOrder Entry Item` AS oei
-                                on DATE(taor.creation) between '{hoy}' and '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed'
-                                group by item_code;""", as_dict=True)
+                                on DATE(taor.creation) = '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed'
+                                group by item_name;""", as_dict=True)
         # Invoiced = Totalmente facturado          Completed = Cocina termino de acer el pedido
     return ordenes
 
