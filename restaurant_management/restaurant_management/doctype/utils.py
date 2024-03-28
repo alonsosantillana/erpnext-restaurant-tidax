@@ -56,22 +56,52 @@ def get_ordenes_cocina_resumen(usuario):
     hoy = hoy.strftime('%Y-%m-%d')
 
     if usuario.startswith("cocin"):
-        ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
-                            where (status != 'Attending' AND status != 'Completed') and item_pt like '%COCINA%'
-                            AND DATE(creation) = '{hoy}'
-                            group by item_name;""", as_dict=True)
+        ordenes = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
+                            INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
+                            WHERE (oei.status != 'Attending' AND oei.status != 'Completed') and oei.item_pt like '%COCINA%'
+                            AND DATE(oei.creation) = '{hoy}'
+                            AND tao.status = "Attending"
+                            AND tao.table_description NOT LIKE "D%"
+                            group by oei.item_name;""", as_dict=True)
+        delivery = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
+                            INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
+                            WHERE (oei.status != 'Attending' AND oei.status != 'Completed') and oei.item_pt like '%COCINA%'
+                            AND DATE(oei.creation) = '{hoy}'
+                            AND tao.status = "Attending"
+                            AND tao.table_description LIKE "D%"
+                            group by oei.item_name;""", as_dict=True)
     elif usuario.startswith("bar"):
-        ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
-                            where (status != 'Attending' AND status != 'Completed') and item_pt like '%BAR%'
-                            AND DATE(creation) = '{hoy}'
-                            group by item_name;""", as_dict=True)
+        ordenes = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
+                            INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
+                            WHERE (oei.status != 'Attending' AND oei.status != 'Completed') and oei.item_pt like '%BAR%'
+                            AND DATE(oei.creation) = '{hoy}'
+                            AND tao.status = "Attending"
+                            AND tao.table_description NOT LIKE "D%"
+                            group by oei.item_name;""", as_dict=True)
+        delivery = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
+                            INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
+                            WHERE (oei.status != 'Attending' AND oei.status != 'Completed') and oei.item_pt like '%BAR%'
+                            AND DATE(oei.creation) = '{hoy}'
+                            AND tao.status = "Attending"
+                            AND tao.table_description LIKE "D%"
+                            group by oei.item_name;""", as_dict=True)
     else:
-        ordenes = frappe.db.sql(f"""SELECT item_code, item_name, SUM(qty) as qty FROM `tabOrder Entry Item`
-                            where (status != 'Attending' AND status != 'Completed')
-                            AND DATE(creation) = '{hoy}'
-                            group by item_name;""", as_dict=True)
+        ordenes = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
+                            INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
+                            WHERE (oei.status != 'Attending' AND oei.status != 'Completed')
+                            AND DATE(oei.creation) = '{hoy}'
+                            AND tao.status = "Attending"
+                            AND tao.table_description NOT LIKE "D%"
+                            group by oei.item_name;""", as_dict=True)
+        delivery = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
+                            INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
+                            WHERE (oei.status != 'Attending' AND oei.status != 'Completed')
+                            AND DATE(oei.creation) = '{hoy}'
+                            AND tao.status = "Attending"
+                            AND tao.table_description LIKE "D%"
+                            group by oei.item_name;""", as_dict=True)
 
-    return ordenes
+    return ordenes, delivery
 
 @frappe.whitelist()
 def get_ordenes_cocina_atendidos(usuario):

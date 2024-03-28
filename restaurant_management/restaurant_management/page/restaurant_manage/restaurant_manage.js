@@ -74,7 +74,8 @@ RestaurantManage = class RestaurantManage {
 			'css/order-manage.css',
 			'css/process-manage.css',
 			'css/product-list.css',
-			'css/restaurant-object.css'
+			'css/restaurant-object.css',
+			'css/cocina.css'
 		].map(asset => `assets/restaurant_management/restaurant/${asset}`);
 
 		frappe.require(assets, () => {

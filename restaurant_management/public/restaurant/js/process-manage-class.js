@@ -69,28 +69,71 @@ ProcessManage = class ProcessManage {
                     usuario: frappe.session.user
                 },
                 callback: (r) => {
-                    const orderItems = r.message;
+                    const orderItems = r.message[0];
+                    const orderItemsDelivery = r.message[1];
                     if (popupWindow && !popupWindow.closed) {
                         let cant = 0;
+                        let cantDel = 0;
                         // Abre un documento HTML en la nueva ventana y muestra los datos
                         const popupDocument = popupWindow.document;
                         popupDocument.open();
-                        popupDocument.write("<html><head><title>Platos Consolidados</title></head><body>");
+                        popupDocument.write(`<html><head><title>Platos Consolidados</title></head><body>
+                        <style>
+                            * {
+                            box-sizing: border-box;
+                            }
+
+                            /* Create three equal columns that floats next to each other */
+                            .column {
+                            float: left;
+                            width: 40%;
+                            padding: 10px;
+                            /* height: 300px; Should be removed. Only for demonstration */
+                            }
+
+                            /* Clear floats after the columns */
+                            .row:after {
+                            content: "";
+                            display: table;
+                            clear: both;
+                            }
+                            </style>
+                        `);
                         popupDocument.write("<h2>Consolidacion de Platos:</h2>");
+                        popupDocument.write("<button type='button' style='border-radius: 8px; padding: 8px 20px;' id='refreshButton'>Actualizar</button>");
+                        popupDocument.write("<div class= 'row'> <div class= 'column'>");
                         popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
                         popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
                         // popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
                         orderItems.forEach((item) => {
-                            cant = cant + item.qty;
+                                cant = cant + item.qty;
+                                popupDocument.write("<tr>");
+                                popupDocument.write("<td>[" + item.qty + "]</td>");
+                                // popupDocument.write("<td>" + item.item_code + "</td>");
+                                popupDocument.write("<td>" + item.item_name + "</td>");
+                                popupDocument.write("</tr>");
+                        });
+
+                        popupDocument.write(`</table></center>`);
+                        popupDocument.write(`<div id='totalqty'><center><b>Platos Totales: [${cant}]</b></center></div>`);
+
+                        popupDocument.write(`</div><div class= 'column'>`);
+
+                        popupDocument.write(`<center><table id='tableData1' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px; background: #e9e9e9;">`);
+                        popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
+                        // popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
+                        orderItemsDelivery.forEach((item) => {
+                            cantDel = cantDel + item.qty;
                             popupDocument.write("<tr>");
                             popupDocument.write("<td>[" + item.qty + "]</td>");
                             // popupDocument.write("<td>" + item.item_code + "</td>");
                             popupDocument.write("<td>" + item.item_name + "</td>");
                             popupDocument.write("</tr>");
                         });
+
                         popupDocument.write(`</table></center>`);
-                        popupDocument.write(`<div id='totalqty'><center><b>Platos Totales: [${cant}]</b></center></div>`);
-                        popupDocument.write("<button type='button' style='border-radius: 8px; padding: 8px 20px;' id='refreshButton'>Actualizar</button>");
+                        popupDocument.write(`<div id='totalqty1'><center><b>Deliveries Totales: [${cantDel}]</b></center></div>`);
+                        popupDocument.write("</div></div>");
                         // Agrega un evento al botón de actualización
                         const refreshButton = popupDocument.getElementById('refreshButton');
                         refreshButton.addEventListener('click', () => {
@@ -100,6 +143,7 @@ ProcessManage = class ProcessManage {
                         // Función para cargar y mostrar los datos
                         function refreshData() {
                             cant = 0;
+                            cantDel = 0;
                             // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
                             frappe.call({
                                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
@@ -107,7 +151,8 @@ ProcessManage = class ProcessManage {
                                     usuario: frappe.session.user
                                 },
                                 callback: (r) => {
-                                    const orderItems = r.message;
+                                    const orderItems = r.message[0];
+                                    const orderItemsDelivery = r.message[1];
 
                                     // Encuentra la tabla y actualiza su contenido
                                     const tableData = popupDocument.getElementById('tableData');
@@ -121,6 +166,20 @@ ProcessManage = class ProcessManage {
                                         // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
                                     });
                                     totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
+
+                                    // Encuentra la tabla y actualiza su contenido
+                                    const tableData1 = popupDocument.getElementById('tableData1');
+                                    const totalqty1 = popupDocument.getElementById('totalqty1');
+                                    tableData1.innerHTML = "<tr><th>[Qty]</th><th>Nombre</th></tr>";
+                                    // tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
+
+                                    orderItemsDelivery.forEach((item) => {
+                                        cantDel = cantDel + item.qty;
+                                        tableData1.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
+                                        // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
+                                    });
+                                    totalqty1.innerHTML = `<center><b>Platos Totales: [${cantDel}]</b></center>`;
+
                                 }
                             });
                         }
