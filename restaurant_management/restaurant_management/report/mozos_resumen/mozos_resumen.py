@@ -32,6 +32,10 @@ def get_data(filters):
 					    SUM(`tabTable Order`.`amount`) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
+					    ROUND((SUM(`tabPOS Invoice`.`grand_total`)/(SELECT SUM(grand_total) FROM `tabPOS Invoice` WHERE docstatus = 1 AND 
+					   		DATE(posting_date) between %s AND %s))*100, 2) AS porcentaje_ventas_neto,
+					    ROUND((SUM(`tabTable Order`.`amount`)/(SELECT SUM(amount) FROM `tabTable Order` WHERE docstatus = 1 AND 
+					   		DATE(creation) between %s AND %s))*100, 2) AS porcentaje_ventas_bruto,
 					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_neto,
 					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
 					FROM
@@ -46,7 +50,7 @@ def get_data(filters):
 						AND `tabTable Order`.`docstatus` = 1
 					GROUP BY
 						`tabTable Order`.`owner`;
-				""", (mozo, from_d, to_d, mozo), as_dict=True)
+				""", (from_d, to_d, from_d, to_d, mozo, from_d, to_d, mozo), as_dict=True)
 		return data
 	else:
 		data = frappe.db.sql("""
@@ -59,6 +63,10 @@ def get_data(filters):
 					    SUM(`tabTable Order`.`amount`) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
+					    ROUND((SUM(`tabPOS Invoice`.`grand_total`)/(SELECT SUM(grand_total) FROM `tabPOS Invoice` WHERE docstatus = 1 AND 
+					   		DATE(posting_date) between %s AND %s))*100, 2) AS porcentaje_ventas_neto,
+					    ROUND((SUM(`tabTable Order`.`amount`)/(SELECT SUM(amount) FROM `tabTable Order` WHERE docstatus = 1 AND 
+					   		DATE(creation) between %s AND %s))*100, 2) AS porcentaje_ventas_bruto,
 					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_neto,
 					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`personas`), 0), 2) AS ticket_promedio_bruto
 					FROM
@@ -71,8 +79,10 @@ def get_data(filters):
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 						AND `tabTable Order`.`docstatus` = 1
 					GROUP BY
-						`tabTable Order`.`owner`;
-				""", (from_d, to_d), as_dict=True)
+						`tabTable Order`.`owner`
+					ORDER BY
+					   	monto_bruto_mesas_atendidas;
+				""", (from_d, to_d, from_d, to_d, from_d, to_d), as_dict=True)
 
 		return data
 
@@ -80,12 +90,14 @@ def get_columns(filters=None):
     columns = [
 		"Fecha:Date:100",
         "Mozo:Data:200",
-        "Nombre:Data:200",
+        "Nombre:Data:100",
         "QTY Mesas Atendidas:Data:100",
         "Monto Neto Mesas Atendidas:Data:100",
 		"Monto Bruto Mesas Atendidas:Data:100",
         "QTY Platos Atendidos:Data:100",
 		"QTY Personas Atendidas:Data:100",
+		"Porcentaje Ventas Neto:Data:100",
+		"Porcentaje Ventas Bruto:Data:100",
 		"Ticket Promedio Neto:Data:100",
 		"Ticket Promedio Bruto:Data:100"
     ]
