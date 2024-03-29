@@ -28,8 +28,8 @@ def get_data(filters):
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
-						SUM(`tabPOS Invoice`.`grand_total`) AS monto_neto_mesas_atendidas,
-					    SUM(`tabTable Order`.`amount`) AS monto_bruto_mesas_atendidas,
+						ROUND(SUM(`tabPOS Invoice`.`grand_total`), 2) AS monto_neto_mesas_atendidas,
+					    ROUND(SUM(`tabTable Order`.`amount`), 2) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
 					    ROUND((SUM(`tabPOS Invoice`.`grand_total`)/(SELECT SUM(grand_total) FROM `tabPOS Invoice` WHERE docstatus = 1 AND 
@@ -59,8 +59,8 @@ def get_data(filters):
 						`tabTable Order`.`owner` AS mozo,
 						`tabUser`.`full_name` AS nombre,
 						COUNT(`tabTable Order`.`name`) AS qty_mesas_atendidas,
-						SUM(`tabPOS Invoice`.`grand_total`) AS monto_neto_mesas_atendidas,
-					    SUM(`tabTable Order`.`amount`) AS monto_bruto_mesas_atendidas,
+						ROUND(SUM(`tabPOS Invoice`.`grand_total`), 2) AS monto_neto_mesas_atendidas,
+					    ROUND(SUM(`tabTable Order`.`amount`), 2) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
 					    SUM(`tabTable Order`.`personas`) AS qty_personas_atendidas,
 					    ROUND((SUM(`tabPOS Invoice`.`grand_total`)/(SELECT SUM(grand_total) FROM `tabPOS Invoice` WHERE docstatus = 1 AND 
