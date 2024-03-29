@@ -60,7 +60,7 @@ ProcessManage = class ProcessManage {
     agrupacion_platos() {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButton').addEventListener('click', () => {
-            const popupWindow = window.open("", "Consolidacion de Platos", "width=600,height=400,top=100,left=100");
+            const popupWindow = window.open("", "Consolidacion de Platos", "width=850,height=500,top=100,left=100");
             //console.log(frappe.session.user);
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
@@ -86,7 +86,7 @@ ProcessManage = class ProcessManage {
                             /* Create three equal columns that floats next to each other */
                             .column {
                             float: left;
-                            width: 40%;
+                            width: 50%;
                             padding: 10px;
                             /* height: 300px; Should be removed. Only for demonstration */
                             }
@@ -178,7 +178,7 @@ ProcessManage = class ProcessManage {
                                         tableData1.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
                                         // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
                                     });
-                                    totalqty1.innerHTML = `<center><b>Platos Totales: [${cantDel}]</b></center>`;
+                                    totalqty1.innerHTML = `<center><b>Deliveries Totales: [${cantDel}]</b></center>`;
 
                                 }
                             });
