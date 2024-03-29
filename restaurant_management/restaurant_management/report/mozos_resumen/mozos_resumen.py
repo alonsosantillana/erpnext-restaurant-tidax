@@ -81,7 +81,7 @@ def get_data(filters):
 					GROUP BY
 						`tabTable Order`.`owner`
 					ORDER BY
-					   	monto_bruto_mesas_atendidas;
+					   	monto_bruto_mesas_atendidas desc;
 				""", (from_d, to_d, from_d, to_d, from_d, to_d), as_dict=True)
 
 		return data
