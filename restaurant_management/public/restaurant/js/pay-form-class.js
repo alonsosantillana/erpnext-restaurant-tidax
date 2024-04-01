@@ -254,7 +254,7 @@ class PayForm extends DeskForm {
 
         RM.working("Generating Invoice");
         this.order.data.dinners = this.dinners.val();
-        frappe.msgprint(this.order.data.electronic_invoice);
+        //frappe.msgprint(this.order.data.electronic_invoice);
         //frappe.msgprint(this.electronic_invoice.val());
         frappeHelper.api.call({
             model: "Table Order",

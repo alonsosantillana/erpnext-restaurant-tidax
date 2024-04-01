@@ -153,12 +153,18 @@ class TableOrder(Document):
             none_dinners = _("Please set a Dinners") if dinners == 0 else ""
 
             frappe.throw(none_customer + none_dinners)
+        
+        if (self.customer_tax_id == "" or self.customer_tipo_documento_identidad == "") and dinners != 1:
+                none_customer = _("Please set a RUC/DNI") + "<br>" if self.customer_tax_id == "" else ""
+                none_document = _("Please set a tipo de documento de identidad") if self.customer_tipo_documento_identidad == "" else ""
+
+                return frappe.throw(none_customer + none_document)
 
         entry_items = {
             item.identifier: item.as_dict() for item in self.entry_items
         }
-        print("MAKE INVOICE ----------------------->")
-        print(entry_items)
+        # print("MAKE INVOICE ----------------------->")
+        # print(entry_items)
         if len(entry_items) == 0:
             frappe.throw(_("There is not Item in this Order"))
 
