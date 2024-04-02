@@ -176,12 +176,14 @@ class TableOrder(Document):
                 amount=mode_of_payment[mp]
             ))
 
-        # TIDAX
+        # TIDAX: CASOS PRODUCTOS GRATIS
         total_dicount_lines = 0
         total_free = 0
         for it in self.entry_items:
             total_dicount_lines += (it.discount_amount * it.qty)
             total_free += (it.unit_value * it.qty)
+            if(it.price_list_rate == 0):
+                total_free += 1 * it.qty
 
         if(dinners==1):
             if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):

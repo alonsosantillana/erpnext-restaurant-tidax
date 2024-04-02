@@ -291,7 +291,7 @@ class PayForm extends DeskForm {
                                 'doctype': "POS Invoice"
                             },
                             callback: function(values) {
-                                console.log(values.message.codigo);
+                                //console.log(values.message.codigo);
                                 resolve(values);
                             }
                         });
@@ -323,7 +323,7 @@ class PayForm extends DeskForm {
                                                 'enlace_del_pdf': data.message.enlace_del_pdf
                                             },
                                             callback: function(data) {
-                                                console.log(data);
+                                                //console.log(data);
                                                 if (data.message.codigo_hash) {                                                    
                                                     //window.open(data.message.enlace_del_pdf);
                                                     console.log("CE Generado");
