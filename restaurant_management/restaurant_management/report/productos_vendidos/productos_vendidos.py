@@ -75,7 +75,7 @@ def get_data(filters):
 				WHERE
 					DATE(`tabPOS Invoice`.`posting_date`) BETWEEN %s AND %s
 					AND `tabPOS Invoice`.`docstatus` = 1
-					
+					AND `tabPOS Invoice`.`status` = "Consolidated"
 					AND `tabPOS Invoice Item`.`docstatus` = 1 
 				GROUP BY
 					YEAR(`tabPOS Invoice`.`posting_date`), MONTH(`tabPOS Invoice`.`posting_date`), `tabPOS Invoice Item`.`item_code`
@@ -91,10 +91,8 @@ def get_columns(filters=None):
 		"Month:Data:100",
         "Codigo Producto:Data:100",
         "Nombre Producto:Data:200",
-
         "QTY:Data:100",
-
-        "monto:Data:100"
+        "Monto:Currency:100"
     ]
 
     return columns

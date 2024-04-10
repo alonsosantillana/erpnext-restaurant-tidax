@@ -34,10 +34,13 @@ def get_data(filters):
 						`tabOrder Entry Item` ON `tabTable Order`.`name` = `tabOrder Entry Item`.`parent`
 					LEFT JOIN
 						`tabUser` ON `tabUser`.`name` = %s
+					LEFT JOIN
+						`tabPOS Invoice` ON `tabPOS Invoice`.`name` = `tabTable Order`.`link_invoice`
 					WHERE
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 					    AND `tabTable Order`.`owner` = %s
 						AND `tabTable Order`.`docstatus` = 1
+					    AND `tabPOS Invoice`.`status` = 'Consolidated'
 					GROUP BY
 					    DATE(`tabTable Order`.`creation`),				    
 						`tabTable Order`.`owner`,
@@ -64,9 +67,12 @@ def get_data(filters):
 						`tabOrder Entry Item` ON `tabTable Order`.`name` = `tabOrder Entry Item`.`parent`
 					LEFT JOIN
 						`tabUser` ON `tabUser`.`name` = `tabTable Order`.`owner`
+					LEFT JOIN
+						`tabPOS Invoice` ON `tabPOS Invoice`.`name` = `tabTable Order`.`link_invoice`
 					WHERE
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 						AND `tabTable Order`.`docstatus` = 1
+					    AND `tabPOS Invoice`.`status` = 'Consolidated'
 					GROUP BY	
 					    DATE(`tabTable Order`.`creation`),				    
 						`tabTable Order`.`owner`,
