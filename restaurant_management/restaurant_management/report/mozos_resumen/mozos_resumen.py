@@ -48,6 +48,7 @@ def get_data(filters):
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 					    AND `tabTable Order`.`owner` = %s
 						AND `tabTable Order`.`docstatus` = 1
+					    AND `tabPOS Invoice`.`status` = 'Consolidated'
 					GROUP BY
 						`tabTable Order`.`owner`;
 				""", (from_d, to_d, from_d, to_d, mozo, from_d, to_d, mozo), as_dict=True)
@@ -78,6 +79,7 @@ def get_data(filters):
 					WHERE
 						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
 						AND `tabTable Order`.`docstatus` = 1
+					    AND `tabPOS Invoice`.`status` = 'Consolidated'
 					GROUP BY
 						`tabTable Order`.`owner`
 					ORDER BY
