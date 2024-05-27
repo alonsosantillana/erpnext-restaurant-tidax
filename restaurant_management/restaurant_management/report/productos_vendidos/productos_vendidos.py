@@ -67,7 +67,8 @@ def get_data(filters):
 
 					ROUND(SUM(`tabPOS Invoice Item`.`qty`), 2) AS qty,
 
-					SUM(`tabPOS Invoice Item`.`net_amount`) AS monto
+					SUM(`tabPOS Invoice Item`.`net_amount`) AS monto_neto,
+					SUM(`tabPOS Invoice Item`.`amount`) AS monto_bruto
 				FROM
 					`tabPOS Invoice`
 				LEFT JOIN
@@ -80,7 +81,7 @@ def get_data(filters):
 				GROUP BY
 					YEAR(`tabPOS Invoice`.`posting_date`), MONTH(`tabPOS Invoice`.`posting_date`), `tabPOS Invoice Item`.`item_code`
 				ORDER BY
-					monto desc;
+					monto_bruto desc;
 			""", (fecha_inicio_str, fecha_fin_str), as_dict=True)
 
 	return data
@@ -92,7 +93,8 @@ def get_columns(filters=None):
         "Codigo Producto:Data:100",
         "Nombre Producto:Data:200",
         "QTY:Data:100",
-        "Monto:Currency:150"
+        "Monto Neto:Currency:150",
+		"Monto Bruto:Currency:150"
     ]
 
     return columns
