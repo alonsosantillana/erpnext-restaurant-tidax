@@ -287,7 +287,7 @@ ProcessManage = class ProcessManage {
     agrupacion_comandas() {
         // Agrega un evento al botón "Abrir Nueva Ventana"
         document.getElementById('openPopupButtonCom').addEventListener('click', () => {
-            const popupWindow = window.open("", "Informacion Comandas", "top=100,left=100");
+            const popupWindow = window.open("", "Informacion Comandas", "width=900,height=600,top=100,left=100");
             // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
             frappe.call({
                 method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",

@@ -92,7 +92,7 @@ def get_columns(filters=None):
         "Codigo Producto:Data:100",
         "Nombre Producto:Data:200",
         "QTY:Data:100",
-        "Monto:Currency:100"
+        "Monto:Currency:150"
     ]
 
     return columns
