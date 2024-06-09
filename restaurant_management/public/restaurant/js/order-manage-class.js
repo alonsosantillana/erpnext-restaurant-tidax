@@ -308,10 +308,21 @@ class OrderManage extends ObjectManage {
                 on: {
                     'click': () => {
                         const current_item = this.current_order ? this.current_order.current_item : null;
-
                         if (current_item != null) {
                             if (current_item.is_enabled_to_delete) {
                                 current_item.delete();
+                                // console.log(current_item.data.status);
+                                // // TIDAX: CONDICION BORRADO PRODUCTO
+                                // if (frappe.session.user.includes("mozo") && current_item.data.status == "Attending") {
+                                //     current_item.delete();
+                                // }
+                                // if (frappe.session.user.includes("mozo") && current_item.data.status != "Attending") {
+                                //     frappe.msgprint(__("El producto ya se envio a cocina. No tiene permisos para eliminar el producto en este estado."));
+                                // }
+                                // if (!frappe.session.user.includes("mozo")) {
+                                //     current_item.delete();
+                                // }
+
                             } else {
                                 frappe.msgprint(__("You do not have permissions to delete Items"));
                             }
@@ -670,6 +681,10 @@ class OrderManage extends ObjectManage {
         objects.Minus.prop("disabled", !item_is_enabled_to_edit);
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
         objects.Trash.prop("disabled", !item.is_enabled_to_delete);
+        // TIDAX: EL MOZO SOLO PUEDE ELIMINAR EN ESTADO ATENDIDO
+        if (frappe.session.user.includes("mozo") && item.data.status != "Attending") {
+            objects.Trash.prop("disabled", item.is_enabled_to_delete);
+        }
         if (frappe.session.user.includes("cajero")) {
             this.#components.new_customer.enable().show();
             // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
