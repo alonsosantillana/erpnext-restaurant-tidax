@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"s5pXpGLdkx\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Restaurant Management</span>\",\"col\":12}},{\"id\":\"hRP5CGZTdn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"POS Restaurant\",\"col\":3}},{\"id\":\"PKKl3hJxrD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tablero\",\"col\":3}},{\"id\":\"XeZ7JpnXpW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"f9pyLDHT6e\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuraci\u00f3n\",\"col\":4}},{\"id\":\"TakfKRxIpo\",\"type\":\"card\",\"data\":{\"card_name\":\"Caja\",\"col\":4}},{\"id\":\"XlyWsLAxBs\",\"type\":\"card\",\"data\":{\"card_name\":\"Restaurant\",\"col\":4}},{\"id\":\"KCJy-gOQ2S\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Ventas Anuales\",\"col\":4}},{\"id\":\"LAAhFSBc26\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas Completadas\",\"col\":4}},{\"id\":\"kMUc6fBPyb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas en Proceso\",\"col\":4}},{\"id\":\"YXord2YU7o\",\"type\":\"card\",\"data\":{\"card_name\":\"Logistica\",\"col\":4}},{\"id\":\"yj7gKVZVCR\",\"type\":\"card\",\"data\":{\"card_name\":\"Reportes\",\"col\":4}}]",
+ "content": "[{\"id\":\"s5pXpGLdkx\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Restaurant Management</span>\",\"col\":12}},{\"id\":\"hRP5CGZTdn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"POS Restaurant\",\"col\":3}},{\"id\":\"XeZ7JpnXpW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"f9pyLDHT6e\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuraci\u00f3n\",\"col\":4}},{\"id\":\"TakfKRxIpo\",\"type\":\"card\",\"data\":{\"card_name\":\"Caja\",\"col\":4}},{\"id\":\"XlyWsLAxBs\",\"type\":\"card\",\"data\":{\"card_name\":\"Restaurant\",\"col\":4}},{\"id\":\"KCJy-gOQ2S\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Ventas Anuales\",\"col\":4}},{\"id\":\"LAAhFSBc26\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas Completadas\",\"col\":4}},{\"id\":\"kMUc6fBPyb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Mesas en Proceso\",\"col\":4}},{\"id\":\"YXord2YU7o\",\"type\":\"card\",\"data\":{\"card_name\":\"Logistica\",\"col\":4}},{\"id\":\"yj7gKVZVCR\",\"type\":\"card\",\"data\":{\"card_name\":\"Reportes\",\"col\":4}}]",
  "creation": "2023-04-26 17:15:35.609631",
  "custom_blocks": [],
  "docstatus": 0,
@@ -48,44 +48,6 @@
    "label": "Settings",
    "link_count": 0,
    "link_to": "Restaurant Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Restaurant",
-   "link_count": 3,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Orden de Mesa",
-   "link_count": 0,
-   "link_to": "Table Order",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "POS Invoice",
-   "link_count": 0,
-   "link_to": "POS Invoice",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Sales Invoice",
-   "link_count": 0,
-   "link_to": "Sales Invoice",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -381,9 +343,37 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Restaurant",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "POS Invoice",
+   "link_count": 0,
+   "link_to": "POS Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Invoice",
+   "link_count": 0,
+   "link_to": "Sales Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2024-03-22 01:19:24.332116",
+ "modified": "2024-06-10 09:21:38.325032",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Management",
@@ -408,13 +398,6 @@
  "roles": [],
  "sequence_id": 31.0,
  "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Tablero",
-   "link_to": "Resto",
-   "type": "Dashboard"
-  },
   {
    "color": "Grey",
    "doc_view": "List",
