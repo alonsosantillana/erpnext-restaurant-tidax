@@ -682,7 +682,7 @@ class OrderManage extends ObjectManage {
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
         objects.Trash.prop("disabled", !item.is_enabled_to_delete);
         // TIDAX: EL MOZO SOLO PUEDE ELIMINAR EN ESTADO ATENDIDO
-        if (frappe.session.user.includes("mozo") && item.data.status != "Attending") {
+        if ((!frappe.session.user.includes("cajero") && !frappe.session.user.includes("admin")) && item.data.status != "Attending") {
             objects.Trash.prop("disabled", item.is_enabled_to_delete);
         }
         if (frappe.session.user.includes("cajero")) {
