@@ -137,7 +137,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-09-25 16:00:31.975587",
+ "modified": "2024-06-19 02:37:24.768776",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Object",
@@ -221,7 +221,6 @@
   }
  ],
  "quick_entry": 1,
- "restrict_to_domain": "Services",
  "search_fields": "description,type",
  "sort_field": "modified",
  "sort_order": "DESC",
