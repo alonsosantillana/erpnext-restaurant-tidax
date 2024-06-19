@@ -24,7 +24,8 @@ class FoodCommand {
                 this.execute();
             }, !RM.restrictions.to_change_status_order ? DOUBLE_CLICK : null)
             // TIDAX: QUITA PERMISO A MOZOS
-            if (frappe.session.user.includes("mozo") || !frappe.session.user.includes("vcocina")) {
+            console.log(frappe.session);
+            if (frappe.session.user.includes("mozo") || frappe.session.user.includes("vcocina")) {
                 this.action_button.prop('disabled', true);
             }
 
