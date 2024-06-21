@@ -55,7 +55,7 @@ def get_ordenes_cocina_resumen(usuario):
     hoy = datetime.now()
     hoy = hoy.strftime('%Y-%m-%d')
 
-    if usuario.startswith("cocin"):
+    if usuario.startswith("cocin") or usuario.startswith("vcocin"):
         ordenes = frappe.db.sql(f"""SELECT oei.item_code, oei.item_name, SUM(qty) as qty FROM `tabOrder Entry Item` as oei
                             INNER JOIN `tabTable Order` AS tao ON tao.name = oei.parent
                             WHERE (oei.status != 'Attending' AND oei.status != 'Completed') and oei.item_pt like '%COCINA%'
@@ -108,7 +108,7 @@ def get_ordenes_cocina_atendidos(usuario):
     hoy = datetime.now()
     hoy = hoy.strftime('%Y-%m-%d')
 
-    if usuario.startswith("cocin"):
+    if usuario.startswith("cocin") or usuario.startswith("vcocin"):
         ordenes = frappe.db.sql(f"""SELECT oei.item_code as item_code, oei.item_name as item_name, SUM(oei.qty) as qty FROM `tabTable Order` AS taor INNER JOIN
                                 `tabOrder Entry Item` AS oei
                                 on DATE(taor.creation) = '{hoy}' AND taor.name = oei.parent AND oei.status = 'Completed' and
@@ -134,7 +134,7 @@ def get_ordenes_cocina_comandas(usuario):
     hoy = hoy.strftime('%Y-%m-%d')
 
 
-    if usuario.startswith("cocin"):
+    if usuario.startswith("cocin") or usuario.startswith("vcocin"):
         ordenes = frappe.db.sql(f"""
         SELECT 
         taor.name, 
