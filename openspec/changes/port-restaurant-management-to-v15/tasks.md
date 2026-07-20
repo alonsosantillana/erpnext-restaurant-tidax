@@ -1,13 +1,13 @@
 ## 1. Baseline and Decisions
 
-- [ ] 1.1 Capture the supported Frappe, ERPNext, ovenube_peru and Python version matrix in project documentation.
-- [ ] 1.2 Produce a file-level comparison of fork 1.7.7, upstream 1.8.6 and ERPNext v15 for runtime, order, POS and helper components.
-- [ ] 1.3 Inventory every frontend global, external Python import, DocType, Custom Field, Client Script and app dependency used by the fork.
+- [x] 1.1 Capture the supported Frappe, ERPNext, ovenube_peru and Python version matrix in project documentation.
+- [x] 1.2 Produce a file-level comparison of fork 1.7.7, upstream 1.8.6 and ERPNext v15 for runtime, order, POS and helper components.
+- [x] 1.3 Inventory every frontend global, external Python import, DocType, Custom Field, Client Script and app dependency used by the fork.
 - [x] 1.4 Document `silent_print` and WebApp Hardware Bridge as required printing integrations, with sale persistence and controlled retry on print failure.
 - [x] 1.5 Document that MFC-backed production functionality is retained through app-owned DocTypes and the MFC dependency is removed.
 - [x] 1.6 Document that `Table Order` remains submittable and is finalized through `submit()`/`cancel()` instead of direct `docstatus` writes.
 - [ ] 1.7 Confirm the meaning of `_m` series variants, waiter assignment and production states, and validate the new explicit Boleta/Factura field with functional owners.
-- [ ] 1.8 Record a baseline of existing security findings and map each finding to a specification requirement and test.
+- [x] 1.8 Record a baseline of existing security findings and map each finding to a specification requirement and test.
 
 ## 2. ERPNext v15 Runtime and Dependencies
 
