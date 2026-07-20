@@ -37,6 +37,11 @@ READ_ONLY_DOCUMENT_METHODS = {
     ("Table Order", "get_items"),
 }
 
+DELETE_DOCUMENT_METHODS = {
+    ("Restaurant Object", "_delete"),
+    ("Table Order", "_delete"),
+}
+
 
 def _require_authenticated_user():
     if frappe.session.user == "Guest":
@@ -52,14 +57,26 @@ def call(model, name, method, args=None):
         frappe.throw(_("Unsupported restaurant operation"), frappe.PermissionError)
 
     doc = frappe.get_doc(model, name)
-    permission_type = "read" if (model, method) in READ_ONLY_DOCUMENT_METHODS else "write"
+    if (model, method) in READ_ONLY_DOCUMENT_METHODS:
+        permission_type = "read"
+    elif (model, method) in DELETE_DOCUMENT_METHODS:
+        permission_type = "delete"
+    else:
+        permission_type = "write"
     doc.check_permission(permission_type)
 
     parsed_args = frappe.parse_json(args) if args else {}
     if not isinstance(parsed_args, dict):
         frappe.throw(_("Operation arguments must be an object"))
 
-    return getattr(doc, method)(**parsed_args)
+    action = getattr(doc, method)
+    if callable(action):
+        return action(**parsed_args)
+
+    if parsed_args:
+        frappe.throw(_("This restaurant operation does not accept arguments"))
+
+    return action
 
 
 @frappe.whitelist()

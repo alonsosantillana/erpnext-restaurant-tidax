@@ -37,6 +37,8 @@ class RestaurantRoom extends ObjectManage {
     remove() {
         this.obj.remove();
         this.tables_container.remove();
+        delete RM.objects[this.data.name];
+        RM.rooms = (RM.rooms || []).filter(room => room.name !== this.data.name);
     }
 
     make_objects(tables = []) {
@@ -193,6 +195,12 @@ class RestaurantRoom extends ObjectManage {
             model: "Restaurant Object",
             name: this.data.name,
             method: "_delete",
+            callback: () => {
+                if (RM.current_room && RM.current_room.data.name === this.data.name) {
+                    RM.delete_current_room();
+                }
+                this.remove();
+            },
             always: (r) => {
                 RM.ready();
             },

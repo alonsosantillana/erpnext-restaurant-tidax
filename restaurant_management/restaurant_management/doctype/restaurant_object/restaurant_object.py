@@ -18,7 +18,7 @@ class RestaurantObject(Document):
     def after_delete(self):
         frappe.publish_realtime(self.name, dict(
             action="Delete"
-        ))
+        ), after_commit=True)
 
     def on_update(self):
         self._on_update()
@@ -381,9 +381,14 @@ class RestaurantObject(Document):
         frappe.db.set_value("Restaurant Object", self.name, "shape" if shape else 'data_style', _data)
         self._on_update()
 
-    @property
     def _delete(self):
+        deleted = {
+            "name": self.name,
+            "type": self.type,
+            "room": self.room,
+        }
         self.delete()
+        return deleted
 
 
 def load_json(data):

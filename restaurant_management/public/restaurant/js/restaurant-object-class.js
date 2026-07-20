@@ -51,6 +51,7 @@ RestaurantObject = class RestaurantObject {
 
     remove() {
         this.obj.remove();
+        delete RM.objects[this.data.identifier];
         const tables = Object.keys(this.room.tables);
 
         tables.forEach((table) => {
@@ -436,6 +437,9 @@ RestaurantObject = class RestaurantObject {
             model: "Restaurant Object",
             name: this.data.name,
             method: "_delete",
+            callback: () => {
+                this.remove();
+            },
             always: () => {
                 RM.ready();
             },

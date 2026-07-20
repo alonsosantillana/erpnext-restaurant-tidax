@@ -22,6 +22,7 @@
 - [x] 2.9 Update package metadata, README requirements and installation documentation for the supported v15 matrix.
 - [x] 2.10 Validate Python imports, JavaScript syntax, JSON metadata and asset paths after the runtime port.
 - [x] 2.11 Restore v15 room and table creation by removing request-path debug output, returning persisted state and reconciling the client after commit.
+- [x] 2.12 Restore v15 room, table and production-center deletion with callable actions, explicit delete permission and post-commit client reconciliation.
 
 ## 3. Security and Data Isolation
 

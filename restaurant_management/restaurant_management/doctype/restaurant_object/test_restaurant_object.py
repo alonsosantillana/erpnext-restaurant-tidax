@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from restaurant_management.api import call as restaurant_call
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import add_room
 
 
@@ -25,3 +26,17 @@ class TestRestaurantObject(FrappeTestCase):
 			frappe.db.get_value("Restaurant Object", table.name, "room"),
 			room.name,
 		)
+
+	def test_restaurant_api_deletes_table_as_a_method(self):
+		response = add_room(client="delete-test")
+		room = frappe.get_doc("Restaurant Object", response["current_room"])
+		table = room.add_object("Table")
+
+		deleted = restaurant_call(
+			model="Restaurant Object",
+			name=table.name,
+			method="_delete",
+		)
+
+		self.assertEqual(deleted["name"], table.name)
+		self.assertFalse(frappe.db.exists("Restaurant Object", table.name))
