@@ -6,7 +6,7 @@
 - [x] 1.4 Document `silent_print` and WebApp Hardware Bridge as required printing integrations, with sale persistence and controlled retry on print failure.
 - [x] 1.5 Document that MFC-backed production functionality is retained through app-owned DocTypes and the MFC dependency is removed.
 - [x] 1.6 Document that `Table Order` remains submittable and is finalized through `submit()`/`cancel()` instead of direct `docstatus` writes.
-- [ ] 1.7 Confirm waiter assignment and production states, and approve independent Boleta/Factura and Electronica/Manual fields; `_m` is confirmed as the manual series variant.
+- [ ] 1.7 Confirm waiter assignment and production states; independent Boleta/Factura and Electronica/Manual fields are approved and `_m` is confirmed as the manual series variant.
 - [x] 1.8 Record a baseline of existing security findings and map each finding to a specification requirement and test.
 
 ## 2. ERPNext v15 Runtime and Dependencies
@@ -43,7 +43,7 @@
 - [ ] 4.4 Replace order-based preparation timing with the approved item/order timing source and test time-zone behavior.
 - [ ] 4.5 Fix order deletion so validation occurs before child mutation and sent or later items remain intact.
 - [ ] 4.6 Make add, edit, delete, divide and transfer operations atomic and remove internal commits that prevent rollback.
-- [ ] 4.7 Implement the selected `Table Order` submit/finalization lifecycle without direct `docstatus` updates.
+- [x] 4.7 Implement the selected `Table Order` submit/finalization lifecycle without direct `docstatus` updates.
 - [ ] 4.8 Add conflict detection for concurrent edits to the same table or order and return reload guidance to the losing client.
 - [ ] 4.9 Publish realtime events only after successful persistence and make clients reconcile against server state.
 - [ ] 4.10 Replace the destructive daily status rewrite with the approved non-destructive expiry policy or remove the scheduler.
@@ -53,11 +53,11 @@
 
 - [ ] 5.1 Extract invoice preconditions for actor, company, POS Profile, customer identity, items, stock and payments into testable validation functions.
 - [ ] 5.2 Replace hardcoded invoice owner, payment mode and operational constants with authenticated context and validated configuration.
-- [ ] 5.3 Add an explicit Boleta/Factura field independent of `dinners`, and model each approved series by company and operating context with clear validation errors.
+- [ ] 5.3 Add explicit Boleta/Factura and Electronica/Manual fields independent of `dinners`, and model each approved series by company and operating context with clear validation errors. The fields and global series matrix are implemented; company scoping remains.
 - [ ] 5.4 Build POS Invoice items, taxes and payments through supported ERPNext v15 APIs and compare calculated totals with approved fixtures.
-- [ ] 5.5 Make POS Invoice submission and Table Order linkage atomic without direct `docstatus` writes or partial commits.
+- [x] 5.5 Make POS Invoice submission and Table Order linkage atomic without direct `docstatus` writes or partial commits.
 - [ ] 5.6 Implement and test line discount, global discount, mixed gratuity and total gratuity cases.
-- [ ] 5.7 Validate DNI, RUC and other approved identity paths without treating unknown or empty identity as factura by default.
+- [x] 5.7 Validate the currently approved DNI and RUC identity paths without treating unknown or empty identity as factura by default.
 - [ ] 5.8 Make electronic submission idempotent and persist a recoverable state for provider timeout or rejection.
 - [ ] 5.9 Ensure electronic invoicing logs and errors exclude credentials and minimize personal/tax data.
 - [ ] 5.10 Integrate `silent_print` with WebApp Hardware Bridge for comandas, boletas and facturas, isolating failures from sale completion and supporting retry without duplication.

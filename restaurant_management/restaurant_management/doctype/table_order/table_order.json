@@ -15,6 +15,8 @@
   "customer",
   "address",
   "dinners",
+  "voucher_type",
+  "emission_mode",
   "link_invoice",
   "discount",
   "discount_global_percent",
@@ -72,6 +74,22 @@
    "fieldname": "dinners",
    "fieldtype": "Int",
    "label": "Dinners"
+  },
+  {
+   "default": "Boleta",
+   "fieldname": "voucher_type",
+   "fieldtype": "Select",
+   "label": "Tipo de Comprobante",
+   "options": "Boleta\nFactura",
+   "reqd": 1
+  },
+  {
+   "default": "Electrónica",
+   "fieldname": "emission_mode",
+   "fieldtype": "Select",
+   "label": "Modo de Emisión",
+   "options": "Electrónica\nManual",
+   "reqd": 1
   },
   {
    "fieldname": "link_invoice",

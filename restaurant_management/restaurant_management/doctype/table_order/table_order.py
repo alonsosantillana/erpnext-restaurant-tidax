@@ -3,15 +3,95 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
-from operator import inv
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
-from restaurant_management.restaurant_management.doctype.utils import obtener_res_set
 status_attending = "Attending"
+
+VOUCHER_CONFIG = {
+    ("Boleta", "Electrónica"): {
+        "series_field": "serie_boleta",
+        "document_code": "03",
+        "document_label": "Boleta de Venta",
+        "identity_code": "1",
+        "identity_label": "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)",
+        "identity_length": 8,
+    },
+    ("Boleta", "Manual"): {
+        "series_field": "serie_boleta_m",
+        "document_code": "03",
+        "document_label": "Boleta de Venta",
+        "identity_code": "1",
+        "identity_label": "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)",
+        "identity_length": 8,
+    },
+    ("Factura", "Electrónica"): {
+        "series_field": "serie_factura",
+        "document_code": "01",
+        "document_label": "Factura",
+        "identity_code": "6",
+        "identity_label": "REGISTRO ÚNICO DE CONTRIBUYENTES",
+        "identity_length": 11,
+    },
+    ("Factura", "Manual"): {
+        "series_field": "serie_factura_m",
+        "document_code": "01",
+        "document_label": "Factura",
+        "identity_code": "6",
+        "identity_label": "REGISTRO ÚNICO DE CONTRIBUYENTES",
+        "identity_length": 11,
+    },
+}
+
+
+def get_voucher_config(voucher_type, emission_mode):
+    voucher_type = (voucher_type or "").strip()
+    emission_mode = (emission_mode or "").strip()
+    config = VOUCHER_CONFIG.get((voucher_type, emission_mode))
+
+    if not config:
+        frappe.throw(
+            _("Seleccione un tipo de comprobante y modo de emisión válidos"),
+            frappe.ValidationError,
+        )
+
+    return config
+
+
+def get_customer_identity(customer, config):
+    identity = frappe.db.get_value(
+        "Customer",
+        customer,
+        ["tax_id", "tipo_documento_identidad", "codigo_tipo_documento"],
+        as_dict=True,
+    )
+    if not identity:
+        frappe.throw(_("No se encontró el cliente seleccionado"))
+
+    identity_code = str(identity.codigo_tipo_documento or "")
+    if identity_code != config["identity_code"]:
+        frappe.throw(
+            _("El cliente debe tener {0} para emitir este comprobante").format(
+                config["identity_label"]
+            )
+        )
+
+    tax_id = "".join(
+        character for character in str(identity.tax_id or "") if character.isdigit()
+    )
+    if len(tax_id) != config["identity_length"]:
+        frappe.throw(
+            _("El documento del cliente debe contener {0} dígitos").format(
+                config["identity_length"]
+            )
+        )
+
+    identity.tax_id = tax_id
+    return identity
 
 
 class TableOrder(Document):
@@ -129,7 +209,14 @@ class TableOrder(Document):
         if status is not None:
             RestaurantManage.production_center_notify(status)
 
-    def make_invoice(self, mode_of_payment, customer=None, dinners=0, electronic_invoice=0):
+    def make_invoice(
+        self,
+        mode_of_payment,
+        customer=None,
+        dinners=0,
+        voucher_type=None,
+        emission_mode=None,
+    ):
         # TIDAX: obteniendo el perfil del usuario para ver si puede realizar el comprobante
         profile = frappe.db.get_value("User", frappe.session.user, "role_profile_name")
         if profile == "Resto_Mozos" or profile == "Resto_Cocinas":
@@ -138,27 +225,24 @@ class TableOrder(Document):
         if self.link_invoice:
             return frappe.throw(_("The order has been invoiced"))
 
-        if customer is not None:
-            frappe.db.set_value("Table Order", self.name, "customer", customer)
+        customer = str(customer or "").strip()
+        voucher_type = str(voucher_type or "").strip()
+        emission_mode = str(emission_mode or "").strip()
+        dinners = cint(dinners)
+        if not customer:
+            frappe.throw(_("Seleccione un cliente"))
+        if dinners <= 0:
+            frappe.throw(_("La cantidad de comensales debe ser mayor que cero"))
 
-        if dinners > 0:
-            frappe.db.set_value("Table Order", self.name, "dinners", dinners)
+        voucher_config = get_voucher_config(voucher_type, emission_mode)
+        customer_identity = get_customer_identity(customer, voucher_config)
 
-        if customer is not None or dinners > 0:
-            frappe.db.commit()
-            self.reload()
-
-        if customer is None or len(customer) == 0 or dinners == 0:
-            none_customer = _("Please set a Customer") + "<br>" if customer is None or len(customer) == 0 else ""
-            none_dinners = _("Please set a Dinners") if dinners == 0 else ""
-
-            frappe.throw(none_customer + none_dinners)
-        
-        if (self.customer_tax_id == "" or self.customer_tipo_documento_identidad == "") and dinners != 1:
-                none_customer = _("Please set a RUC/DNI") + "<br>" if self.customer_tax_id == "" else ""
-                none_document = _("Please set a tipo de documento de identidad") if self.customer_tipo_documento_identidad == "" else ""
-
-                return frappe.throw(none_customer + none_document)
+        self.customer = customer
+        self.dinners = dinners
+        self.voucher_type = voucher_type
+        self.emission_mode = emission_mode
+        self.save()
+        self.reload()
 
         entry_items = {
             item.identifier: item.as_dict() for item in self.entry_items
@@ -185,118 +269,42 @@ class TableOrder(Document):
             if(it.price_list_rate == 0):
                 total_free += 1 * it.qty
 
-        if(dinners==1):
-            if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
-                serie = obtener_res_set("serie_boleta_m")
-                # invoice.naming_series = "BV-BP01-.######"
-                invoice.naming_series = serie[0]["value"]
-                invoice.codigo_comprobante = "03"
-                invoice.tipo_comprobante = "Boleta de Venta"
-                invoice.codigo_tipo_documento = "1"
-                invoice.tipo_documento_identidad = "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
-                invoice.codigo_transaccion_sunat = "1"
-                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
-                invoice.condicion_pago = "CONTADO"
-                invoice.tax_id = self.customer_tax_id
-                invoice.total_amount_discount_lines = total_dicount_lines
-                # Descuento globales
-                if(self.discount > 0 and self.discount < self.amount):
-                    invoice.discount_amount = self.discount
-                if(self.discount_global_percent>0 and self.discount_global_percent<100):
-                    invoice.additional_discount_percentage = self.discount_global_percent
-                if(self.discount_global_percent == 100 or self.discount == self.amount):
-                    invoice.additional_discount_percentage = 100
-                # Casuistica descuento lineal y descuento global
-                if(total_free>0):
-                    invoice.total_amount_free = total_free
-                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
-                    invoice.total_amount_free = self.amount
-                    invoice.is_free_global = 1
-                invoice.table_description = self.table_description
-            # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
-            else:
-                serie = obtener_res_set("serie_factura_m")
-                # invoice.naming_series = "FV-FP01-.######"
-                invoice.naming_series = serie[0]["value"]
-                invoice.codigo_comprobante = "01"
-                invoice.tipo_comprobante = "Factura"
-                invoice.codigo_tipo_documento = "6"
-                invoice.tipo_documento_identidad = "REGISTRO ÙNICO DE CONTRIBUYENTES"
-                invoice.codigo_transaccion_sunat = "1"
-                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
-                invoice.condicion_pago = "CONTADO"
-                invoice.tax_id = self.customer_tax_id
-                invoice.total_amount_discount_lines = total_dicount_lines
-                # Descuento globales
-                if(self.discount > 0 and self.discount < self.amount):
-                    invoice.discount_amount = self.discount
-                if(self.discount_global_percent>0 and self.discount_global_percent<100):
-                    invoice.additional_discount_percentage = self.discount_global_percent
-                if(self.discount_global_percent == 100 or self.discount == self.amount):
-                    invoice.additional_discount_percentage = 100
-                # Casuistica descuento lineal y descuento global
-                if(total_free>0):
-                    invoice.total_amount_free = total_free
-                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
-                    invoice.total_amount_free = self.amount
-                    invoice.is_free_global = 1
-                invoice.table_description = self.table_description
-        else:
-            if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
-                serie = obtener_res_set("serie_boleta")
-                # invoice.naming_series = "BV-BP01-.######"
-                invoice.naming_series = serie[0]["value"]
-                invoice.codigo_comprobante = "03"
-                invoice.tipo_comprobante = "Boleta de Venta"
-                invoice.codigo_tipo_documento = "1"
-                invoice.tipo_documento_identidad = "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
-                invoice.codigo_transaccion_sunat = "1"
-                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
-                invoice.condicion_pago = "CONTADO"
-                invoice.tax_id = self.customer_tax_id
-                invoice.total_amount_discount_lines = total_dicount_lines
-                # Descuento globales
-                if(self.discount > 0 and self.discount < self.amount):
-                    invoice.discount_amount = self.discount
-                if(self.discount_global_percent>0 and self.discount_global_percent<100):
-                    invoice.additional_discount_percentage = self.discount_global_percent
-                if(self.discount_global_percent == 100 or self.discount == self.amount):
-                    invoice.additional_discount_percentage = 100
-                # Casuistica descuento lineal y descuento global
-                if(total_free>0):
-                    invoice.total_amount_free = total_free
-                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
-                    invoice.total_amount_free = self.amount
-                    invoice.is_free_global = 1
-                invoice.table_description = self.table_description
-            # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
-            else:
-                serie = obtener_res_set("serie_factura")
-                # invoice.naming_series = "FV-FP01-.######"
-                invoice.naming_series = serie[0]["value"]
-                invoice.codigo_comprobante = "01"
-                invoice.tipo_comprobante = "Factura"
-                invoice.codigo_tipo_documento = "6"
-                invoice.tipo_documento_identidad = "REGISTRO ÙNICO DE CONTRIBUYENTES"
-                invoice.codigo_transaccion_sunat = "1"
-                invoice.tipo_transaccion_sunat = "VENTA INTERNA"
-                invoice.condicion_pago = "CONTADO"
-                invoice.tax_id = self.customer_tax_id
-                invoice.total_amount_discount_lines = total_dicount_lines
-                # Descuento globales
-                if(self.discount > 0 and self.discount < self.amount):
-                    invoice.discount_amount = self.discount
-                if(self.discount_global_percent>0 and self.discount_global_percent<100):
-                    invoice.additional_discount_percentage = self.discount_global_percent
-                if(self.discount_global_percent == 100 or self.discount == self.amount):
-                    invoice.additional_discount_percentage = 100
-                # Casuistica descuento lineal y descuento global
-                if(total_free>0):
-                    invoice.total_amount_free = total_free
-                elif(self.discount_global_percent>=100 or self.discount >= self.amount):
-                    invoice.total_amount_free = self.amount
-                    invoice.is_free_global = 1
-                invoice.table_description = self.table_description
+        series = frappe.db.get_single_value(
+            "Restaurant Settings", voucher_config["series_field"]
+        )
+        if not series:
+            frappe.throw(
+                _("Configure la serie {0} en Restaurant Settings").format(
+                    voucher_config["series_field"]
+                )
+            )
+
+        invoice.naming_series = series
+        invoice.codigo_comprobante = voucher_config["document_code"]
+        invoice.tipo_comprobante = voucher_config["document_label"]
+        invoice.comprobante_electronico_manual = emission_mode
+        invoice.codigo_tipo_documento = voucher_config["identity_code"]
+        invoice.tipo_documento_identidad = customer_identity.tipo_documento_identidad
+        invoice.codigo_transaccion_sunat = "1"
+        invoice.tipo_transaccion_sunat = "VENTA INTERNA"
+        invoice.condicion_pago = "CONTADO"
+        invoice.tax_id = customer_identity.tax_id
+        invoice.total_amount_discount_lines = total_dicount_lines
+
+        if self.discount > 0 and self.discount < self.amount:
+            invoice.discount_amount = self.discount
+        if self.discount_global_percent > 0 and self.discount_global_percent < 100:
+            invoice.additional_discount_percentage = self.discount_global_percent
+        if self.discount_global_percent == 100 or self.discount == self.amount:
+            invoice.additional_discount_percentage = 100
+
+        if total_free > 0:
+            invoice.total_amount_free = total_free
+        elif self.discount_global_percent >= 100 or self.discount >= self.amount:
+            invoice.total_amount_free = self.amount
+            invoice.is_free_global = 1
+
+        invoice.table_description = self.table_description
         invoice.validate()
         invoice.save()
         invoice.submit()
@@ -308,8 +316,7 @@ class TableOrder(Document):
         self.total_amount_discount_lines = total_dicount_lines
 
         self.save()
-        
-        frappe.db.set_value("Table Order", self.name, "docstatus", 1)
+        self.submit()
 
         frappe.msgprint(_('Invoice Created'), indicator='green', alert=True)
 

@@ -100,9 +100,9 @@ La creacion de `POS Invoice` se separara en:
 5. vinculacion atomica con `Table Order`;
 6. envio electronico e impresion como operaciones controladas posteriores.
 
-`dinners` representara exclusivamente la cantidad de comensales. El tipo de comprobante se guardara en un campo explicito Boleta/Factura, independiente de `dinners`; DNI o RUC podran sugerir una opcion, pero nunca se inferira el comprobante por la cantidad de comensales.
+`dinners` representara exclusivamente la cantidad de comensales. `Table Order` guardara dos campos obligatorios e independientes: tipo de comprobante Boleta/Factura y modo de emision Electronica/Manual. El servidor validara DNI para Boleta y RUC para Factura; nunca inferira el comprobante ni el modo por la cantidad de comensales.
 
-Series de factura/boleta, incluidas temporalmente las variantes `_m` hasta confirmar su significado, formatos y modos de pago se leeran de configuracion validada por compania y contexto operativo. No se asignara `owner`; Frappe conservara al usuario real. Se probaran DNI, RUC, otros documentos autorizados, descuentos por linea, descuento global, gratuidad parcial/total, impuestos incluidos, multiples medios de pago y errores de SUNAT.
+Las series electronicas usaran `serie_boleta` o `serie_factura`; las variantes `_m` confirmadas como manuales usaran `serie_boleta_m` o `serie_factura_m`. Formatos y modos de pago se leeran de configuracion validada por compania y contexto operativo. No se asignara `owner`; Frappe conservara al usuario real. Se probaran DNI, RUC, otros documentos autorizados, descuentos por linea, descuento global, gratuidad parcial/total, impuestos incluidos, multiples medios de pago y errores de SUNAT.
 
 Si el envio electronico falla despues de crear la factura, se registrara un estado recuperable y reintentable sin duplicar el comprobante. Logs y errores no contendran credenciales ni datos personales completos.
 
@@ -184,8 +184,8 @@ Matriz minima:
 ## Confirmed Decisions
 
 - La funcionalidad de produccion que usaba MFC se conservara mediante DocTypes propios de `restaurant_management`.
-- `dinners` se usara solo para la cantidad de comensales; Boleta/Factura tendra seleccion explicita y configurada.
-- Las variantes de serie `_m` corresponden a emision Manual; el modo Electronica/Manual sera una seleccion separada del tipo de comprobante.
+- `dinners` se usara solo para la cantidad de comensales; `voucher_type` guardara la seleccion explicita Boleta/Factura.
+- Las variantes de serie `_m` corresponden a emision Manual; `emission_mode` guardara Electronica/Manual de forma separada.
 - `silent_print` y WebApp Hardware Bridge se conservaran para comandas, boletas y facturas, con fallos reintentables que no corrompan la venta.
 - `Table Order` seguira siendo submittable y se finalizara con la API documental de Frappe.
 - Se autoriza implementar y validar en un sitio v15 desechable antes de cualquier despliegue operativo.

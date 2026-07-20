@@ -72,6 +72,7 @@ class PayForm extends DeskForm {
         await super.reload(null, true);
 
         this.set_dinners_input();
+        this.set_receipt_defaults();
         // this.set_discount_global_percent_input();
         this.update_paid_value();
     }
@@ -120,6 +121,7 @@ class PayForm extends DeskForm {
         this.get_field("payment_methods").$wrapper.empty().append(payment_methods);
 
         this.set_dinners_input();
+        this.set_receipt_defaults();
 
         // this.set_discount_global_percent_input();
         
@@ -153,8 +155,17 @@ class PayForm extends DeskForm {
             }).val(this.doc.dinners).int();
         }
         this.get_field("dinners").$wrapper.empty().append(
-            this.form_tag("Dinners", this.dinners)
+            this.form_tag("Comensales", this.dinners)
         );
+    }
+
+    set_receipt_defaults() {
+        if (!this.get_value("voucher_type")) {
+            this.set_value("voucher_type", "Boleta");
+        }
+        if (!this.get_value("emission_mode")) {
+            this.set_value("emission_mode", "Electrónica");
+        }
     }
 
     form_tag(label, input) {
@@ -230,6 +241,14 @@ class PayForm extends DeskForm {
     #send_payment() {
         if (!RM.can_pay) return;
         const order_manage = this.order.order_manage;
+        const voucher_type = this.get_value("voucher_type");
+        const emission_mode = this.get_value("emission_mode");
+
+        if (!voucher_type || !emission_mode) {
+            frappe.msgprint(__("Seleccione el tipo de comprobante y el modo de emisión"));
+            this.reset_payment_button();
+            return;
+        }
 
         // this.payments_values es un objeto JSON
         let suma_valor = 0; // Inicializa la variable suma_valor
@@ -254,8 +273,8 @@ class PayForm extends DeskForm {
 
         RM.working("Generating Invoice");
         this.order.data.dinners = this.dinners.val();
-        //frappe.msgprint(this.order.data.electronic_invoice);
-        //frappe.msgprint(this.electronic_invoice.val());
+        this.order.data.voucher_type = voucher_type;
+        this.order.data.emission_mode = emission_mode;
         frappeHelper.api.call({
             model: "Table Order",
             name: this.order.data.name,
@@ -264,7 +283,8 @@ class PayForm extends DeskForm {
                 mode_of_payment: this.payments_values,
                 customer: this.get_value("customer"),
                 dinners: this.dinners.float_val,
-                electronic_invoice: this.order.data.electronic_invoice
+                voucher_type: voucher_type,
+                emission_mode: emission_mode
             },
             always: (r) => {
                 RM.ready();
@@ -277,6 +297,11 @@ class PayForm extends DeskForm {
                     this.hide();
 
                     order_manage.make_orders();
+
+                    if (emission_mode !== "Electrónica") {
+                        RM.ready();
+                        return;
+                    }
 
                     // TIDAX
                     RM.working("Generating Invoice Electronic");

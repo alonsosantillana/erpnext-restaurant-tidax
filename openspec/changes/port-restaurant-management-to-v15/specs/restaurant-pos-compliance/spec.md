@@ -26,6 +26,10 @@ Invoice series, tax document type, identity rules, print format and related SUNA
 - **WHEN** the cashier selects Boleta or Factura for an order with any valid `dinners` value
 - **THEN** the selected receipt type and its configured series are used, while `dinners` remains only the number of diners
 
+#### Scenario: Explicit emission mode is independent of receipt type
+- **WHEN** the cashier selects Electronic or Manual emission with either Boleta or Factura
+- **THEN** the corresponding standard or `_m` series is used and only Electronic emission invokes the electronic provider
+
 #### Scenario: Missing tax configuration
 - **WHEN** the required series or tax mapping is absent
 - **THEN** submission is blocked with a configuration error and no fallback hardcoded value is used

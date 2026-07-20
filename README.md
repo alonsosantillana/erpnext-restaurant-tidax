@@ -38,6 +38,19 @@ ___
 
 Validate first on a disposable site. See `docs/v15-baseline.md` and `docs/v15-qualification.md` for the current support matrix and evidence.
 
+#### Receipt configuration
+
+Configure all four series in `Restaurant Settings` before testing payment:
+
+- `serie_boleta`: electronic Boleta.
+- `serie_factura`: electronic Factura.
+- `serie_boleta_m`: manual Boleta.
+- `serie_factura_m`: manual Factura.
+
+The payment form requires two independent selections: `Boleta`/`Factura` and `Electrónica`/`Manual`. `dinners` is only the number of diners. The currently supported identity paths require DNI for Boleta and RUC for Factura. Electronic mode invokes the `ovenube_peru` provider after local submission; Manual mode does not.
+
+Current limitation: these four series are global because `Restaurant Settings` is a Single DocType. Per-company series resolution remains pending for multi-company deployments.
+
 #### Frappe Cloud:
 >Available in your hosting on FrappeCloud [here](https://frappecloud.com/marketplace/apps/restaurant_management)
 
