@@ -26,6 +26,7 @@
 - [x] 2.13 Adapt legacy restaurant item loading to the ERPNext v15 POS parameter and response contract.
 - [x] 2.14 Restore item selection by requiring a customer before adding a line and using the v15 POS selector rate while server-side POS Invoice calculation remains authoritative.
 - [x] 2.15 Show locally added order lines immediately without depending on realtime reconciliation to release the hidden cart state.
+- [x] 2.16 Make quantity, rate, discount, numeric-pad and delete controls update the selected line at the correct time with bounded values and server reconciliation.
 
 ## 3. Security and Data Isolation
 

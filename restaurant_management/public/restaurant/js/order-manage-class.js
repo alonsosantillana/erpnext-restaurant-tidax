@@ -236,9 +236,7 @@ class OrderManage extends ObjectManage {
                 content: '<span class="fa fa-minus">',
                 on: {
                     'click': () => {
-                        if (this.num_pad.input && !this.num_pad.input.is_disabled) {
-                            this.num_pad.input.minus();
-                        }
+                        this.adjust_current_input(-1);
                     }
                 }
             },
@@ -291,9 +289,7 @@ class OrderManage extends ObjectManage {
                 content: '<span class="fa fa-plus">',
                 on: {
                     'click': () => {
-                        if (this.num_pad.input && !this.num_pad.input.is_disabled) {
-                            this.num_pad.input.plus();
-                        }
+                        this.adjust_current_input(1);
                     }
                 }
             },
@@ -365,6 +361,24 @@ class OrderManage extends ObjectManage {
         this.#objects.Rate.float();
     }
 
+    adjust_current_input(delta) {
+        if (RM.busy || !this.num_pad.input || this.num_pad.input.is_disabled) return;
+
+        const input = this.num_pad.input;
+        const fieldname = input.properties.name;
+        const current_value = flt(input.val());
+        let value = current_value + delta;
+
+        if (fieldname === "qty") value = Math.max(1, value);
+        if (fieldname === "discount") value = Math.min(100, Math.max(0, value));
+        if (fieldname === "rate") value = Math.max(0, value);
+        if (value === current_value) return;
+
+        input.val(value, false);
+        this.update_detail(input);
+        input.focus();
+    }
+
     update_detail(input) {
         if (RM.busy) return;
 
@@ -390,21 +404,32 @@ class OrderManage extends ObjectManage {
             let rate = flt(this.objects.Rate.val());
             const base_rate = flt(current_item.data.price_list_rate);
 
+            if (qty < 1) {
+                this.objects.Qty.val(current_item.data.qty, false);
+                frappe.show_alert({
+                    message: __("Quantity must be at least 1. Use Delete to remove the item."),
+                    indicator: "orange"
+                });
+                return;
+            }
+
+            discount = Math.min(100, Math.max(0, discount));
+            rate = Math.max(0, rate);
+
             if (input.properties.name === "qty") {
-                if (input.val() === 0 && current_item.is_enabled_to_delete) {
-                    frappe.msgprint(__("You do not have permissions to delete Items"));
-                    current_item.select();
-                    return;
-                }
                 set_data(current_item, qty, discount, rate);
             }
             if (input.properties.name === "discount") {
+                this.objects.Discount.val(discount, false);
                 rate = (base_rate * (1 - discount / 100));
+                this.objects.Rate.val(rate, false);
                 set_data(current_item, qty, discount, rate);
             }
             if (input.properties.name === "rate") {
-                const _discount = (((base_rate - rate) / base_rate) * 100);
+                this.objects.Rate.val(rate, false);
+                const _discount = base_rate > 0 ? (((base_rate - rate) / base_rate) * 100) : 0;
                 discount = _discount >= 0 ? _discount : 0
+                this.objects.Discount.val(discount, false);
                 set_data(current_item, qty, discount, rate);
             }
         }
@@ -655,6 +680,7 @@ class OrderManage extends ObjectManage {
         /** item OrderItem class **/
         const objects = this.#objects;
         if (item == null) {
+            this.num_pad.input = null;
             this.empty_inputs();
             this.in_objects((input) => {
                 input.disable();
@@ -678,13 +704,18 @@ class OrderManage extends ObjectManage {
             "disabled", !item_is_enabled_to_edit || !pos_profile.allow_rate_change
         ).val(data.rate, false);
 
+        // Quantity is the safe default target for +/- and the numeric pad
+        // whenever the operator selects another order line.
+        this.num_pad.input = item_is_enabled_to_edit ? objects.Qty : null;
+
         objects.Minus.prop("disabled", !item_is_enabled_to_edit);
         objects.Plus.prop("disabled", !item_is_enabled_to_edit);
-        objects.Trash.prop("disabled", !item.is_enabled_to_delete);
         // TIDAX: EL MOZO SOLO PUEDE ELIMINAR EN ESTADO ATENDIDO
-        if ((!frappe.session.user.includes("cajero") && !frappe.session.user.includes("admin")) && item.data.status != "Attending") {
-            objects.Trash.prop("disabled", item.is_enabled_to_delete);
-        }
+        const is_cashier_or_admin = frappe.session.user === "Administrator"
+            || frappe.session.user.includes("cajero")
+            || frappe.session.user.includes("admin");
+        const can_delete = item.is_enabled_to_delete && (is_cashier_or_admin || item.data.status === "Attending");
+        objects.Trash.prop("disabled", !can_delete);
         if (frappe.session.user.includes("cajero")) {
             this.#components.new_customer.enable().show();
             // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO

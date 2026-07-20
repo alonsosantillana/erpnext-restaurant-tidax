@@ -65,7 +65,7 @@ class NumPad {
                             if (this.on_enter != null) {
                                 this.on_enter();
                             }
-                        } else if (this.input) {
+                        } else if (this.input && !this.input.is_disabled) {
                             if (col.action === "delete") {
                                 this.input.delete_value();
                             } else {

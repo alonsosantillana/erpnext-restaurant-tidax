@@ -57,11 +57,7 @@ class OrderItem {
     delete() {
         if (RM.busy_message() || !this.is_enabled_to_delete) return;
         this.data.qty = 0;
-        if (this.data.status === "Pending") {
-            this.order.delete_item(this.data.identifier);
-        } else {
-            this.update(true);
-        }
+        this.update(true);
     }
 
     remove() {
@@ -94,6 +90,7 @@ class OrderItem {
 
     update(server = true) {
         if (this.edit_item) return;
+        const deleting = this.data.qty === 0;
         if (this.data.qty === 0 && !this.is_enabled_to_delete) {
             frappe.throw(__("You do not have permissions to delete Items"));
         }
@@ -124,7 +121,10 @@ class OrderItem {
             args: { item: this.data.qty > 0 ? this.data : this.data.identifier },
             always: (r) => {
                 if (r.exc) {
-                    this.order.check_items({ items: [...Object.values(this.order.items).map(item => item.data), this.data] });
+                    this.order.get_items();
+                } else if (deleting) {
+                    this.order.delete_item(this.data.identifier);
+                    this.order.order_manage.order_status_message();
                 }
                 this.order.aggregate(true);
 
