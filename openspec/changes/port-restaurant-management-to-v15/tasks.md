@@ -51,6 +51,7 @@
 - [ ] 4.9 Publish realtime events only after successful persistence and make clients reconcile against server state.
 - [ ] 4.10 Replace the destructive daily status rewrite with the approved non-destructive expiry policy or remove the scheduler.
 - [ ] 4.11 Add integration tests for create, edit, send, process, complete, split, transfer, waiter change, deletion, rollback and concurrency.
+- [x] 4.12 Return persisted order state from creation, reconcile the requesting client and remove the internal waiter-assignment commit.
 
 ## 5. POS Invoice and TIDAX/SUNAT Compliance
 

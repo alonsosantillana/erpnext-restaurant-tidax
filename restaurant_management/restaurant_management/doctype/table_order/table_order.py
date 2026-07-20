@@ -202,7 +202,7 @@ class TableOrder(Document):
             data=[] if action is None else self.data(items, last_table),
             client=self.options_param(options, "client"),
             item_removed=item_removed
-        ))
+        ), after_commit=True)
 
         self._table.synchronize()
 

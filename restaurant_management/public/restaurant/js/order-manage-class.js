@@ -716,11 +716,14 @@ class OrderManage extends ObjectManage {
             name: this.table.data.name,
             method: "add_order",
             args: { client: RM.client },
-            always: (r) => {
+            callback: (r) => {
+                if (!r.message) return;
+                RM.request_client = r.message.client;
+                this.check_data(r.message);
+                RM.sound_submit();
+            },
+            always: () => {
                 RM.ready();
-                if (typeof r.message != "undefined") {
-                    RM.sound_submit();
-                }
             },
         });
     }

@@ -44,6 +44,27 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(deleted["name"], table.name)
 		self.assertFalse(frappe.db.exists("Restaurant Object", table.name))
 
+	def test_add_order_returns_persisted_state_for_client_reconciliation(self):
+		response = add_room(client="order-test")
+		room = frappe.get_doc("Restaurant Object", response["current_room"])
+		table = room.add_object("Table")
+
+		result = frappe.get_doc("Restaurant Object", table.name).add_order(
+			client="order-test",
+		)
+
+		order_data = result["data"]["order"]["data"]
+		order = frappe.get_doc("Table Order", order_data["name"])
+		pos_profile = frappe.get_doc("POS Profile", order.pos_profile)
+		self.assertEqual(result["action"], "Add")
+		self.assertEqual(result["client"], "order-test")
+		self.assertEqual(order_data["table"], table.name)
+		self.assertTrue(frappe.db.exists("Table Order", order_data["name"]))
+		self.assertEqual(
+			order.selling_price_list,
+			pos_profile.selling_price_list,
+		)
+
 	@patch(
 		"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.get_v15_pos_items",
 		return_value=[],

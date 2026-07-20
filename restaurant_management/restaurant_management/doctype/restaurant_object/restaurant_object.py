@@ -52,11 +52,11 @@ class RestaurantObject(Document):
                     current_user=self.current_user
                 ))
                 
-    def validate_transaction(self, user=frappe.session.user):
+    def validate_transaction(self, user=None):
+        user = user or frappe.session.user
         if self.current_user is None or self.current_user == "Administrator" or self.orders_count == 0:
             frappe.db.set_value("Restaurant Object", self.name, "current_user", user)
-            frappe.db.commit()
-            self.reload()
+            self.current_user = user
             return True
 
         if self.current_user != user and self.orders_count > 0:
@@ -82,7 +82,7 @@ class RestaurantObject(Document):
         # from erpnext.controllers.accounts_controller import get_default_taxes_and_charges
 
         company = frappe.defaults.get_user_default('company')
-        pos_profile = get_pos_profile(company)
+        pos_profile = get_pos_profile(company, user=frappe.session.user)
 
         order = frappe.new_doc("Table Order")
         if pos_profile:
@@ -97,12 +97,19 @@ class RestaurantObject(Document):
         else:
             frappe.throw(_("POS Profile is required to use Point-of-Sale"))
 
-        order.selling_price_list = frappe.db.get_value('Price List', dict(enabled="1"))
+        order.selling_price_list = pos_profile.selling_price_list
         order.table = self.name
         order.company = company
 
         order.save()
+        response = dict(
+            action="Add",
+            data=order.data(),
+            client=client,
+            item_removed=None,
+        )
         order.synchronize(dict(action="Add", client=client))
+        return response
 
         # if last_user != frappe.session.user:
         #    self._on_update()
