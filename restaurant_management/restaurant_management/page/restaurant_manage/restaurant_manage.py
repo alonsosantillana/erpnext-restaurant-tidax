@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 import frappe
+from frappe import _
 from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
+from erpnext.stock.get_item_details import get_pos_profile
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_stock_availability
 
 class RestaurantManage:
@@ -103,6 +105,37 @@ class RestaurantManage:
                 data = dict(Process=frappe.get_all("Order Entry Item", "identifier,status", filters=filters))
 
         return data
+
+
+@frappe.whitelist()
+def get_bootstrap():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+
+    company = frappe.defaults.get_user_default("company")
+    if not company:
+        frappe.throw(_("Set a default Company before opening Restaurant Manage"))
+
+    if not frappe.has_permission("Company", "read", company):
+        frappe.throw(_("Not permitted to use Company {0}").format(company), frappe.PermissionError)
+
+    pos_profile = get_pos_profile(company, user=frappe.session.user)
+    if not pos_profile or pos_profile.get("disabled"):
+        frappe.throw(
+            _("No enabled POS Profile is available for {0}").format(company)
+        )
+
+    installed_apps = set(frappe.get_installed_apps())
+    return {
+        "company": company,
+        "pos_profile": pos_profile.name,
+        "capabilities": {
+            "electronic_invoicing": "ovenube_peru" in installed_apps,
+            "silent_print": "silent_print" in installed_apps,
+            "hardware_bridge": "silent_print" in installed_apps,
+        },
+    }
+
 
 
 @frappe.whitelist()

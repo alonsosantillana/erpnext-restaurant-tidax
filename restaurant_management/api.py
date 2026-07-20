@@ -7,6 +7,90 @@ import requests
 
 SUCCESS = 200
 NOT_FOUND = 400
+DOCUMENT_METHODS = {
+    "Restaurant Object": {
+        "_delete",
+        "add_object",
+        "add_order",
+        "commands_food",
+        "get_objects",
+        "orders_list",
+        "set_status_command",
+        "set_style",
+    },
+    "Table Order": {
+        "_delete",
+        "delete_item",
+        "divide",
+        "get_items",
+        "make_invoice",
+        "push_item",
+        "send",
+        "transfer",
+    },
+}
+
+READ_ONLY_DOCUMENT_METHODS = {
+    ("Restaurant Object", "commands_food"),
+    ("Restaurant Object", "get_objects"),
+    ("Restaurant Object", "orders_list"),
+    ("Table Order", "get_items"),
+}
+
+
+def _require_authenticated_user():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+
+
+@frappe.whitelist()
+def call(model, name, method, args=None):
+    """Call an explicitly supported restaurant document action."""
+    _require_authenticated_user()
+
+    if method not in DOCUMENT_METHODS.get(model, set()):
+        frappe.throw(_("Unsupported restaurant operation"), frappe.PermissionError)
+
+    doc = frappe.get_doc(model, name)
+    permission_type = "read" if (model, method) in READ_ONLY_DOCUMENT_METHODS else "write"
+    doc.check_permission(permission_type)
+
+    parsed_args = frappe.parse_json(args) if args else {}
+    if not isinstance(parsed_args, dict):
+        frappe.throw(_("Operation arguments must be an object"))
+
+    return getattr(doc, method)(**parsed_args)
+
+
+@frappe.whitelist()
+def validate_link(value=None, options=None, fetch=None):
+    """Validate a Link value and return only permitted fields."""
+    _require_authenticated_user()
+
+    if not options or options in {"null", "undefined"}:
+        return "Ok"
+
+    if not frappe.has_permission(options, "read"):
+        frappe.throw(_("Not permitted to read {0}").format(options), frappe.PermissionError)
+
+    meta = frappe.get_meta(options)
+    fetch_fields = [field.strip() for field in (fetch or "").split(",") if field.strip()]
+    invalid_fields = [field for field in fetch_fields if field != "name" and not meta.has_field(field)]
+    if invalid_fields:
+        frappe.throw(_("Invalid fetch fields: {0}").format(", ".join(invalid_fields)))
+
+    permitted = frappe.get_list(options, filters={"name": value}, fields=["name"], limit_page_length=1)
+    if not permitted:
+        return None
+
+    if fetch_fields:
+        frappe.response["fetch_values"] = list(
+            frappe.db.get_value(options, value, fetch_fields) or []
+        )
+
+    frappe.response["valid_value"] = value
+    return "Ok"
+
 
 @frappe.whitelist()
 def get_posinv_summary(from_date, to_date):

@@ -4,5 +4,7 @@
 # import frappe
 from frappe.model.document import Document
 
+
 class RMPRODUCTOSAPRODUCIR(Document):
-	pass
+	def validate(self):
+		self.rm_pp_cantprod = len(self.rm_pp_producto or [])

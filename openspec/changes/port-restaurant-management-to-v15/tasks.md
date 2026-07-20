@@ -6,21 +6,21 @@
 - [x] 1.4 Document `silent_print` and WebApp Hardware Bridge as required printing integrations, with sale persistence and controlled retry on print failure.
 - [x] 1.5 Document that MFC-backed production functionality is retained through app-owned DocTypes and the MFC dependency is removed.
 - [x] 1.6 Document that `Table Order` remains submittable and is finalized through `submit()`/`cancel()` instead of direct `docstatus` writes.
-- [ ] 1.7 Confirm the meaning of `_m` series variants, waiter assignment and production states, and validate the new explicit Boleta/Factura field with functional owners.
+- [ ] 1.7 Confirm waiter assignment and production states, and approve independent Boleta/Factura and Electronica/Manual fields; `_m` is confirmed as the manual series variant.
 - [x] 1.8 Record a baseline of existing security findings and map each finding to a specification requirement and test.
 
 ## 2. ERPNext v15 Runtime and Dependencies
 
-- [ ] 2.1 Port the minimum reviewed and license-compatible helper assets needed for `frappe.jshtml`, `frappeHelper`, modal and form controls.
-- [ ] 2.2 Register helper JavaScript and CSS in deterministic order in `hooks.py` and remove duplicate or unused assets.
-- [ ] 2.3 Add or port the required `Desk Form` metadata and validate loading of every custom restaurant form.
-- [ ] 2.4 Replace the `POS Settings.is_online` startup check with a supported v15 initialization contract.
-- [ ] 2.5 Ensure startup errors are scoped to Restaurant Manage and always release loading/freeze state without hiding the global Desk body.
+- [x] 2.1 Port the minimum reviewed and license-compatible helper assets needed for `frappe.jshtml`, `frappeHelper`, modal and form controls.
+- [x] 2.2 Register helper JavaScript and CSS in deterministic order in `hooks.py` and remove duplicate or unused assets.
+- [x] 2.3 Add or port the required `Desk Form` metadata and validate loading of every custom restaurant form.
+- [x] 2.4 Replace the `POS Settings.is_online` startup check with a supported v15 initialization contract.
+- [x] 2.5 Ensure startup errors are scoped to Restaurant Manage and always release loading/freeze state without hiding the global Desk body.
 - [ ] 2.6 Centralize supported ERPNext POS method calls in a compatibility adapter and cover their expected response shapes.
-- [ ] 2.7 Implement a server-side capability/dependency response for electronic invoicing, printing and optional modules.
+- [x] 2.7 Implement a server-side capability/dependency response for electronic invoicing, printing and optional modules.
 - [ ] 2.8 Remove or guard residual `posawesome`, `Work Station`, obsolete Material Request and other confirmed dead dependencies.
-- [ ] 2.9 Update package metadata, README requirements and installation documentation for the supported v15 matrix.
-- [ ] 2.10 Validate Python imports, JavaScript syntax, JSON metadata and asset paths after the runtime port.
+- [x] 2.9 Update package metadata, README requirements and installation documentation for the supported v15 matrix.
+- [x] 2.10 Validate Python imports, JavaScript syntax, JSON metadata and asset paths after the runtime port.
 
 ## 3. Security and Data Isolation
 
@@ -66,8 +66,8 @@
 
 ## 6. Metadata, Fixtures and Reports
 
-- [ ] 6.1 Replace malformed fixture declarations with scoped standard fixtures for app-owned Custom Fields and Client Scripts.
-- [ ] 6.2 Remove destructive SQL from `after_migrate` and move necessary metadata normalization to idempotent code or patches.
+- [x] 6.1 Replace malformed fixture declarations with scoped standard fixtures for app-owned Custom Fields and Client Scripts.
+- [x] 6.2 Remove destructive SQL from `after_migrate` and move necessary metadata normalization to idempotent code or patches.
 - [ ] 6.3 Resolve duplicate `amended_from`, invalid currency options, incomplete select values and external DocType references in app schemas.
 - [ ] 6.4 Apply company, date, `docstatus` and permission filters to every restaurant report.
 - [ ] 6.5 Correct December/year-boundary and invalid-filter behavior in Productos Vendidos and any equivalent date calculations.
@@ -84,10 +84,10 @@
 
 ## 8. v15 Qualification
 
-- [ ] 8.1 Create an authorized disposable v15 test site and install all required dependencies at documented versions.
-- [ ] 8.2 Verify clean install, repeated migrate, asset build and app uninstall/reinstall behavior where safe.
+- [x] 8.1 Create an authorized disposable v15 test site and install all required dependencies at documented versions.
+- [x] 8.2 Verify clean install, repeated migrate, asset build and app uninstall/reinstall behavior where safe.
 - [ ] 8.3 Restore or construct a representative 1.7.7 dataset and execute the upgrade path on a separate disposable site.
-- [ ] 8.4 Run Python, JavaScript, JSON, hooks, fixtures and OpenSpec validations.
+- [x] 8.4 Run Python, JavaScript, JSON, hooks, fixtures and OpenSpec validations.
 - [ ] 8.5 Run the complete automated app test suite and record versions, commands, duration and results.
 - [ ] 8.6 Execute the browser matrix for administrator, manager, cashier, waiter and cook with console and server error monitoring.
 - [ ] 8.7 Execute the end-to-end room -> table -> order -> kitchen -> payment -> POS Invoice -> electronic submission -> print flow.

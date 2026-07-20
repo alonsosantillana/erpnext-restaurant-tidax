@@ -18,7 +18,6 @@
   "sec_brk_002",
   "rm_pp_cantprod",
   "col_brk_002",
-  "amended_from",
   "amended_from"
  ],
  "fields": [
@@ -70,7 +69,7 @@
   {
    "fieldname": "rm_pp_producto",
    "fieldtype": "Table",
-   "options": "MFC Pichanga Inscripcion Reporte Producto"
+   "options": "RM Producto a Producir Detalle"
   },
   {
    "fieldname": "sec_brk_002",
@@ -85,15 +84,6 @@
   {
    "fieldname": "col_brk_002",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "MFC Pichanga Inscripcion Reporte",
-   "print_hide": 1,
-   "read_only": 1
   },
   {
    "fieldname": "amended_from",

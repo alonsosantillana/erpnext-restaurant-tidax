@@ -10,7 +10,9 @@ app_description = "Restaurant"
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "qubitcore.io@gmail.com"
-app_license = "MIT"
+app_license = "GPL-3.0-only"
+
+required_apps = ["erpnext", "ovenube_peru", "silent_print"]
 source_link = "https://github.com/joepa37/restaurant_management"
 
 doc_events = {
@@ -24,21 +26,41 @@ doc_events = {
     },
 }
 
-after_migrate = "restaurant_management.setup.install.after_install"
+after_migrate = "restaurant_management.setup.install.after_migrate"
 after_install = "restaurant_management.setup.install.after_install"
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/{app_name}/css/{app_name}.css"
+app_include_css = [
+    "/assets/restaurant_management/helper/css/desk-form.css",
+    "/assets/restaurant_management/helper/css/custom.css",
+    "/assets/restaurant_management/helper/css/num-pad.css",
+]
 
 fixtures = [
-    "Custom Field Material Request Item",
-    "Custom Field Material Request",
+    {
+        "dt": "Custom Field",
+        "filters": [[
+            "name",
+            "in",
+            [
+                "Material Request-clear_item_no_manufacturing",
+                "Material Request Item-pos_invoice",
+                "Material Request Item-pos_invoice_item",
+            ],
+        ]],
+    }
 ]
 
 app_include_js = [
+    "/assets/restaurant_management/helper/js/jshtml-class.js",
+    "/assets/restaurant_management/helper/js/num-pad-class.js",
+    "/assets/restaurant_management/helper/js/desk-modal.js",
+    "/assets/restaurant_management/helper/js/frappe-helper-api.js",
+    "/assets/restaurant_management/helper/js/frappe-form-class.js",
+    "/assets/restaurant_management/helper/js/desk-form-class.js",
     '/assets/restaurant_management/js/clusterize.min.js',
     '/assets/restaurant_management/js/interact.min.js',
     '/assets/restaurant_management/js/drag.js',

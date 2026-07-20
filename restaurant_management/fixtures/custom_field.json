@@ -1,0 +1,34 @@
+[
+  {
+    "doctype": "Custom Field",
+    "dt": "Material Request",
+    "fieldname": "clear_item_no_manufacturing",
+    "fieldtype": "Button",
+    "insert_after": "set_warehouse",
+    "label": "Platos a producir y agrupacion",
+    "name": "Material Request-clear_item_no_manufacturing",
+    "no_copy": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Material Request Item",
+    "fieldname": "pos_invoice",
+    "fieldtype": "Small Text",
+    "insert_after": "proy",
+    "label": "POS Invoice",
+    "name": "Material Request Item-pos_invoice",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Material Request Item",
+    "fieldname": "pos_invoice_item",
+    "fieldtype": "Data",
+    "hidden": 1,
+    "insert_after": "pos_invoice",
+    "label": "POS Invoice Item",
+    "name": "Material Request Item-pos_invoice_item",
+    "no_copy": 1,
+    "read_only": 1
+  }
+]

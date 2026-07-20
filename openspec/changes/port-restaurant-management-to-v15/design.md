@@ -178,7 +178,6 @@ Matriz minima:
 
 ## Open Questions
 
-- ¿Que representan exactamente las variantes de serie TIDAX `_m`: sucursal, emision manual, contingencia u otro contexto operativo?
 - ¿Que estados historicos y volumen de ordenes deben normalizarse durante el upgrade?
 - ¿Que versiones exactas de `ovenube_peru` y ERPNext v15 formaran la matriz soportada?
 
@@ -186,6 +185,7 @@ Matriz minima:
 
 - La funcionalidad de produccion que usaba MFC se conservara mediante DocTypes propios de `restaurant_management`.
 - `dinners` se usara solo para la cantidad de comensales; Boleta/Factura tendra seleccion explicita y configurada.
+- Las variantes de serie `_m` corresponden a emision Manual; el modo Electronica/Manual sera una seleccion separada del tipo de comprobante.
 - `silent_print` y WebApp Hardware Bridge se conservaran para comandas, boletas y facturas, con fallos reintentables que no corrompan la venta.
 - `Table Order` seguira siendo submittable y se finalizara con la API documental de Frappe.
 - Se autoriza implementar y validar en un sitio v15 desechable antes de cualquier despliegue operativo.

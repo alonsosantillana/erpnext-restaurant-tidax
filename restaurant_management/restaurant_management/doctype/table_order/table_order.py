@@ -213,7 +213,6 @@ class TableOrder(Document):
                     invoice.total_amount_free = self.amount
                     invoice.is_free_global = 1
                 invoice.table_description = self.table_description
-                invoice.owner = "cajero@resto.pe"
             # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
             else:
                 serie = obtener_res_set("serie_factura_m")
@@ -242,7 +241,6 @@ class TableOrder(Document):
                     invoice.total_amount_free = self.amount
                     invoice.is_free_global = 1
                 invoice.table_description = self.table_description
-                invoice.owner = "cajero@resto.pe"
         else:
             if(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
                 serie = obtener_res_set("serie_boleta")
@@ -271,7 +269,6 @@ class TableOrder(Document):
                     invoice.total_amount_free = self.amount
                     invoice.is_free_global = 1
                 invoice.table_description = self.table_description
-                invoice.owner = "cajero@resto.pe"
             # elif(self.customer_tipo_documento_identidad == "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"):
             else:
                 serie = obtener_res_set("serie_factura")
@@ -300,7 +297,6 @@ class TableOrder(Document):
                     invoice.total_amount_free = self.amount
                     invoice.is_free_global = 1
                 invoice.table_description = self.table_description
-                invoice.owner = "cajero@resto.pe"
         invoice.validate()
         invoice.save()
         invoice.submit()

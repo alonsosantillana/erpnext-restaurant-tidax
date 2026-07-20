@@ -1,20 +1,21 @@
 from __future__ import unicode_literals
-from faulthandler import disable
+from pathlib import Path
+
 import frappe
-from itertools import chain
+from frappe.modules.import_file import import_file_by_path
 
 docs = {
     "POS Profile User": dict(
         restaurant_permission=dict(label="Restaurant Permission", fieldtype="Button",
-                                   options="Restaurant Permission", insert_after="User", in_list_view=1, read_only=1),
+                                   options="Restaurant Permission", insert_after="user", in_list_view=1, read_only=1),
         parent=dict(label="Parent", fieldtype="Data", hidden=1),
         parenttype=dict(label="Parent Type", fieldtype="Data", hidden=1),
         restaurant_permissions=dict(label="Restaurant Permissions", fieldtype="Table",
-                                    options="Restaurant Permission", hidden=1, insert_after="Restaurant Permission"),
+                                    options="Restaurant Permission", hidden=1, insert_after="restaurant_permission"),
     ),
     "POS Profile": dict(
         posa_tax_inclusive=dict(
-            label="Tax Inclusive", fieldtype="Check", insert_after="tax_category", default_value=1)
+            label="Tax Inclusive", fieldtype="Check", insert_after="tax_category", default="1")
     ),
     "POS Invoice Item": dict(
         identifier=dict(label="Identifier", fieldtype="Data"),
@@ -27,40 +28,46 @@ docs = {
 fields_not_needed = ['parent', 'parenttype', 'restaurant_permissions']
 
 def after_install():
-    clear_custom_fields();
+    sync_app_metadata()
+
+def after_migrate():
+    sync_app_metadata()
+
+def sync_app_metadata():
     set_custom_fields()
+    sync_desk_forms()
     set_custom_scripts()
 
-def clear_custom_fields():
-    for doc in docs:
-        for field_name in docs[doc]:
-            if (field_name in fields_not_needed):
-                test_field = frappe.get_value(
-                    "Custom Field", doc + "-" + field_name)
-
-                if test_field is not None:
-                    frappe.db.sql("""DELETE FROM `tabCustom Field` WHERE name=%s""", test_field)
-
 def set_custom_fields():
-    for doc in docs:
-        for field_name in docs[doc]:
-            if (field_name in fields_not_needed):
+    for doctype, fields in docs.items():
+        for field_name, properties in fields.items():
+            if field_name in fields_not_needed:
                 continue
 
-            test_field = frappe.get_value(
-                "Custom Field", doc + "-" + field_name)
+            field_id = frappe.db.exists(
+                "Custom Field", {"dt": doctype, "fieldname": field_name}
+            )
+            custom_field = (
+                frappe.get_doc("Custom Field", field_id)
+                if field_id
+                else frappe.new_doc("Custom Field")
+            )
+            values = {**properties, "dt": doctype, "fieldname": field_name}
 
-            if test_field is None or field_name != "posa_tax_inclusive":
-                CF = frappe.new_doc("Custom Field") if test_field is None else frappe.get_doc(
-                    "Custom Field", test_field)
+            if field_id and all(custom_field.get(key) == value for key, value in values.items()):
+                continue
 
-                _values = dict(chain.from_iterable(d.items() for d in (
-                    docs[doc][field_name], dict(dt=doc, fieldname=field_name))))
+            custom_field.update(values)
+            custom_field.flags.ignore_version = True
+            custom_field.save() if field_id else custom_field.insert()
 
-                for key in _values:
-                    CF.set(key, _values[key])
 
-                CF.insert() if test_field is None else CF.save()
+def sync_desk_forms():
+    desk_form_path = Path(frappe.get_app_path(
+        "restaurant_management", "restaurant_management", "desk_form"
+    ))
+    for form_path in sorted(desk_form_path.glob("*/*.json")):
+        import_file_by_path(str(form_path), force=True, ignore_version=True)
 
 
 def set_custom_scripts():

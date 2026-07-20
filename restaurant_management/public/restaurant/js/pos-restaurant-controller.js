@@ -1,6 +1,3 @@
-// TIDAX
-let usuario;
-usuario = "cajero@resto.pe";
 erpnext.PointOfSale.RestaurantController = class {
 	constructor(wrapper) {
 		this.wrapper = $(wrapper).find('.layout-main-section');
@@ -10,7 +7,7 @@ erpnext.PointOfSale.RestaurantController = class {
 	fetch_opening_entry() {
 		// TIDAX
 		// return frappe.call("erpnext.selling.page.point_of_sale.point_of_sale.check_opening_entry", { "user": frappe.session.user });
-		return frappe.call("erpnext.selling.page.point_of_sale.point_of_sale.check_opening_entry", { "user": usuario });
+		return frappe.call("erpnext.selling.page.point_of_sale.point_of_sale.check_opening_entry", { "user": frappe.session.user });
 	}
 
 	check_opening_entry() {
@@ -222,7 +219,7 @@ erpnext.PointOfSale.RestaurantController = class {
 		voucher.pos_profile = this.frm.doc.pos_profile;
 		//TIDAX
 		// voucher.user = frappe.session.user;
-		voucher.user = usuario;
+		voucher.user = frappe.session.user;
 		voucher.company = this.frm.doc.company;
 		voucher.pos_opening_entry = this.pos_opening;
 		voucher.period_end_date = frappe.datetime.now_datetime();

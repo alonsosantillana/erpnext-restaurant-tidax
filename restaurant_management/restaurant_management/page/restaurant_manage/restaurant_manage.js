@@ -3,21 +3,28 @@ var RM = null;
 const [TRANSFER, UPDATE, DELETE, INVOICED, ADD, QUEUE, SPLIT] = ["Transfer", "Update", "Delete", "Invoiced", "Add", "queue", "Split"];
 frappe.provide('erpnext.PointOfSale');
 
-frappe.pages['restaurant-manage'].on_page_load = function (wrapper) {
+frappe.pages['restaurant-manage'].on_page_load = async function (wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
 		title: '',
 		single_column: true
 	});
 
-	$("body").hide();
-
-	frappe.db.get_value('POS Settings', { name: 'POS Settings' }, 'is_online', (r) => {
-		if (r && !cint(r.use_pos_in_offline_mode)) {
-			RM = new RestaurantManage(wrapper);
-		}
-	});
-}
+	const $page = $(wrapper).find('.layout-main-section');
+	try {
+		const bootstrap = await frappe.xcall(
+			"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.get_bootstrap"
+		);
+		RM = new RestaurantManage(wrapper);
+		RM.bootstrap = bootstrap;
+	} catch (error) {
+		const message = error?.message || __("Restaurant Manage could not be initialized");
+		$page.empty().append(
+			$("<div>").addClass("alert alert-danger").text(message)
+		);
+		frappe.show_alert({ message, indicator: "red" });
+	}
+};
 RestaurantManage = class RestaurantManage {
 	#pos_profile = null;
 	#permissions = null;

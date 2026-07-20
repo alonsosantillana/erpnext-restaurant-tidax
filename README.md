@@ -18,21 +18,25 @@ ___
 
 ___
 ### ERPNext Restaurant Management requires
-1. [Frappe Framework](https://github.com/quantumbitcore/frappe_helper.git)
-2. [ERPNext](https://github.com/frappe/erpnext.git)
-3. [Frappe Helper](https://github.com/quantumbitcore/frappe_helper.git)<br>
-    Frappe Helper is another experimental application, in order to be reused by other applications.
+1. Frappe 15 and ERPNext 15. The verified baseline is 15.109.0.
+2. `ovenube_peru` 15.3.5 for the current TIDAX/SUNAT flow.
+3. `silent_print` 0.0.1 and a configured WebApp Hardware Bridge for ticket printing.
+
+The frontend helper used by Restaurant Manage is bundled in this app; the legacy `frappe_helper` app is not required. MFC is not a dependency.
 
 ___
 ### How to Install
 
 #### Self Host:
-1. `bench get-app https://github.com/quantumbitcore/erpnext-restaurant.git`
-2. `bench setup requirements`
-3. `bench build --app restaurant_management`
-4. `bench restart`
+1. Install compatible v15 versions of `ovenube_peru` and `silent_print`.
+2. `bench get-app [repository-url] --branch feature/restaurant-v15-compatibility`
+3. `bench setup requirements`
+4. `bench --site [site.name] install-app silent_print`
 5. `bench --site [site.name] install-app restaurant_management`
-6. `bench --site [site.name] migrate`
+6. `bench build --app restaurant_management`
+7. Configure Company, POS Profile, POS Opening Entry, Restaurant Settings, Silent Print Settings and the Hardware Bridge.
+
+Validate first on a disposable site. See `docs/v15-baseline.md` and `docs/v15-qualification.md` for the current support matrix and evidence.
 
 #### Frappe Cloud:
 >Available in your hosting on FrappeCloud [here](https://frappecloud.com/marketplace/apps/restaurant_management)
@@ -43,7 +47,7 @@ ___
 
 ___
 ### Compatibility
-> V13, V14
+> Verified on Frappe/ERPNext 15.109.0. Other v15 minors require the same qualification suite; v13 and v14 are no longer part of this port target.
 
 ___
 ERPNext Restaurant Management is based on [Frappe Framework](https://github.com/frappe/frappe).
