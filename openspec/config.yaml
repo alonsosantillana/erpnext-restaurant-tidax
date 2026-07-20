@@ -1,0 +1,46 @@
+schema: spec-driven
+
+context: |
+  App Frappe/ERPNext v15: restaurant_management.
+  Proposito actual: gestionar salas, mesas, ordenes, comandas, centros de produccion,
+  pagos y facturacion POS para restaurantes, con personalizaciones TIDAX para Peru,
+  facturacion electronica mediante ovenube_peru, impresion y reportes operativos.
+
+  Convenciones del proyecto:
+  - Mantener compatibilidad con Frappe v15 y ERPNext v15.
+  - No modificar apps core como frappe o erpnext.
+  - Preservar las personalizaciones TIDAX/SUNAT que sean funcionalmente necesarias.
+  - Usar ORM y ciclos documentales estandar de Frappe; justificar SQL directo.
+  - Parametrizar SQL y validar permisos en toda API o metodo whitelisted.
+  - No hardcodear empresas, sitios, usuarios, series, cuentas, credenciales ni rutas.
+  - No exponer datos personales, tributarios, tokens ni secretos en respuestas o logs.
+  - Mantener atomicidad en ordenes, pagos, POS Invoice y cambios de estado; evitar commits manuales.
+  - Toda modificacion de DocTypes, hooks, APIs, reportes, fixtures, patches, permisos,
+    facturacion, inventario o logica de negocio requiere un cambio OpenSpec.
+  - Los cambios en facturacion electronica, SUNAT, pagos, inventario y datos existentes
+    se consideran de riesgo alto.
+  - No ejecutar install-app, migrate, restart, patches ni cambios de datos sin autorizacion explicita.
+
+  Componentes actuales:
+  - Pagina Restaurant Manage y frontend de salas, mesas, comandas, pagos y cocina.
+  - DocTypes Restaurant Object, Table Order, Order Entry Item y Restaurant Settings.
+  - Permisos por perfil POS y sala mediante Restaurant Permission y excepciones.
+  - Integracion con POS Profile, POS Invoice, Material Request y stock de ERPNext.
+  - Integracion TIDAX con ovenube_peru, silent_print y DocTypes/campos externos.
+  - Reportes, dashboards, gastos, cambio de mozo y productos a producir.
+  - Actualizaciones en tiempo real mediante frappe.publish_realtime.
+
+rules:
+  proposal:
+    - Incluir problema, objetivo, alcance, exclusiones, impacto esperado y criterios de aceptacion.
+    - Identificar app, modulos, DocTypes, APIs, hooks, fixtures, reportes, dependencias y archivos afectados.
+    - Clasificar el riesgo y separar compatibilidad v15, seguridad, integridad y funcionalidad tributaria.
+  design:
+    - Describir arquitectura, estrategia de port selectivo desde upstream, dependencias y limites de responsabilidad.
+    - Documentar permisos, transacciones, concurrencia, tiempo real, migracion, fixtures, patches y plan de reversion.
+    - Para facturacion electronica/SUNAT, documentar series, comprobantes, descuentos, gratuidad y casos borde.
+    - Incluir una matriz de pruebas sobre un sitio v15 aislado antes de cualquier despliegue.
+  tasks:
+    - Usar tareas verificables y marcables, organizadas por fases y prioridad.
+    - Incluir pruebas unitarias, integracion, seguridad, instalacion, migracion y regresion funcional.
+    - Registrar desviaciones, pruebas realizadas y resultados antes de cerrar el cambio.
