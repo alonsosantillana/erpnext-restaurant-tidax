@@ -231,6 +231,9 @@ class RestaurantRoom extends ObjectManage {
             args: {
                 t: t,
             },
+            callback: (r) => {
+                if (r.message) this.append_table(r.message, true);
+            },
             always: () => {
                 RM.ready();
             },

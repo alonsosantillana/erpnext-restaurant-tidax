@@ -21,6 +21,7 @@
 - [ ] 2.8 Remove or guard residual `posawesome`, `Work Station`, obsolete Material Request and other confirmed dead dependencies.
 - [x] 2.9 Update package metadata, README requirements and installation documentation for the supported v15 matrix.
 - [x] 2.10 Validate Python imports, JavaScript syntax, JSON metadata and asset paths after the runtime port.
+- [x] 2.11 Restore v15 room and table creation by removing request-path debug output, returning persisted state and reconciling the client after commit.
 
 ## 3. Security and Data Isolation
 

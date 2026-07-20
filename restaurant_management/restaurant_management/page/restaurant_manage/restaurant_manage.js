@@ -492,13 +492,7 @@ RestaurantManage = class RestaurantManage {
 		});
 
 		frappe.realtime.on("check_rooms", (r) => {
-			this.rooms = r.rooms;
-
-			this.settings_data.then(() => {
-				this.rooms = this.rooms.filter(room => this.rooms_access.includes(room.name) || frappe.session.user === "Administrator");
-
-				this.render_rooms(r.client === RM.client ? r.current_room : false);
-			});
+			this.sync_rooms(r);
 		});
 
 		frappe.realtime.on("pos_profile_update", (r) => {
@@ -543,9 +537,21 @@ RestaurantManage = class RestaurantManage {
 		frappe.call({
 			method: this.url_manage + "add_room",
 			args: { client: RM.client },
+			callback: (r) => {
+				if (r.message) this.sync_rooms(r.message);
+			},
 			always: () => {
 				this.ready();
 			},
+		});
+	}
+
+	sync_rooms(data) {
+		this.rooms = data.rooms || [];
+
+		this.settings_data.then(() => {
+			this.rooms = this.rooms.filter(room => this.rooms_access.includes(room.name) || frappe.session.user === "Administrator");
+			this.render_rooms(data.client === RM.client ? data.current_room : false);
 		});
 	}
 

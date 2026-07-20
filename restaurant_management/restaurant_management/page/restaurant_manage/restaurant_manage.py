@@ -145,11 +145,14 @@ def get_rooms():
 
 @frappe.whitelist()
 def add_room(client=None):
-    frappe.publish_realtime("check_rooms", dict(
+    room = RestaurantManage().add_room()
+    response = dict(
         client=client,
-        current_room=RestaurantManage().add_room().name,
+        current_room=room.name,
         rooms=RestaurantManage().get_rooms()
-    ))
+    )
+    frappe.publish_realtime("check_rooms", response, after_commit=True)
+    return response
 
 
 @frappe.whitelist(allow_guest=True)

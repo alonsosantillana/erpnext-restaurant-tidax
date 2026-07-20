@@ -169,8 +169,6 @@ class RestaurantObject(Document):
         if self.type == "Production Center":
             data["status_managed"] = self._status_managed
             data["items_group"] = self._items_group
-        print(self.__dict__)
-        print(self.orders_count)
         return data
 
     @property
@@ -208,7 +206,7 @@ class RestaurantObject(Document):
         table.save()
 
         frappe.publish_realtime(
-            "order_entry_update", self
+            "order_entry_update", self, after_commit=True
         )
         data = self.get_objects(table.name)
 
@@ -216,7 +214,8 @@ class RestaurantObject(Document):
             frappe.publish_realtime(self.name, dict(
                 action="Add",
                 table=data[0]
-            ))
+            ), after_commit=True)
+            return data[0]
 
     def count_objects(self, t):
         return frappe.db.count("Restaurant Object", filters={
