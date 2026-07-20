@@ -254,6 +254,27 @@ class ProductItem {
     }
     // TIDAX : Adicion de campos en Items: unit_value, ordered_finish, ordered_nro
     add_item_in_order(item) {
+        const current_order = this.order_manage.current_order;
+
+        if (current_order == null) {
+            frappe.show_alert({
+                message: __("Select or create an Order before adding an item."),
+                indicator: "orange"
+            });
+            return;
+        }
+
+        if (!current_order.data.customer) {
+            this.order_manage.components.customer.highlight();
+            frappe.show_alert({
+                message: __("You must select a customer before adding an item."),
+                indicator: "orange"
+            });
+            frappe.utils.play_sound("error");
+            current_order.set_customer();
+            return;
+        }
+
         const base_item = {
             name: null,
             entry_name: null,
@@ -275,58 +296,34 @@ class ProductItem {
             has_batch_no: 0,
             batch_no: null,
             unit_value: 0,
-            ordered_finish: 0
+            ordered_finish: 0,
+            item_tax_template: null,
+            item_tax_rate: "{}",
+            tax_amount: 0,
+            amount: flt(item.price_list_rate)
         };
 
-        const current_order = this.order_manage.current_order;
-        const pos_profile = RM.pos_profile;
-
-        if (current_order != null) {
-            if (!RM.check_permissions("order", current_order, "write")) {
-                RM.notification("red", __("You cannot modify an order from another User"));
-                return;
-            }
-
-            base_item.company = RM.company;
-            base_item.customer = current_order.data.customer;
-            base_item.doctype = "Sales Invoice";
-            base_item.currency = pos_profile.currency;
-            base_item.pos_profile = pos_profile.name;
-
-            this.get_items_detail(base_item).then(item_data => {
-                const item_to_push = Object.assign({}, base_item, item_data);
-
-                item_to_push.identifier = RM.uuid("entry");
-                item_to_push.status = "Pending";
-                item_to_push.notes = null;
-                item_to_push.process_status_data = {
-                    next_action_message: 'Sent',
-                    color: 'red',
-                    icon: 'fa fa-cart-arrow-down',
-                    status_message: 'Add',
-                }
-                item_to_push.qty = 1;
-
-                current_order.push_item(item_to_push);
-            });
+        if (!RM.check_permissions("order", current_order, "write")) {
+            RM.notification("red", __("You cannot modify an order from another User"));
+            return;
         }
-    }
 
-    get_items_detail(item) {
-        return new Promise(res => {
-            if (RM.store.items[item.item_code]) {
-                res(RM.store.items[item.item_code]);
-            } else {
-                frappe.call({
-                    method: 'erpnext.stock.get_item_details.get_item_details',
-                    freeze: true,
-                    args: { args: item }
-                }).then(r => {
-                    RM.store.items[r.message.item_code] = r.message;
-                    res(r.message);
-                });
+        const item_to_push = Object.assign({}, base_item, {
+            identifier: RM.uuid("entry"),
+            status: "Pending",
+            notes: null,
+            process_status_data: {
+                next_action_message: 'Sent',
+                color: 'red',
+                icon: 'fa fa-cart-arrow-down',
+                status_message: 'Add',
             }
         });
+
+        // ERPNext v15 POS already returns the applicable list rate in the
+        // selector response. The Table Order server rebuilds a POS Invoice
+        // and remains the source of truth for taxes and final totals.
+        current_order.push_item(item_to_push);
     }
 }
 

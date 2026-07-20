@@ -15,6 +15,14 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 
 
 class TestRestaurantObject(FrappeTestCase):
+	def test_restaurant_order_requires_customer_selection(self):
+		desk_form = frappe.get_doc("Desk Form", "restaurant-order-customer")
+		customer_field = next(
+			field for field in desk_form.desk_form_fields if field.fieldname == "customer"
+		)
+
+		self.assertEqual(customer_field.reqd, 1)
+
 	def test_room_and_table_creation_do_not_write_debug_output(self):
 		with patch("builtins.print") as print_mock:
 			response = add_room(client="test-client")

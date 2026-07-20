@@ -24,6 +24,7 @@
 - [x] 2.11 Restore v15 room and table creation by removing request-path debug output, returning persisted state and reconciling the client after commit.
 - [x] 2.12 Restore v15 room, table and production-center deletion with callable actions, explicit delete permission and post-commit client reconciliation.
 - [x] 2.13 Adapt legacy restaurant item loading to the ERPNext v15 POS parameter and response contract.
+- [x] 2.14 Restore item selection by requiring a customer before adding a line and using the v15 POS selector rate while server-side POS Invoice calculation remains authoritative.
 
 ## 3. Security and Data Isolation
 
