@@ -160,6 +160,9 @@ class TableOrder {
         test_item = test_item || this.add_locale_item(new_item);
         if (test_item != null) {
             test_item.update();
+            // Keep the local cart visible even when the realtime server
+            // reconciliation is delayed or temporarily unavailable.
+            this.order_manage.order_status_message();
             test_item.select(true);
         }
     }
