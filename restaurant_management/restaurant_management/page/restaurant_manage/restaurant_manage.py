@@ -1,9 +1,8 @@
 from __future__ import unicode_literals
 import frappe
 from frappe import _
-from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
+from erpnext.selling.page.point_of_sale.point_of_sale import get_items as get_v15_pos_items
 from erpnext.stock.get_item_details import get_pos_profile
-from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_stock_availability
 
 class RestaurantManage:
     @staticmethod
@@ -199,124 +198,91 @@ def debug_data(data):
 
 
 @frappe.whitelist()
-def get_items(start, page_length, price_list, item_group, pos_profile, search_value=""):
-    data = dict()
-    result = []
-
-    allow_negative_stock = frappe.db.get_single_value('Stock Settings', 'allow_negative_stock')
-    warehouse, hide_unavailable_items = frappe.db.get_value('POS Profile', pos_profile,
-                                                            ['warehouse', 'hide_unavailable_items'])
-
-    if not frappe.db.exists('Item Group', item_group):
-        item_group = get_root_of('Item Group')
-
-    if search_value:
-        data = search_serial_or_batch_or_barcode_number(search_value)
-
-    item_code = data.get("item_code") if data.get("item_code") else search_value
-    serial_no = data.get("serial_no") if data.get("serial_no") else ""
-    batch_no = data.get("batch_no") if data.get("batch_no") else ""
-    barcode = data.get("barcode") if data.get("barcode") else ""
-
-    if data:
-        item_info = frappe.db.get_value(
-            "Item", data.get("item_code"),
-            ["name as item_code", "item_name", "description", "stock_uom", "image as item_image", "is_stock_item"]
-            , as_dict=1)
-        item_info.setdefault('serial_no', serial_no)
-        item_info.setdefault('batch_no', batch_no)
-        item_info.setdefault('barcode', barcode)
-
-        return {'items': [item_info]}
-
-    condition = get_conditions(item_code, serial_no, batch_no, barcode)
-    condition += get_item_group_condition(pos_profile)
-
-    lft, rgt = frappe.db.get_value('Item Group', item_group, ['lft', 'rgt'])
-
-    bin_join_selection, bin_join_condition = "", ""
-    if hide_unavailable_items:
-        bin_join_selection = ", `tabBin` bin"
-        bin_join_condition = "AND bin.warehouse = %(warehouse)s AND bin.item_code = item.name AND bin.actual_qty > 0"
-
-    items_data = frappe.db.sql("""
-		SELECT
-			item.name AS item_code,
-			item.item_name,
-			item.description,
-			item.stock_uom,
-			item.image AS item_image,
-			item.is_stock_item
-		FROM
-			`tabItem` item {bin_join_selection}
-		WHERE
-			item.disabled = 0
-			AND item.has_variants = 0
-			AND item.is_sales_item = 1
-			AND item.is_fixed_asset = 0
-			AND item.item_group in (SELECT name FROM `tabItem Group` WHERE lft >= {lft} AND rgt <= {rgt})
-			AND {condition}
-			{bin_join_condition}
-		ORDER BY
-			item.name asc
-		LIMIT
-			{start}, {page_length}"""
-        .format(
+def get_items(start, page_length, price_list, pos_profile, item_group=None, search_value=""):
+    """Adapt the legacy restaurant item request to the ERPNext v15 POS contract."""
+    root_item_group = _get_pos_item_group_root(pos_profile)
+    item_group = _get_permitted_item_group(item_group, root_item_group)
+    result = get_v15_pos_items(
         start=start,
         page_length=page_length,
-        lft=lft,
-        rgt=rgt,
-        condition=condition,
-        bin_join_selection=bin_join_selection,
-        bin_join_condition=bin_join_condition
-    ), {'warehouse': warehouse}, as_dict=1)
+        price_list=price_list,
+        item_group=item_group,
+        pos_profile=pos_profile,
+        search_term=search_value,
+    )
 
-    if items_data:
-        items = [d.item_code for d in items_data]
-        item_prices_data = frappe.get_all("Item Price",
-                                          fields=["item_code", "price_list_rate", "currency"],
-                                          filters={'price_list': price_list, 'item_code': ['in', items]})
+    if isinstance(result, list):
+        return {"items": result}
 
-        item_prices = {}
-        for d in item_prices_data:
-            item_prices[d.item_code] = d
+    return result or {"items": []}
 
-        for item in items_data:
-            item_code = item.item_code
-            item_price = item_prices.get(item_code) or {}
-            if allow_negative_stock:
-                item_stock_qty = \
-                frappe.db.sql("""select ifnull(sum(actual_qty), 0) from `tabBin` where item_code = %s""", item_code)[0][
-                    0]
-            else:
-                item_stock_qty = get_stock_availability(item_code, warehouse)
 
-            row = {}
-            row.update(item)
-            row.update({
-                'price_list_rate': item_price.get('price_list_rate'),
-                'currency': item_price.get('currency'),
-                'actual_qty': item_stock_qty,
-            })
-            result.append(row)
+@frappe.whitelist()
+def get_item_group_root(pos_profile):
+    return _get_pos_item_group_root(pos_profile)
 
-    res = {
-        'items': result
-    }
 
-    return res
+def _get_pos_item_group_root(pos_profile):
+    configured_groups = frappe.get_all(
+        "POS Item Group",
+        filters={"parent": pos_profile},
+        pluck="item_group",
+    )
 
-def get_conditions(item_code, serial_no, batch_no, barcode):
-	if serial_no or batch_no or barcode:
-		return "item.name = {0}".format(frappe.db.escape(item_code))
+    if configured_groups:
+        group_bounds = frappe.get_all(
+            "Item Group",
+            filters={"name": ("in", configured_groups)},
+            fields=["lft", "rgt"],
+        )
+        if group_bounds:
+            minimum_lft = min(group.lft for group in group_bounds)
+            maximum_rgt = max(group.rgt for group in group_bounds)
+            ancestors = frappe.get_all(
+                "Item Group",
+                filters={
+                    "is_group": 1,
+                    "lft": ("<=", minimum_lft),
+                    "rgt": (">=", maximum_rgt),
+                },
+                fields=["name"],
+                order_by="lft desc",
+                limit_page_length=1,
+            )
+            if ancestors:
+                return ancestors[0].name
 
-	return """(item.name like {item_code}
-		or item.item_name like {item_code})""".format(item_code = frappe.db.escape('%' + item_code + '%'))
+    roots = frappe.get_all(
+        "Item Group",
+        filters={"is_group": 1},
+        fields=["name"],
+        order_by="rgt desc",
+        limit_page_length=1,
+    )
+    if not roots:
+        frappe.throw(_("Configure at least one Item Group before using Restaurant Manage"))
 
-def get_item_group_condition(pos_profile):
-	cond = "and 1=1"
-	item_groups = get_item_groups(pos_profile)
-	if item_groups:
-		cond = "and item.item_group in (%s)"%(', '.join(['%s']*len(item_groups)))
+    return roots[0].name
 
-	return cond % tuple(item_groups)
+
+def _get_permitted_item_group(item_group, root_item_group):
+    if not item_group:
+        return root_item_group
+
+    bounds = frappe.db.get_value(
+        "Item Group",
+        item_group,
+        ["lft", "rgt"],
+        as_dict=True,
+    )
+    root_bounds = frappe.db.get_value(
+        "Item Group",
+        root_item_group,
+        ["lft", "rgt"],
+        as_dict=True,
+    )
+    if not bounds or not root_bounds:
+        return root_item_group
+
+    is_within_root = bounds.lft >= root_bounds.lft and bounds.rgt <= root_bounds.rgt
+    return item_group if is_within_root else root_item_group

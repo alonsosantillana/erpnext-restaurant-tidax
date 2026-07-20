@@ -5,8 +5,11 @@ class ProductItem {
         this.items = {};
         this.currency = RM.pos_profile.currency;
 
-        frappe.db.get_value("Item Group", { lft: 1, is_group: 1 }, "name", async (r) => {
-            this.parent_item_group = r.name;
+        frappe.call({
+            method: `${RM.url_manage}get_item_group_root`,
+            args: { pos_profile: RM.pos_profile.name },
+        }).then(async (r) => {
+            this.parent_item_group = r.message;
             this.make_dom();
             this.make_fields();
             this.init_clusterize();
@@ -116,7 +119,7 @@ class ProductItem {
 
         return new Promise(res => {
             frappe.call({
-                method: "erpnext.selling.page.point_of_sale.point_of_sale.get_items",
+                method: `${RM.url_manage}get_items`,
                 freeze: true,
                 args: { start, page_length, price_list, item_group, search_value, pos_profile }
             }).then(r => {

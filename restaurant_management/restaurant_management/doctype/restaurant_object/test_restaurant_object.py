@@ -8,7 +8,10 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from restaurant_management.api import call as restaurant_call
-from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import add_room
+from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import (
+	add_room,
+	get_items,
+)
 
 
 class TestRestaurantObject(FrappeTestCase):
@@ -40,3 +43,31 @@ class TestRestaurantObject(FrappeTestCase):
 
 		self.assertEqual(deleted["name"], table.name)
 		self.assertFalse(frappe.db.exists("Restaurant Object", table.name))
+
+	@patch(
+		"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.get_v15_pos_items",
+		return_value=[],
+	)
+	@patch(
+		"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage._get_pos_item_group_root",
+		return_value="RESTAURANTE",
+	)
+	def test_item_adapter_maps_legacy_request_to_v15(self, get_root, get_v15_items):
+		result = get_items(
+			start=0,
+			page_length=40,
+			price_list="Standard Selling",
+			pos_profile="Test POS Profile",
+			search_value="coffee",
+		)
+
+		self.assertEqual(result, {"items": []})
+		get_root.assert_called_once_with("Test POS Profile")
+		get_v15_items.assert_called_once_with(
+			start=0,
+			page_length=40,
+			price_list="Standard Selling",
+			item_group="RESTAURANTE",
+			pos_profile="Test POS Profile",
+			search_term="coffee",
+		)
