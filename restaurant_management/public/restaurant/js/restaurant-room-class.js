@@ -4,6 +4,7 @@ class RestaurantRoom extends ObjectManage {
 
         this.identifier = data.identifier;
         this.edit_form = null;
+        this.reloading_tables = false;
         this.data = data;
         this.init_synchronize();
         this.render();
@@ -214,8 +215,10 @@ class RestaurantRoom extends ObjectManage {
         });
     }
 
-    get_tables() {
-        RM.working("Loading Objects");
+    get_tables(silent = false) {
+        if (this.reloading_tables) return;
+        this.reloading_tables = true;
+        if (!silent) RM.working("Loading Objects");
         // frappe.set_route(`/restaurant-manage?restaurant_room=${this.data.name}`);
         frappeHelper.api.call({
             model: "Restaurant Object",
@@ -223,8 +226,16 @@ class RestaurantRoom extends ObjectManage {
             method: "get_objects",
             args: {},
             always: (r) => {
-                this.make_objects(r.message);
-                RM.ready();
+                if (r && r.message) this.make_objects(r.message);
+                if (silent) {
+                    this.in_tables(table => {
+                        if (table.order_manage != null) {
+                            table.order_manage.reload_orders_silently();
+                        }
+                    });
+                }
+                this.reloading_tables = false;
+                if (!silent) RM.ready();
             },
             freeze: false,
         });

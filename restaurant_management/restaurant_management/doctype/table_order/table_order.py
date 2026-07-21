@@ -201,17 +201,20 @@ class TableOrder(Document):
         status = self.options_param(options, "status")
         item_removed = self.options_param(options, "item_removed")
 
-        frappe.publish_realtime("synchronize_order_data", dict(
+        event = dict(
             action=action,
             data=[] if action is None else self.data(items, last_table),
             client=self.options_param(options, "client"),
             item_removed=item_removed
-        ), after_commit=True)
+        )
+        frappe.publish_realtime("synchronize_order_data", event, after_commit=True)
 
         self._table.synchronize()
 
         if status is not None:
             RestaurantManage.production_center_notify(status)
+
+        return event
 
     def make_invoice(
         self,
@@ -349,10 +352,18 @@ class TableOrder(Document):
                                 table_description)
 
         self.reload()
-        self.synchronize(dict(action="Transfer", client=client, last_table=last_table_name))
+        transfer_event = self.synchronize(dict(
+            action="Transfer",
+            client=client,
+            last_table=last_table_name
+        ))
 
         last_table.synchronize()
-        return True
+        return dict(
+            transfer_event=transfer_event,
+            source_table=last_table.get_data(),
+            destination_table=new_table.get_data(),
+        )
 
     def transfer_order_values(self, to_doc):
         # print("TRANSFER ORDER VALUES-------------------->")

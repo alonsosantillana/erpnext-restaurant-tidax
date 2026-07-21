@@ -34,6 +34,7 @@
 - [x] 2.21 Show unsent order items with a mustard cart and an explicit pending-to-send label until the Order action is completed.
 - [x] 2.22 Show each table's total ordered dish quantity while retaining the active-order count for occupancy and permission rules.
 - [x] 2.23 Show ordered dishes above each table and keep active diners with configured seating capacity visible below it.
+- [x] 2.24 Reconcile source and destination tables idempotently after transfers, with authoritative response data and silent polling fallback.
 
 ## 3. Security and Data Isolation
 

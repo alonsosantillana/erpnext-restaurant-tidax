@@ -3,6 +3,7 @@ class OrderManage extends ObjectManage {
     #components = {};
     #items = {};
     #numpad = null;
+    orders_reloading = false;
 
     constructor(options) {
         super(options);
@@ -774,6 +775,49 @@ class OrderManage extends ObjectManage {
         });
     }
 
+    reload_orders_silently() {
+        if (this.orders_reloading) return;
+        this.orders_reloading = true;
+
+        frappeHelper.api.call({
+            model: "Restaurant Object",
+            name: this.table.data.name,
+            method: "orders_list",
+            args: {},
+            always: (r) => {
+                if (!r || r.exc || !Array.isArray(r.message)) {
+                    this.orders_reloading = false;
+                    return;
+                }
+
+                const persisted_orders = r.message;
+                const persisted_names = new Set(persisted_orders.map(order => order.name));
+                const stale_orders = [];
+
+                this.in_orders(order => {
+                    if (!persisted_names.has(order.data.name)) {
+                        stale_orders.push(order.data.name);
+                    }
+                });
+                stale_orders.forEach(order_name => this.delete_order(order_name));
+
+                persisted_orders.forEach(order => {
+                    const current = this.get_order(order.name);
+                    if (current) {
+                        current.data = Object.assign({}, order.data);
+                        current.show_items_count();
+                    } else {
+                        this.append_order(order);
+                    }
+                });
+
+                this.orders_reloading = false;
+                this.check_permissions_status();
+            },
+            freeze: false,
+        });
+    }
+
     in_orders(f) {
         this.in_childs((child, key, index) => {
             f(child, key, index);
@@ -820,6 +864,16 @@ class OrderManage extends ObjectManage {
                 return new_order;
             }
         });
+    }
+
+    remove_transferred_order(order_name) {
+        if (this.get_order(order_name) != null) {
+            this.delete_order(order_name);
+        }
+    }
+
+    receive_transferred_order(data) {
+        this.check_data(Object.assign({}, data, { action: UPDATE }));
     }
 
     get_order(name) {

@@ -5,16 +5,48 @@ from __future__ import unicode_literals
 
 import frappe
 import unittest
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 
 from restaurant_management.restaurant_management.doctype.table_order.table_order import (
 	get_customer_identity,
 	get_voucher_config,
+	TableOrder,
 )
 
 
 class TestTableOrder(unittest.TestCase):
+	@patch(
+		"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.publish_realtime"
+	)
+	def test_synchronize_returns_the_published_event(self, publish_realtime):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "ORDER-TEST",
+			"table": "TABLE-TEST",
+		})
+		expected_data = {"order": {"data": {"name": "ORDER-TEST"}}, "items": []}
+
+		with patch.object(TableOrder, "data", return_value=expected_data), patch.object(
+			TableOrder, "_table", new_callable=PropertyMock
+		) as table:
+			event = order.synchronize({
+				"action": "Transfer",
+				"client": "client-test",
+				"last_table": "TABLE-OLD",
+			})
+
+		self.assertEqual(event, {
+			"action": "Transfer",
+			"data": expected_data,
+			"client": "client-test",
+			"item_removed": None,
+		})
+		publish_realtime.assert_called_once_with(
+			"synchronize_order_data", event, after_commit=True
+		)
+		table.return_value.synchronize.assert_called_once_with()
+
 	def test_voucher_series_matrix(self):
 		cases = {
 			("Boleta", "Electrónica"): ("serie_boleta", "03", "1"),

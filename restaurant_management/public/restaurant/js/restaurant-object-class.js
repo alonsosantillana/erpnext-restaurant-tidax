@@ -416,10 +416,8 @@ RestaurantObject = class RestaurantObject {
                     args: { table: this.data.name, client: RM.client },
                     always: (r) => {
                         if (r.message) {
-                            if (RM.transfer_order != null) {
-                                RM.transfer_order.order_manage.clear_current_order();
-                                RM.transfer_order = null;
-                            }
+                            RM.reconcile_order_transfer(r.message);
+                            this.room.get_tables(true);
                         }
                         RM.ready();
                     },

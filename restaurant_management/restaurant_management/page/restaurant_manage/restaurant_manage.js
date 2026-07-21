@@ -42,6 +42,7 @@ RestaurantManage = class RestaurantManage {
 	client =  this.uuid();
 	request_client = null;
 	loaded = false;
+	table_reconciliation_interval = null;
 	store = {
 		items: []
 	}
@@ -420,6 +421,71 @@ RestaurantManage = class RestaurantManage {
 		return typeof this.objects[name] != "undefined" ? this.objects[name] : null;
 	}
 
+	reconcile_order_transfer(payload) {
+		const event = payload && payload.transfer_event ? payload.transfer_event : payload;
+		const order = event && event.data && event.data.order;
+		if (!order || !order.data) return;
+		this.request_client = event.client;
+
+		const destination_table = this.object(order.data.table);
+		const source_table = this.object(order.data.last_table);
+		if (payload && payload.source_table && source_table) {
+			source_table.reset_data(payload.source_table);
+		}
+		if (payload && payload.destination_table && destination_table) {
+			destination_table.reset_data(payload.destination_table);
+		}
+
+		if (source_table && source_table.order_manage) {
+			source_table.order_manage.remove_transferred_order(order.data.name);
+		}
+
+		this.transfer_order = null;
+		if (!destination_table) return;
+
+		if (destination_table.order_manage == null) {
+			if (this.client === event.client && !destination_table.transfer_manage_pending) {
+				destination_table.transfer_manage_pending = true;
+				setTimeout(() => {
+					destination_table.order_manage = new OrderManage({
+						identifier: this.OMName(destination_table.data.name),
+						table: destination_table,
+						current_order_identifier: order.data.name
+					});
+					this.object(destination_table.order_manage.identifier, destination_table.order_manage);
+					destination_table.transfer_manage_pending = false;
+				});
+			}
+			return;
+		}
+
+		setTimeout(() => {
+			destination_table.order_manage.receive_transferred_order(event);
+			if (
+				destination_table.room.data.name === this.current_room.data.name &&
+				this.client === event.client
+			) {
+				destination_table.order_manage.show();
+			}
+		});
+	}
+
+	start_table_reconciliation() {
+		if (this.table_reconciliation_interval) {
+			clearInterval(this.table_reconciliation_interval);
+		}
+
+		this.table_reconciliation_interval = setInterval(() => {
+			if (RM !== this) {
+				clearInterval(this.table_reconciliation_interval);
+				return;
+			}
+			if (!document.hidden && this.current_room && !this.editing && !this.busy) {
+				this.current_room.get_tables(true);
+			}
+		}, 5000);
+	}
+
 	init_synchronize() {
 		frappe.realtime.on("debug_data", (data) => {
 			console.log(data);
@@ -449,32 +515,7 @@ RestaurantManage = class RestaurantManage {
 			if (this.current_room == null || table == null) return;
 
 			if (r.action === TRANSFER) {
-				const last_table = RM.object(order.data.last_table);
-				if (last_table != null && last_table.order_manage != null) {
-					last_table.order_manage.check_data(r)
-				}
-
-				this.transfer_order = null;
-
-				if (table.order_manage == null) {
-					if (this.client === r.client) {
-						setTimeout(() => {
-							table.order_manage = new OrderManage({
-								identifier: RM.OMName(table.data.name),
-								table: table,
-								current_order_identifier: order.data.name
-							});
-							RM.object(table.order_manage.identifier, table.order_manage);
-						});
-					}
-				} else {
-					setTimeout(() => {
-						table.order_manage.check_data(r);
-						if (table.room.data.name === RM.current_room.data.name && RM.client === r.client) {
-							table.order_manage.show();
-						}
-					});
-				}
+				this.reconcile_order_transfer(r);
 			} else {
 				if (table.order_manage != null) {
 					setTimeout(() => {
@@ -503,6 +544,8 @@ RestaurantManage = class RestaurantManage {
 				this.raise_exception_for_pos_profile();
 			}
 		});
+
+		this.start_table_reconciliation();
 	}
 
 	get rooms_access() {
