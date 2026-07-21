@@ -79,7 +79,7 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 
 #### Scenario: Full-screen production view
 - **WHEN** a kitchen user activates Full screen from a Production Center
-- **THEN** the complete Production Center occupies the browser screen and the user can leave full screen with Escape or the same control
+- **THEN** the production views occupy the browser screen without the modal header and the user can leave full screen with Escape
 
 #### Scenario: Realtime production update
 - **WHEN** an order is sent or a kitchen command changes state and the transaction commits
