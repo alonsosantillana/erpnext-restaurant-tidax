@@ -339,7 +339,11 @@ RestaurantObject = class RestaurantObject {
 
         this.no_of_seats = frappe.jshtml({
             tag: "span",
-            properties: { class: "d-table-seats", title: __("Table capacity") },
+            properties: {
+                class: "d-table-seats",
+                title: __("Table capacity"),
+                style: `margin-left: ${table_is_active ? "1px" : "-20px"}`
+            },
             content: `<span class="fa fa-user" style="font-size: 14px"></span> {{text}}`,
             text: this.data.no_of_seats
         });
@@ -516,6 +520,7 @@ RestaurantObject = class RestaurantObject {
         if (this.is_table) {
             const table_is_active = flt(this.data.orders_count) > 0;
             this.dinners_indicator.val(this.dinners_count);
+            this.no_of_seats.css("margin-left", table_is_active ? "1px" : "-20px");
 
             [this.dinners_indicator, this.indicator].forEach(counter => {
                 counter[table_is_active ? "remove_class" : "add_class"]("hide");
