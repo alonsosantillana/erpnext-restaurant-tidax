@@ -30,6 +30,7 @@ DOCUMENT_METHODS = {
         "divide",
         "divide_template",
         "get_items",
+        "increment_item",
         "make_invoice",
         "push_item",
         "send",

@@ -179,8 +179,7 @@ class TableOrder {
         }, {});
         const mutation = {
             identifier: order_item.data.identifier,
-            order_item,
-            deleting,
+            type: deleting ? "delete" : "set",
             payload,
         };
         const pending_index = this.item_mutation_queue.findIndex(
@@ -198,6 +197,34 @@ class TableOrder {
         this.process_item_mutation_queue();
     }
 
+    queue_item_increment(order_item, delta = 1) {
+        const identifier = order_item.data.identifier;
+        const pending_index = this.item_mutation_queue.findIndex(
+            pending => pending.identifier === identifier
+        );
+
+        if (pending_index >= 0) {
+            const pending = this.item_mutation_queue[pending_index];
+            if (pending.type === "increment") {
+                pending.delta += delta;
+            } else {
+                pending.type = "set";
+                pending.payload = Object.entries(order_item.data).reduce((result, [key, value]) => {
+                    result[key] = value === 0 ? 0 : value || "";
+                    return result;
+                }, {});
+            }
+        } else {
+            this.item_mutation_queue.push({
+                identifier,
+                type: "increment",
+                delta,
+            });
+        }
+
+        this.process_item_mutation_queue();
+    }
+
     process_item_mutation_queue() {
         if (this.item_mutation_in_flight || !this.item_mutation_queue.length) return;
 
@@ -206,13 +233,22 @@ class TableOrder {
         window.saving = true;
         RM.working("Update Item", false);
 
+        const method = mutation.type === "increment"
+            ? "increment_item"
+            : (mutation.type === "delete" ? "delete_item" : "push_item");
+        const item_arg = mutation.type === "increment"
+            ? { identifier: mutation.identifier, delta: mutation.delta }
+            : {
+                item: mutation.type === "delete"
+                    ? mutation.identifier
+                    : mutation.payload,
+            };
+
         frappeHelper.api.call({
             model: "Table Order",
             name: this.data.name,
-            method: mutation.deleting ? "delete_item" : "push_item",
-            args: {
-                item: mutation.deleting ? mutation.identifier : mutation.payload,
-            },
+            method,
+            args: item_arg,
             always: (r) => {
                 const failed = !r || r.exc;
                 const has_pending_mutations = this.item_mutation_queue.length > 0;
@@ -221,7 +257,7 @@ class TableOrder {
                     this.item_mutation_queue = [];
                     this.get_items();
                 } else if (!has_pending_mutations) {
-                    if (mutation.deleting) {
+                    if (mutation.type === "delete") {
                         this.delete_item(mutation.identifier);
                     } else if (r.message) {
                         this.order_manage.check_data(r.message);
@@ -255,21 +291,28 @@ class TableOrder {
         }
 
         let test_item = null;
+        let increment_existing = false;
         this.in_items(item => {
-            if (item.data.item_code === new_item.item_code) {
+            if (!test_item && item.data.item_code === new_item.item_code) {
                 if ([this.data.attending_status, "Pending", "Add", "", null, "undefined"].includes(item.data.status)) {
                     item.data.qty += 1;
                     item.data.item_tax_rate = new_item.item_tax_rate;
                     item.data.status = "Pending";
                     item.calculate();
                     test_item = item;
+                    increment_existing = true;
                 }
             }
         });
 
         test_item = test_item || this.add_locale_item(new_item);
         if (test_item != null) {
-            test_item.update();
+            if (increment_existing) {
+                test_item.update(false);
+                this.queue_item_increment(test_item);
+            } else {
+                test_item.update();
+            }
             // Keep the local cart visible even when the realtime server
             // reconciliation is delayed or temporarily unavailable.
             this.refresh_local_summary();

@@ -592,6 +592,40 @@ class TableOrder(Document):
 
         return self.synchronize(dict(item=item["identifier"]))
 
+    def increment_item(self, identifier, delta=1):
+        if self.customer is None:
+            frappe.throw(_("Please set a Customer"))
+
+        delta = cint(delta)
+        if delta < 1 or delta > 100:
+            frappe.throw(_("The quantity increment must be between 1 and 100"))
+
+        from restaurant_management.restaurant_management.restaurant_manage import check_exceptions
+        check_exceptions(
+            dict(name="Table Order", short_name="order", action="write", data=self),
+            "You cannot modify an order from another User"
+        )
+
+        frappe.db.sql(
+            "SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE",
+            (self.name,),
+        )
+        self.reload()
+        items = self.items_list(identifier)
+        if len(items) != 1 or items[0].get("status") != status_attending:
+            frappe.throw(_("The selected dish can no longer be increased"))
+
+        item = items[0]
+        item["qty"] = flt(item.get("qty")) + delta
+        item["status"] = status_attending
+        action = self.update_item(item)
+        if action == "db_commit":
+            self.db_commit()
+        else:
+            self.aggregate()
+
+        return self.synchronize(dict(item=identifier))
+
     def delete_item(self, item, unrestricted=False, synchronize=True):
         if not unrestricted:
             from restaurant_management.restaurant_management.restaurant_manage import check_exceptions

@@ -184,6 +184,44 @@ class TestTableOrder(unittest.TestCase):
 		self.assertIsNone(values["ordered_time"])
 		self.assertEqual(values["ordered_nro"], 0)
 
+	@patch(
+		"restaurant_management.restaurant_management.restaurant_manage.check_exceptions"
+	)
+	def test_increment_item_adds_delta_to_persisted_unsent_qty(self, check_exceptions):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"customer": "CUSTOMER-1",
+		})
+		item = {
+			"identifier": "ITEM-1",
+			"item_code": "PLT-001",
+			"qty": 1,
+			"status": "Attending",
+		}
+		event = {"action": "Update"}
+
+		with (
+			patch.object(order, "reload") as reload_order,
+			patch.object(order, "items_list", return_value=[item]),
+			patch.object(order, "update_item", return_value="db_commit") as update_item,
+			patch.object(order, "db_commit") as db_commit,
+			patch.object(order, "synchronize", return_value=event) as synchronize,
+			patch.object(frappe.db, "sql") as sql,
+		):
+			result = order.increment_item("ITEM-1", 2)
+
+		self.assertEqual(result, event)
+		self.assertEqual(item["qty"], 3)
+		reload_order.assert_called_once_with()
+		update_item.assert_called_once_with(item)
+		db_commit.assert_called_once_with()
+		synchronize.assert_called_once_with({"item": "ITEM-1"})
+		sql.assert_called_once_with(
+			"SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE",
+			("OR-2026-00001",),
+		)
+
 	def test_items_list_includes_server_calculated_tax_amount(self):
 		order = TableOrder({
 			"doctype": "Table Order",

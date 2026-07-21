@@ -16,7 +16,7 @@ Creating, editing, dividing, transferring, sending, deleting or invoicing an ord
 
 #### Scenario: Repeated product selection while saving
 - **WHEN** an operator selects the same product repeatedly before the previous persistence request finishes
-- **THEN** the client serializes and consolidates the mutations so the latest visible quantity is persisted and survives a reload
+- **THEN** the client serializes and consolidates atomic increment operations so the latest visible quantity is persisted and survives a reload
 
 #### Scenario: Unsent product timing
 - **WHEN** a product is selected or its quantity is changed before the operator presses Order
