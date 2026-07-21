@@ -289,6 +289,14 @@ class OrderItem {
                     item_code: {
                         read_only: true
                     },
+                    item_tax_rate: {
+                        hidden: true,
+                        read_only: true
+                    },
+                    valuation_rate: {
+                        hidden: true,
+                        read_only: true
+                    },
                     has_batch_no: {
                         read_only: true,
                         hidden: this.data.has_batch_no === 0,
