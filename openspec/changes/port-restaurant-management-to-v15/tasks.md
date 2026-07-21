@@ -30,6 +30,7 @@
 - [x] 2.17 Reconcile the locally persisted item state and pending count so the Order action is enabled without depending on realtime delivery.
 - [x] 2.18 Publish production-center notifications after commit and reconcile open kitchen views against persisted commands.
 - [x] 2.19 Reload persisted production commands whenever a previously opened kitchen view is entered again.
+- [x] 2.20 Recalculate the production-center badge from active commands after loading, adding, transitioning or removing kitchen items.
 
 ## 3. Security and Data Isolation
 

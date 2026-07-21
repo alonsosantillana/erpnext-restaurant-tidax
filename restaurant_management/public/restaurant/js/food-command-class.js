@@ -214,8 +214,14 @@ class FoodCommand {
                 identifier: this.data.identifier,
                 tiempo: this._time_elapsed.value
             },
-            always: () => {
+            always: (r) => {
+                if (!r || r.exc) {
+                    RM.ready();
+                    return;
+                }
+
                 RM.ready(false, "success");
+                this.process_manage.reload();
             },
         });
     }

@@ -693,6 +693,7 @@ ProcessManage = class ProcessManage {
         items.forEach((item) => {
             this.check_item(item);
         });
+        this.sync_orders_count();
     }
 
     check_item(item) {
@@ -716,12 +717,14 @@ ProcessManage = class ProcessManage {
         Object.keys(this.items).filter(x => !this.new_items_keys.includes(x)).forEach((r) => {
             this.items[r].remove();
         });
+        this.sync_orders_count();
     }
 
     remove_item(item) {
         if (this.items[item]) {
             this.items[item].remove();
         }
+        this.sync_orders_count();
     }
 
     add_item(item) {
@@ -730,6 +733,11 @@ ProcessManage = class ProcessManage {
             process_manage: this,
             data: item
         });
+    }
+
+    sync_orders_count() {
+        this.table.data.orders_count = Object.keys(this.items).length;
+        this.table.set_orders_count();
     }
 
     include_status(status) {
