@@ -1,7 +1,7 @@
 class OrderItem {
     enabled_form_fields_status = {
-        "Pending": ["qty", "rate", "notes", "batch_no", "serial_no"],
-        "Attending": ["qty", "rate", "notes", "batch_no", "serial_no"],
+        "Pending": ["qty", "rate", "discount_percentage", "notes", "batch_no", "serial_no"],
+        "Attending": ["qty", "rate", "discount_percentage", "notes", "batch_no", "serial_no"],
         "Sent": ["notes"],
         "Processing": ["notes"]
     }
@@ -146,7 +146,7 @@ class OrderItem {
             const discount_field = this.form_editor.get_field("discount_percentage");
 
             const qty = flt(qty_field.get_value());
-            let discount = flt(discount_field.get_value());
+            let discount = Math.min(100, Math.max(0, flt(discount_field.get_value())));
             let rate = flt(rate_field.get_value());
             const base_rate = flt(this.data.price_list_rate);
 
@@ -258,10 +258,10 @@ class OrderItem {
             tag: "div",
             properties: { class: "widget-user-header" },
             content: header_template
-        }).on("click", () => {
+        }).on("click", async () => {
             RM.pull_alert("left");
-            this.make_form_editor();
-            this.select();
+            await this.make_form_editor();
+            await this.select();
         });
 
         return `
@@ -322,6 +322,7 @@ class OrderItem {
                     },
                 }
             });
+            await this.form_editor.ready;
         }
     }
 
@@ -367,7 +368,11 @@ class OrderItemEditor extends DeskForm {
         super(opts);
 
         this.order_item = opts.order_item;
-        super.initialize();
+        // Frappe mutates DocField properties while refreshing controls. Each
+        // dish therefore needs an isolated copy so another editor cannot leave
+        // Notes or Discount Percentage in a read-only state.
+        this.desk_form = JSON.parse(JSON.stringify(RM.order_item_editor_form));
+        this.ready = super.initialize();
     }
 
     async make() {

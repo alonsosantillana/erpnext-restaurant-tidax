@@ -136,7 +136,7 @@ class TestTableOrder(unittest.TestCase):
 				price_list_rate=35,
 				item_tax_template="",
 				item_tax_rate="{}",
-				discount_percentage=0,
+				discount_percentage=12,
 				discount_amount=0,
 			)]
 		entry = {
@@ -147,9 +147,9 @@ class TestTableOrder(unittest.TestCase):
 			"price_list_rate": 35,
 			"item_tax_template": "",
 			"item_tax_rate": "{}",
-			"discount_percentage": 0,
+			"discount_percentage": 12,
 			"status": "Pending",
-			"notes": "",
+			"notes": "Sin cebolla",
 			"ordered_time": "2026-07-21 07:26:46",
 			"ordered_nro": 7,
 			"ordered_finish": 0,
@@ -180,6 +180,8 @@ class TestTableOrder(unittest.TestCase):
 		self.assertEqual(action, "db_commit")
 		values = set_value.call_args.args[2]
 		self.assertEqual(values["qty"], 3)
+		self.assertEqual(values["discount_percentage"], 12)
+		self.assertEqual(values["notes"], "Sin cebolla")
 		self.assertEqual(values["status"], "Attending")
 		self.assertIsNone(values["ordered_time"])
 		self.assertEqual(values["ordered_nro"], 0)

@@ -22,6 +22,10 @@ Creating, editing, dividing, transferring, sending, deleting or invoicing an ord
 - **WHEN** a product is selected or its quantity is changed before the operator presses Order
 - **THEN** it remains without an ordered timestamp or command number until the server sends it to production
 
+#### Scenario: Edit unsent dish details
+- **WHEN** an authorized operator opens an unsent dish and the POS Profile permits discount changes
+- **THEN** Notes and Discount Percentage are editable, remain isolated from other dish editors and persist through the serialized item mutation flow
+
 #### Scenario: Successful split
 - **WHEN** an authorized user divides valid quantities into a second order
 - **THEN** both orders and all child quantities are persisted consistently without duplicate identifiers
