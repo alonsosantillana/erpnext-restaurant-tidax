@@ -134,6 +134,9 @@ class OrderItem {
                     this.order.delete_item(this.data.identifier);
                     this.order.refresh_local_summary();
                 } else {
+                    if (r.message) {
+                        this.order.order_manage.check_data(r.message);
+                    }
                     if (this.data.status === "Pending") {
                         this.data.status = this.order.data.attending_status || "Attending";
                     }

@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import frappe
 import unittest
 from pathlib import Path
-from unittest.mock import PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 
 from restaurant_management.restaurant_management.doctype.table_order.table_order import (
@@ -18,6 +18,51 @@ from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHO
 
 
 class TestTableOrder(unittest.TestCase):
+	@patch(
+		"restaurant_management.restaurant_management.restaurant_manage.check_exceptions"
+	)
+	def test_push_item_returns_server_calculated_payload(self, check_exceptions):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"customer": "CUSTOMER-1",
+		})
+		event = {"action": "Update", "data": {"items": [{"tax_amount": 5.76}]}}
+
+		with patch.object(TableOrder, "update_item", return_value="aggregate"), patch.object(
+			TableOrder, "aggregate"
+		), patch.object(TableOrder, "synchronize", return_value=event) as synchronize:
+			result = order.push_item({"identifier": "ITEM-1"})
+
+		self.assertEqual(result, event)
+		synchronize.assert_called_once_with({"item": "ITEM-1"})
+
+	def test_items_list_includes_server_calculated_tax_amount(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"table": "TABLE-1",
+			"entry_items": [{
+				"doctype": "Order Entry Item",
+				"identifier": "ITEM-1",
+				"item_code": "PLT-001",
+				"item_name": "Ceviche",
+				"qty": 1,
+				"rate": 32,
+				"tax_amount": 5.76,
+				"amount": 37.76,
+			}],
+		})
+		table = MagicMock()
+		table.order_short_name.return_value = "00001"
+		table.process_status_data.return_value = {}
+
+		with patch.object(TableOrder, "_table", new_callable=PropertyMock) as table_property:
+			table_property.return_value = table
+			items = order.items_list()
+
+		self.assertEqual(items[0]["tax_amount"], 5.76)
+
 	def test_runtime_assets_do_not_reference_legacy_dinners_name(self):
 		assets_path = Path(
 			frappe.get_app_path("restaurant_management", "public", "restaurant", "js")

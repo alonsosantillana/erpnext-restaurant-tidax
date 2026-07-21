@@ -533,7 +533,7 @@ class TableOrder(Document):
         else:
             self.aggregate()
 
-        self.synchronize(dict(item=item["identifier"]))
+        return self.synchronize(dict(item=item["identifier"]))
 
     def delete_item(self, item, unrestricted=False, synchronize=True):
         if not unrestricted:
@@ -735,6 +735,7 @@ class TableOrder(Document):
                     "price_list_rate",
                     "item_tax_template",
                     "item_tax_rate",
+                    "tax_amount",
                     "table_description",
                     "status",
                     "notes",
