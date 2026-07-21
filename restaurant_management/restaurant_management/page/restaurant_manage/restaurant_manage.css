@@ -21,6 +21,52 @@
     width: 100%;
 }
 
+.restaurant-manage .transfer-notice {
+    align-items: center;
+    background: #fff3cd;
+    border: 2px solid #d49b00;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: #664d03;
+    display: flex;
+    font-size: 15px;
+    font-weight: 600;
+    justify-content: space-between;
+    left: 50%;
+    line-height: 1.3;
+    max-width: 720px;
+    min-height: 44px;
+    padding: 7px 9px 7px 14px;
+    position: absolute;
+    top: 51px;
+    transform: translateX(-50%);
+    width: calc(100% - 24px);
+    z-index: 1000;
+}
+
+.restaurant-manage .transfer-notice.hide {
+    display: none !important;
+}
+
+.restaurant-manage .transfer-notice-message {
+    align-items: center;
+    display: flex;
+    padding-right: 12px;
+}
+
+.restaurant-manage .transfer-notice-icon {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.restaurant-manage .transfer-cancel-button {
+    flex: 0 0 auto;
+}
+
+.restaurant-manage.transfer-mode .floor-map .d-table:not(.p-center) {
+    box-shadow: 0 0 0 2px rgba(212, 155, 0, 0.7);
+}
+
 .restaurant-manage .floor-map .table-container-scroll{
     height: 100%;
     width: 100%;

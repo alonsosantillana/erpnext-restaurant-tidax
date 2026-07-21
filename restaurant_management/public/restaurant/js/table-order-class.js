@@ -376,8 +376,7 @@ class TableOrder {
     }
 
     transfer() {
-        RM.working("Transferring Order");
-        RM.transfer_order = this;
+        RM.begin_order_transfer(this);
         this.order_manage.close();
     }
 

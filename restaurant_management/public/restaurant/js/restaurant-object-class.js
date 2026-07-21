@@ -424,18 +424,20 @@ RestaurantObject = class RestaurantObject {
                     freeze: true
                 });
             } else {
-                RM.transfer_order = null;
-                RM.ready();
+                if (RM.transfer_order != null) {
+                    RM.cancel_order_transfer(false);
+                } else {
+                    RM.ready();
+                }
                 open();
             }
         } else if (this.data.type === "Production Center") {
             if (RM.transfer_order != null) {
                 frappe.confirm(
                     `${__("You are transferring an Order, choose a table")}<br><br>
-					<strong>${__("Do you want to cancel the transfer?")}</strong>`,
+                    <strong>${__("Do you want to cancel the transfer?")}</strong>`,
                     () => {
-                        RM.transfer_order = null;
-                        RM.ready();
+                        RM.cancel_order_transfer(false);
                         this.open_modal();
                     }
                 );

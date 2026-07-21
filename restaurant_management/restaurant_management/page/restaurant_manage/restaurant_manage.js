@@ -238,6 +238,35 @@ RestaurantManage = class RestaurantManage {
 			);
 		});
 
+		this.transfer_notice_text = frappe.jshtml({
+			tag: "span",
+			properties: { class: "transfer-notice-text" },
+			content: "{{text}}",
+			text: ""
+		});
+
+		this.cancel_transfer_button = frappe.jshtml({
+			tag: "button",
+			properties: { class: "btn btn-sm btn-warning transfer-cancel-button" },
+			content: `<span class="fa fa-times"></span> ${__("Cancel transfer")}`
+		}).on("click", () => this.cancel_order_transfer());
+
+		this.transfer_notice = frappe.jshtml({
+			tag: "div",
+			properties: {
+				class: "transfer-notice hide",
+				role: "alert",
+				"aria-live": "assertive"
+			},
+			content: `
+				<div class="transfer-notice-message">
+					<span class="fa fa-exchange transfer-notice-icon"></span>
+					${this.transfer_notice_text.html()}
+				</div>
+				${this.cancel_transfer_button.html()}
+			`
+		});
+
 		this.wrapper.append(`
 			<div class="restaurant-manage">
 				<div class="floor-selector">
@@ -246,6 +275,7 @@ RestaurantManage = class RestaurantManage {
 					${this.add_room_button.html()}
 					${this.setting_button.html()}
 				</div>
+				${this.transfer_notice.html()}
 				<div class="floor-map">
 					<div class="floor-map-editor left">
 						${this.components.add_table.html()}
@@ -421,6 +451,37 @@ RestaurantManage = class RestaurantManage {
 		return typeof this.objects[name] != "undefined" ? this.objects[name] : null;
 	}
 
+	begin_order_transfer(order) {
+		this.transfer_order = order;
+		const source_table = order.order_manage.table.data.description;
+		const order_name = order.data.short_name || order.data.name;
+		const message = __(
+			"Transferring order {0} from {1}. Select the destination table.",
+			[order_name, source_table]
+		);
+
+		this.transfer_notice_text.val(frappe.utils.escape_html(message));
+		this.transfer_notice.remove_class("hide");
+		this.wrapper.find(".restaurant-manage").addClass("transfer-mode");
+		this.working("Transferring Order");
+	}
+
+	hide_transfer_notice() {
+		if (this.transfer_notice) this.transfer_notice.add_class("hide");
+		this.wrapper.find(".restaurant-manage").removeClass("transfer-mode");
+	}
+
+	cancel_order_transfer(reopen_source = true) {
+		const order = this.transfer_order;
+		this.transfer_order = null;
+		this.hide_transfer_notice();
+		this.ready({ message: __("Transfer cancelled"), indicator: "orange" });
+
+		if (reopen_source && order && order.order_manage) {
+			setTimeout(() => order.order_manage.show());
+		}
+	}
+
 	reconcile_order_transfer(payload) {
 		const event = payload && payload.transfer_event ? payload.transfer_event : payload;
 		const order = event && event.data && event.data.order;
@@ -441,6 +502,7 @@ RestaurantManage = class RestaurantManage {
 		}
 
 		this.transfer_order = null;
+		this.hide_transfer_notice();
 		if (!destination_table) return;
 
 		if (destination_table.order_manage == null) {
