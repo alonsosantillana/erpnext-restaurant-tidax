@@ -780,11 +780,29 @@ class TableOrder {
         this.edit("discount");
     }
 
-    edit(type) {
+    sync_edit_form_data(type, doc) {
+        if (!doc) return;
+
+        const fields_by_type = {
+            customer: ["customer", "customer_name", "customer_tax_id"],
+            dinners: ["dinners"],
+            mozo: ["cambio_mozo", "cambio_mozo_nombre"],
+            discount: ["discount"]
+        };
+
+        (fields_by_type[type] || []).forEach(fieldname => {
+            if (typeof doc[fieldname] !== "undefined") {
+                this.data[fieldname] = doc[fieldname];
+            }
+        });
+    }
+
+    async edit(type) {
         const form = type + "_form";
         const fieldname = type === "mozo" ? "cambio_mozo" : type;
         if (this[form]) {
-            this[form].reload();
+            await this[form].reload(null, true);
+            this.sync_edit_form_data(type, this[form].doc);
             this[form].show();
         } else {
             const configure_form = self => {
@@ -812,6 +830,7 @@ class TableOrder {
                     self.hide();
 
                     RM.sound_submit();
+                    this.sync_edit_form_data(type, self.doc);
                     this.data[fieldname] = self.get_value(fieldname);
                     if (type === "dinners" && this.order_manage.table) {
                         this.order_manage.table.data.dinners_count = flt(this.data[fieldname]);
