@@ -100,7 +100,7 @@ La creacion de `POS Invoice` se separara en:
 5. vinculacion atomica con `Table Order`;
 6. envio electronico e impresion como operaciones controladas posteriores.
 
-`dinners` representara exclusivamente la cantidad de comensales. `Table Order` guardara dos campos obligatorios e independientes: tipo de comprobante Boleta/Factura y modo de emision Electronica/Manual. El servidor validara DNI para Boleta y RUC para Factura; nunca inferira el comprobante ni el modo por la cantidad de comensales.
+`guest_count` representara exclusivamente la cantidad de comensales. `Table Order` guardara dos campos obligatorios e independientes: tipo de comprobante Boleta/Factura y modo de emision Electronica/Manual. El servidor validara DNI para Boleta y RUC para Factura; nunca inferira el comprobante ni el modo por la cantidad de comensales.
 
 Las series electronicas usaran `serie_boleta` o `serie_factura`; las variantes `_m` confirmadas como manuales usaran `serie_boleta_m` o `serie_factura_m`. Formatos y modos de pago se leeran de configuracion validada por compania y contexto operativo. No se asignara `owner`; Frappe conservara al usuario real. Se probaran DNI, RUC, otros documentos autorizados, descuentos por linea, descuento global, gratuidad parcial/total, impuestos incluidos, multiples medios de pago y errores de SUNAT.
 
@@ -184,7 +184,7 @@ Matriz minima:
 ## Confirmed Decisions
 
 - La funcionalidad de produccion que usaba MFC se conservara mediante DocTypes propios de `restaurant_management`.
-- `dinners` se usara solo para la cantidad de comensales; `voucher_type` guardara la seleccion explicita Boleta/Factura.
+- `guest_count` se usara solo para la cantidad de comensales; `voucher_type` guardara la seleccion explicita Boleta/Factura.
 - Las variantes de serie `_m` corresponden a emision Manual; `emission_mode` guardara Electronica/Manual de forma separada.
 - `silent_print` y WebApp Hardware Bridge se conservaran para comandas, boletas y facturas, con fallos reintentables que no corrompan la venta.
 - `Table Order` seguira siendo submittable y se finalizara con la API documental de Frappe.

@@ -49,8 +49,8 @@ RestaurantObject = class RestaurantObject {
         if (typeof data.ordered_items_qty !== "undefined") {
             this.data.ordered_items_qty = data.ordered_items_qty;
         }
-        if (typeof data.dinners_count !== "undefined") {
-            this.data.dinners_count = data.dinners_count;
+        if (typeof data.guest_count !== "undefined") {
+            this.data.guest_count = data.guest_count;
         }
         this.set_orders_count();
 
@@ -284,7 +284,7 @@ RestaurantObject = class RestaurantObject {
             ? (!table_is_active ? " hide" : "")
             : (this.indicator_count <= 0 ? " hide" : "");
         //console.log((this.data));
-        this.dinners_indicator = frappe.jshtml({
+        this.guest_count_indicator = frappe.jshtml({
             tag: "span",
             properties: {
                 class: `people-count ${people_hide_class}`,
@@ -292,7 +292,7 @@ RestaurantObject = class RestaurantObject {
                 title: __("People at table")
             },
             content: '<span class="fa fa-users" style="font-size: 12px"></span> {{text}}',
-            text: this.dinners_count
+            text: this.guest_count
         });
 
         this.indicator = frappe.jshtml({
@@ -519,10 +519,10 @@ RestaurantObject = class RestaurantObject {
 
         if (this.is_table) {
             const table_is_active = flt(this.data.orders_count) > 0;
-            this.dinners_indicator.val(this.dinners_count);
+            this.guest_count_indicator.val(this.guest_count);
             this.no_of_seats.css("margin-left", table_is_active ? "1px" : "-20px");
 
-            [this.dinners_indicator, this.indicator].forEach(counter => {
+            [this.guest_count_indicator, this.indicator].forEach(counter => {
                 counter[table_is_active ? "remove_class" : "add_class"]("hide");
                 counter.css("background-color", RM.can_open_order_manage(this) ? "" : RM.restrictions.color);
             });
@@ -544,8 +544,8 @@ RestaurantObject = class RestaurantObject {
         return this.is_table ? flt(this.data.ordered_items_qty) : flt(this.data.orders_count);
     }
 
-    get dinners_count() {
-        return this.is_table ? flt(this.data.dinners_count) : 0;
+    get guest_count() {
+        return this.is_table ? flt(this.data.guest_count) : 0;
     }
 
     get is_table() { return this.data.type === "Table" }

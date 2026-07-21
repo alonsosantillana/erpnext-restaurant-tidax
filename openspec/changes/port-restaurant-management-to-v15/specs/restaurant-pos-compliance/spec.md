@@ -23,8 +23,8 @@ Invoice series, tax document type, identity rules, print format and related SUNA
 - **THEN** the invoice uses the approved factura series and RUC identity codes for that company
 
 #### Scenario: Explicit receipt selection is independent of diners
-- **WHEN** the cashier selects Boleta or Factura for an order with any valid `dinners` value
-- **THEN** the selected receipt type and its configured series are used, while `dinners` remains only the number of diners
+- **WHEN** the cashier selects Boleta or Factura for an order with any valid `guest_count` value
+- **THEN** the selected receipt type and its configured series are used, while `guest_count` remains only the number of guests
 
 #### Scenario: Explicit emission mode is independent of receipt type
 - **WHEN** the cashier selects Electronic or Manual emission with either Boleta or Factura

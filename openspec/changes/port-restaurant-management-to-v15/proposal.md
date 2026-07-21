@@ -14,7 +14,7 @@ Entregar una version instalable, segura y verificable de `restaurant_management`
 - Corregir APIs whitelisted, permisos, consultas SQL, aislamiento por compania y renderizado de valores no confiables.
 - Corregir el ciclo de vida de `Table Order` y `Order Entry Item`: eliminacion, envio a cocina, finalizacion, transferencia, cambio de mozo, facturacion y limpieza programada.
 - Sustituir cambios directos de `docstatus`, `owner` y commits parciales por ciclos documentales y transacciones consistentes.
-- Separar configuracion tributaria de valores hardcodeados y seleccionar Boleta o Factura mediante un campo explicito, independiente de `dinners`, preservando descuentos, gratuidad e integracion SUNAT.
+- Separar configuracion tributaria de valores hardcodeados y seleccionar Boleta o Factura mediante un campo explicito, independiente de `guest_count`, preservando descuentos, gratuidad e integracion SUNAT.
 - Corregir reportes operativos para respetar compania, fechas, estados documentales y permisos.
 - Crear pruebas unitarias, de integracion, seguridad e instalacion para Frappe/ERPNext 15, ademas de una matriz funcional end-to-end.
 - Documentar dependencias, instalacion, configuracion, reversion y resultados de pruebas.

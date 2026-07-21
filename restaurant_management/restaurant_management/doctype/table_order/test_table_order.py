@@ -17,6 +17,28 @@ from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHO
 
 
 class TestTableOrder(unittest.TestCase):
+	def test_short_data_exposes_guest_count(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"table": "TABLE-1",
+			"customer": "CUSTOMER-1",
+			"status": "Attending",
+			"guest_count": 4,
+			"tax": 0,
+			"amount": 100,
+		})
+
+		with patch.object(
+			TableOrder, "items_count", new_callable=PropertyMock, return_value=0
+		), patch.object(
+			TableOrder, "products_not_ordered_count", new_callable=PropertyMock, return_value=0
+		):
+			data = order.short_data()["data"]
+
+		self.assertEqual(data["guest_count"], 4)
+		self.assertNotIn("dinners", data)
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.render_template"
 	)

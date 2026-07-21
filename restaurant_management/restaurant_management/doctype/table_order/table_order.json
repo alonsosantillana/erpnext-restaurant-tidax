@@ -14,7 +14,7 @@
   "status",
   "customer",
   "address",
-  "dinners",
+  "guest_count",
   "voucher_type",
   "emission_mode",
   "link_invoice",
@@ -70,9 +70,9 @@
    "options": "Customer"
   },
   {
-   "fieldname": "dinners",
+   "fieldname": "guest_count",
    "fieldtype": "Int",
-   "label": "Dinners"
+   "label": "Guest Count"
   },
   {
    "default": "Boleta",

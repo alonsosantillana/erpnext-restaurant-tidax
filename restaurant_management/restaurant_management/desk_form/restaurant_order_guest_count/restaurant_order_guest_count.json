@@ -30,10 +30,10 @@
    "description": "",
    "extra_field": 0,
    "fetch_if_empty": 0,
-   "fieldname": "dinners",
+   "fieldname": "guest_count",
    "fieldtype": "Int",
    "hidden": 0,
-   "label": "Dinners",
+   "label": "Guest Count",
    "max_length": 0,
    "max_value": 0,
    "read_only": 0,
@@ -51,12 +51,12 @@
  "modified": "2025-03-27 11:33:02.815910",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
- "name": "restaurant-order-dinners",
+ "name": "restaurant-order-guest-count",
  "owner": "Administrator",
  "published": 1,
- "route": "restaurant-order-dinners",
+ "route": "restaurant-order-guest-count",
  "route_to_success_link": 0,
  "show_attachments": 0,
  "show_in_grid": 0,
- "title": "Restaurant Order Dinners"
+ "title": "Restaurant Order Guest Count"
 }

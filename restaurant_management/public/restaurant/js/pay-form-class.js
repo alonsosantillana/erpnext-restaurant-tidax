@@ -2,7 +2,7 @@ class PayForm extends DeskForm {
     button_payment = null;
     num_pad = null;
     payment_methods = {};
-    dinners = null;
+    guest_count = null;
     discount_global_percent = null;
     form_name = "Payment Order";
     has_primary_action = false;
@@ -71,7 +71,7 @@ class PayForm extends DeskForm {
     async reload(){
         await super.reload(null, true);
 
-        this.set_dinners_input();
+        this.set_guest_count_input();
         this.set_receipt_defaults();
         // this.set_discount_global_percent_input();
         this.update_paid_value();
@@ -132,9 +132,9 @@ class PayForm extends DeskForm {
         });*/
     }
 
-    set_dinners_input(){
-        if(this.doc.dinners == 0){
-            this.dinners = frappe.jshtml({
+    set_guest_count_input(){
+        if(this.doc.guest_count == 0){
+            this.guest_count = frappe.jshtml({
                 tag: "input",
                 properties: {
                     type: "text",
@@ -144,7 +144,7 @@ class PayForm extends DeskForm {
                 this.num_pad.input = obj;
             }).val("1").int();
         } else{
-            this.dinners = frappe.jshtml({
+            this.guest_count = frappe.jshtml({
                 tag: "input",
                 properties: {
                     type: "text",
@@ -152,10 +152,10 @@ class PayForm extends DeskForm {
                 },
             }).on("click", (obj) => {
                 this.num_pad.input = obj;
-            }).val(this.doc.dinners).int();
+            }).val(this.doc.guest_count).int();
         }
-        this.get_field("dinners").$wrapper.empty().append(
-            this.form_tag("Comensales", this.dinners)
+        this.get_field("guest_count").$wrapper.empty().append(
+            this.form_tag("Guest Count", this.guest_count)
         );
     }
 
@@ -272,7 +272,7 @@ class PayForm extends DeskForm {
         else{
 
         RM.working("Generating Invoice");
-        this.order.data.dinners = this.dinners.val();
+        this.order.data.guest_count = this.guest_count.val();
         this.order.data.voucher_type = voucher_type;
         this.order.data.emission_mode = emission_mode;
         frappeHelper.api.call({
@@ -282,7 +282,7 @@ class PayForm extends DeskForm {
             args: {
                 mode_of_payment: this.payments_values,
                 customer: this.get_value("customer"),
-                dinners: this.dinners.float_val,
+                guest_count: this.guest_count.float_val,
                 voucher_type: voucher_type,
                 emission_mode: emission_mode
             },

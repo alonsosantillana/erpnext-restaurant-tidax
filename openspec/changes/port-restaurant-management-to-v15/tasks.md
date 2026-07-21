@@ -41,11 +41,12 @@
 - [x] 2.28 Allow the read-only divide template, validate split quantities before mutation and reconcile both resulting accounts immediately.
 - [x] 2.29 Initialize divide-account row and account totals from quantity times the tax-inclusive item rate, matching subsequent modal recalculation.
 - [x] 2.30 Search the table-order customer Link by customer ID, customer name or tax ID while preserving Customer read permissions.
-- [x] 2.31 Preserve complete single-field Link fetch values for waiter names and initialize the Dinners form from the order's current occupancy on every open.
+- [x] 2.31 Preserve complete single-field Link fetch values for waiter names and initialize the Guest Count form from the order's current occupancy on every open.
 - [x] 2.32 Add a permission-aware New Customer flow with local duplicate detection, side-effect-free DNI/RUC preview, explicit confirmation, transactional creation and immediate order assignment.
 - [x] 2.33 Resolve new customers to a valid leaf Customer Group without mutating the ERP global default, preferring valid global, POS Profile and established customer-type conventions.
 - [x] 2.34 Reload the current Table Order from the server before reopening its Customer editor so cached forms always show the latest assigned customer.
-- [x] 2.35 Make Dinners the only guest-count source by removing the duplicate Personas field and migrating waiter-summary metrics to Dinners without retaining legacy data.
+- [x] 2.35 Make Guest Count the only guest-count source by removing the duplicate Personas field and migrating waiter-summary metrics to Guest Count without retaining legacy data.
+- [x] 2.36 Rename the ambiguous `dinners` field and all related forms, API arguments, counters and reports to `guest_count`, displayed as Numero de comensales.
 
 ## 3. Security and Data Isolation
 
@@ -79,7 +80,7 @@
 
 - [ ] 5.1 Extract invoice preconditions for actor, company, POS Profile, customer identity, items, stock and payments into testable validation functions.
 - [ ] 5.2 Replace hardcoded invoice owner, payment mode and operational constants with authenticated context and validated configuration.
-- [ ] 5.3 Add explicit Boleta/Factura and Electronica/Manual fields independent of `dinners`, and model each approved series by company and operating context with clear validation errors. The fields and global series matrix are implemented; company scoping remains.
+- [ ] 5.3 Add explicit Boleta/Factura and Electronica/Manual fields independent of `guest_count`, and model each approved series by company and operating context with clear validation errors. The fields and global series matrix are implemented; company scoping remains.
 - [ ] 5.4 Build POS Invoice items, taxes and payments through supported ERPNext v15 APIs and compare calculated totals with approved fixtures.
 - [x] 5.5 Make POS Invoice submission and Table Order linkage atomic without direct `docstatus` writes or partial commits.
 - [ ] 5.6 Implement and test line discount, global discount, mixed gratuity and total gratuity cases.

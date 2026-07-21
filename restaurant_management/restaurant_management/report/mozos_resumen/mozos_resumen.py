@@ -31,13 +31,13 @@ def get_data(filters):
 						ROUND(SUM(`tabPOS Invoice`.`grand_total`), 2) AS monto_neto_mesas_atendidas,
 					    ROUND(SUM(`tabTable Order`.`amount`), 2) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
-					    SUM(`tabTable Order`.`dinners`) AS qty_personas_atendidas,
+					    SUM(`tabTable Order`.`guest_count`) AS qty_personas_atendidas,
 					    ROUND((SUM(`tabPOS Invoice`.`grand_total`)/(SELECT SUM(grand_total) FROM `tabPOS Invoice` WHERE docstatus = 1 AND 
 					   		DATE(posting_date) between %s AND %s))*100, 2) AS porcentaje_ventas_neto,
 					    ROUND((SUM(`tabTable Order`.`amount`)/(SELECT SUM(amount) FROM `tabTable Order` WHERE docstatus = 1 AND 
 					   		DATE(creation) between %s AND %s))*100, 2) AS porcentaje_ventas_bruto,
-					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`dinners`), 0), 2) AS ticket_promedio_neto,
-					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`dinners`), 0), 2) AS ticket_promedio_bruto
+					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`guest_count`), 0), 2) AS ticket_promedio_neto,
+					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`guest_count`), 0), 2) AS ticket_promedio_bruto
 					FROM
 						`tabTable Order`
 					LEFT JOIN
@@ -63,13 +63,13 @@ def get_data(filters):
 						ROUND(SUM(`tabPOS Invoice`.`grand_total`), 2) AS monto_neto_mesas_atendidas,
 					    ROUND(SUM(`tabTable Order`.`amount`), 2) AS monto_bruto_mesas_atendidas,
 						SUM(`tabPOS Invoice`.`total_qty`) AS qty_platos_atendidos,
-					    SUM(`tabTable Order`.`dinners`) AS qty_personas_atendidas,
+					    SUM(`tabTable Order`.`guest_count`) AS qty_personas_atendidas,
 					    ROUND((SUM(`tabPOS Invoice`.`grand_total`)/(SELECT SUM(grand_total) FROM `tabPOS Invoice` WHERE docstatus = 1 AND 
 					   		DATE(posting_date) between %s AND %s))*100, 2) AS porcentaje_ventas_neto,
 					    ROUND((SUM(`tabTable Order`.`amount`)/(SELECT SUM(amount) FROM `tabTable Order` WHERE docstatus = 1 AND 
 					   		DATE(creation) between %s AND %s))*100, 2) AS porcentaje_ventas_bruto,
-					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`dinners`), 0), 2) AS ticket_promedio_neto,
-					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`dinners`), 0), 2) AS ticket_promedio_bruto
+					    ROUND(SUM(`tabPOS Invoice`.`grand_total`) / NULLIF(SUM(`tabTable Order`.`guest_count`), 0), 2) AS ticket_promedio_neto,
+					    ROUND(SUM(`tabTable Order`.`amount`) / NULLIF(SUM(`tabTable Order`.`guest_count`), 0), 2) AS ticket_promedio_bruto
 					FROM
 						`tabTable Order`
 					LEFT JOIN

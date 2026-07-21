@@ -128,7 +128,7 @@ class OrderManage extends ObjectManage {
         this.#components.change_mozo = RMHelper.default_button("Mozo", 'edit', () => this.update_current_order('mozo')); //TIDAX
         this.#components.customer = RMHelper.default_button("Customer", 'people', () => this.update_current_order('customer'));
         this.#components.new_customer = RMHelper.default_button("New Customer", 'addpeople', () => this.consultar_cliente()); //TIDAX
-        this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
+        this.#components.guest_count = RMHelper.default_button("Guest Count", 'peoples', () => this.update_current_order('guest_count'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
         this.#components.discount_global = RMHelper.default_button("Discount", 'discount', () => this.update_current_order('discount')); //TIDAX
         
@@ -141,7 +141,7 @@ class OrderManage extends ObjectManage {
             ${this.components.change_mozo.html()} 
             ${this.components.new_customer.html()} 
             ${this.components.customer.html()}
-			${this.components.dinners.html()}
+			${this.components.guest_count.html()}
             ${this.components.discount_global.html()}
 		`);
     }
@@ -656,7 +656,7 @@ class OrderManage extends ObjectManage {
                     this.#components.new_customer.disable().hide(); //TIDAX
                 }
                 this.#components.customer.enable().show();
-                this.#components.dinners.enable().show();
+                this.#components.guest_count.enable().show();
                 //this.#components.discount_global.enable().show(); //TIDAX
                 this.#components.discount_global.disable().hide(); //TIDAX
                 this.#components.Transfer.enable();
@@ -664,7 +664,7 @@ class OrderManage extends ObjectManage {
                 this.#components.new_customer.disable().hide(); //TIDAX
                 this.#components.change_mozo.disable().hide(); //TIDAX
                 this.#components.customer.disable().hide();
-                this.#components.dinners.disable().hide();
+                this.#components.guest_count.disable().hide();
                 this.#components.discount_global.disable().hide(); //TIDAX
                 this.#components.Transfer.disable();
                 this.#components.Order.disable();

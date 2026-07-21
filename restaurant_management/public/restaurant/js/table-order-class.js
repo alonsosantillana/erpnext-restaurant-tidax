@@ -772,8 +772,8 @@ class TableOrder {
         this.edit("customer");
     }
 
-    set_dinners() {
-        this.edit("dinners");
+    set_guest_count() {
+        this.edit("guest_count");
     }
     // TIDAX
     set_discount() {
@@ -785,7 +785,7 @@ class TableOrder {
 
         const fields_by_type = {
             customer: ["customer", "customer_name", "customer_tax_id"],
-            dinners: ["dinners"],
+            guest_count: ["guest_count"],
             mozo: ["cambio_mozo", "cambio_mozo_nombre"],
             discount: ["discount"]
         };
@@ -812,11 +812,11 @@ class TableOrder {
                         query: "restaurant_management.restaurant_management.doctype.desk_form.desk_form.search_customers"
                     });
                 }
-                if (type === "dinners") {
-                    const current_dinners = Number.parseInt(this.data.dinners, 10);
+                if (type === "guest_count") {
+                    const current_guest_count = Number.parseInt(this.data.guest_count, 10);
                     input.set_value(
-                        Number.isFinite(current_dinners) && current_dinners > 0
-                            ? current_dinners
+                        Number.isFinite(current_guest_count) && current_guest_count > 0
+                            ? current_guest_count
                             : 1
                     );
                 }
@@ -824,7 +824,7 @@ class TableOrder {
             };
 
             this[form] = new DeskForm({
-                form_name: `restaurant-order-${type}`,
+                form_name: `restaurant-order-${type.replaceAll("_", "-")}`,
                 doc_name: this.data.name,
                 callback: self => {
                     self.hide();
@@ -832,8 +832,8 @@ class TableOrder {
                     RM.sound_submit();
                     this.sync_edit_form_data(type, self.doc);
                     this.data[fieldname] = self.get_value(fieldname);
-                    if (type === "dinners" && this.order_manage.table) {
-                        this.order_manage.table.data.dinners_count = flt(this.data[fieldname]);
+                    if (type === "guest_count" && this.order_manage.table) {
+                        this.order_manage.table.data.guest_count = flt(this.data[fieldname]);
                         this.order_manage.table.set_orders_count();
                     }
                     this.make_invoice();

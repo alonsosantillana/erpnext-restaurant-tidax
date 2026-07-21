@@ -99,7 +99,7 @@ class TableOrder(Document):
         self.set_default_customer()
 
     def on_update(self):
-        if self.get_doc_before_save() and self.has_value_changed("dinners"):
+        if self.get_doc_before_save() and self.has_value_changed("guest_count"):
             self._table.synchronize()
 
     def set_default_customer(self):
@@ -266,7 +266,7 @@ class TableOrder(Document):
         self,
         mode_of_payment,
         customer=None,
-        dinners=0,
+        guest_count=0,
         voucher_type=None,
         emission_mode=None,
     ):
@@ -281,17 +281,17 @@ class TableOrder(Document):
         customer = str(customer or "").strip()
         voucher_type = str(voucher_type or "").strip()
         emission_mode = str(emission_mode or "").strip()
-        dinners = cint(dinners)
+        guest_count = cint(guest_count)
         if not customer:
             frappe.throw(_("Seleccione un cliente"))
-        if dinners <= 0:
+        if guest_count <= 0:
             frappe.throw(_("La cantidad de comensales debe ser mayor que cero"))
 
         voucher_config = get_voucher_config(voucher_type, emission_mode)
         customer_identity = get_customer_identity(customer, voucher_config)
 
         self.customer = customer
-        self.dinners = dinners
+        self.guest_count = guest_count
         self.voucher_type = voucher_type
         self.emission_mode = emission_mode
         self.save()
@@ -711,7 +711,7 @@ class TableOrder(Document):
                 tax=self.tax,
                 amount=self.amount,
                 owner=self.owner,
-                dinners=self.dinners
+                guest_count=self.guest_count
             )
         )
 
