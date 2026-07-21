@@ -480,6 +480,45 @@ class TestRestaurantObject(FrappeTestCase):
 			[("Sent", "Processing"), ("Processing", "Completed")],
 		)
 
+	def test_production_average_target_uses_only_completed_dishes(self):
+		items = [
+			frappe._dict(
+				item_code="PLATE-1",
+				item_name="Plate one",
+				qty=1,
+				status="Sent",
+				production_timing={
+					"target_minutes": 100,
+					"waiting_minutes": 2,
+					"preparation_minutes": None,
+					"total_minutes": 2,
+				},
+			),
+			frappe._dict(
+				item_code="PLATE-1",
+				item_name="Plate one",
+				qty=2,
+				status="Completed",
+				production_timing={
+					"target_minutes": 10,
+					"waiting_minutes": 3,
+					"preparation_minutes": 8,
+					"total_minutes": 11,
+				},
+			),
+		]
+
+		row = RestaurantObject._production_consolidation(
+			items,
+			["Sent", "Processing"],
+		)["PLATE-1"]
+
+		self.assertEqual(row["average_target_minutes"], 10)
+		self.assertEqual(row["average_waiting_minutes"], 3)
+		self.assertEqual(row["average_preparation_minutes"], 8)
+		self.assertEqual(row["average_total_minutes"], 11)
+		self.assertEqual(row["timing_status"], "warning")
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
 	)

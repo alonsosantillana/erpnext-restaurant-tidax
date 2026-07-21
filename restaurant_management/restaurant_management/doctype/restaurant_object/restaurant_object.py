@@ -439,11 +439,11 @@ class RestaurantObject(Document):
             row["total_qty"] += quantity
 
             timing = item.get("production_timing") or {}
-            target = frappe.utils.flt(timing.get("target_minutes"))
-            if target > 0:
-                row["target_weighted_total"] += target * quantity
-                row["target_weight"] += quantity
             if item.status not in active_statuses:
+                target = frappe.utils.flt(timing.get("target_minutes"))
+                if target > 0:
+                    row["target_weighted_total"] += target * quantity
+                    row["target_weight"] += quantity
                 for metric in ("waiting", "preparation", "total"):
                     value = timing.get(f"{metric}_minutes")
                     if value is not None:

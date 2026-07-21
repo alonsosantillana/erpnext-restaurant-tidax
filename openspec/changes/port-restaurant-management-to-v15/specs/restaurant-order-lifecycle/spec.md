@@ -115,3 +115,7 @@ The system SHALL snapshot an optional preparation target when a dish is sent, re
 #### Scenario: Timing performance thresholds
 - **WHEN** an actual preparation time is compared with a positive target
 - **THEN** below 80 percent is on time, 80 through 100 percent is near the limit, and above 100 percent is over target
+
+#### Scenario: Comparable daily preparation averages
+- **WHEN** Dish Consolidation calculates the current-day average preparation time and target for a dish
+- **THEN** both averages are quantity-weighted and use only completed dishes, excluding pending and in-preparation dishes from the comparison
