@@ -85,6 +85,10 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 - **WHEN** an authorized kitchen user starts or completes one dish inside a command
 - **THEN** only that dish advances and the remaining dishes retain their current state
 
+#### Scenario: Daily production control
+- **WHEN** a kitchen user opens Dish Consolidation or Attended Orders
+- **THEN** the views include the complete current calendar day, using an inclusive start and exclusive next-day boundary, and consolidation separates pending, in-preparation and completed quantities
+
 #### Scenario: Conflicting command transition
 - **WHEN** another client already changed any selected item or an item is outside the Production Center scope
 - **THEN** the server rejects the entire command transition and the client reloads authoritative state

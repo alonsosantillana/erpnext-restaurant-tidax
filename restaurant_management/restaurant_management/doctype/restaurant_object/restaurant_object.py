@@ -11,7 +11,6 @@ import re
 
 
 PRODUCTION_CENTER_ITEM_LIMIT = 500
-ATTENDED_ITEM_LIMIT = 300
 
 
 def production_command_batch_key(item):
@@ -259,14 +258,15 @@ class RestaurantObject(Document):
         )
         recent_orders = frappe.get_all(
             "Table Order",
-            filters={
-                "company": company,
-                "pos_profile": pos_profile,
-                "modified": ("between", [today, tomorrow]),
-            },
+            filters=[
+                ["company", "=", company],
+                ["pos_profile", "=", pos_profile],
+                ["modified", ">=", today],
+                ["modified", "<", tomorrow],
+            ],
             fields=fields,
             order_by="modified desc",
-            limit_page_length=PRODUCTION_CENTER_ITEM_LIMIT,
+            limit_page_length=0,
         )
         return {row.name: row for row in [*active_orders, *recent_orders]}
 
@@ -330,6 +330,34 @@ class RestaurantObject(Document):
             key=lambda command: frappe.utils.get_datetime(command["ordered_time"]),
         )
 
+    @staticmethod
+    def _production_consolidation(items, active_statuses):
+        consolidation = {}
+        active_status_list = list(active_statuses)
+        active_statuses = set(active_status_list)
+        pending_status = active_status_list[0] if active_status_list else None
+        for item in items:
+            row = consolidation.setdefault(
+                item.item_code,
+                {
+                    "item_code": item.item_code,
+                    "item_name": item.item_name,
+                    "pending_qty": 0,
+                    "processing_qty": 0,
+                    "completed_qty": 0,
+                    "total_qty": 0,
+                },
+            )
+            quantity = frappe.utils.flt(item.qty)
+            if item.status == pending_status:
+                row["pending_qty"] += quantity
+            elif item.status in active_statuses:
+                row["processing_qty"] += quantity
+            else:
+                row["completed_qty"] += quantity
+            row["total_qty"] += quantity
+        return consolidation
+
     def production_center_dashboard(self):
         self._validate_production_center()
         company, pos_profile = self._production_company_and_profile()
@@ -341,9 +369,12 @@ class RestaurantObject(Document):
             for next_status in status_map.values()
             if next_status not in active_statuses
         ))
+        daily_statuses = list(dict.fromkeys([*active_statuses, *attended_statuses]))
         item_groups = list(dict.fromkeys(self._items_group))
         orders = self._production_order_data(company, pos_profile)
         order_names = list(orders)
+        today = frappe.utils.nowdate()
+        tomorrow = frappe.utils.add_days(today, 1)
 
         item_fields = [
             "name",
@@ -362,7 +393,7 @@ class RestaurantObject(Document):
             "modified",
         ]
         active_items = []
-        attended_items = []
+        daily_items = []
         if order_names:
             active_items = frappe.get_all(
                 "Order Entry Item",
@@ -376,50 +407,32 @@ class RestaurantObject(Document):
                 order_by="ordered_time asc",
                 limit_page_length=PRODUCTION_CENTER_ITEM_LIMIT + 1,
             )
-            if attended_statuses:
-                today = frappe.utils.nowdate()
-                attended_items = frappe.get_all(
+            if daily_statuses:
+                daily_items = frappe.get_all(
                     "Order Entry Item",
-                    filters={
-                        "parent": ("in", order_names),
-                        "status": ("in", attended_statuses),
-                        "item_group": ("in", item_groups),
-                        "qty": (">", 0),
-                        "modified": ("between", [today, frappe.utils.add_days(today, 1)]),
-                    },
+                    filters=[
+                        ["parent", "in", order_names],
+                        ["status", "in", daily_statuses],
+                        ["item_group", "in", item_groups],
+                        ["qty", ">", 0],
+                        ["ordered_time", ">=", today],
+                        ["ordered_time", "<", tomorrow],
+                    ],
                     fields=item_fields,
-                    order_by="modified desc",
-                    limit_page_length=ATTENDED_ITEM_LIMIT + 1,
+                    order_by="ordered_time asc",
+                    limit_page_length=0,
                 )
 
         active_truncated = len(active_items) > PRODUCTION_CENTER_ITEM_LIMIT
-        attended_truncated = len(attended_items) > ATTENDED_ITEM_LIMIT
         active_items = active_items[:PRODUCTION_CENTER_ITEM_LIMIT]
-        attended_items = attended_items[:ATTENDED_ITEM_LIMIT]
-
-        consolidation = {}
-        pending_status = active_statuses[0]
-        for item in active_items:
-            row = consolidation.setdefault(
-                item.item_code,
-                {
-                    "item_code": item.item_code,
-                    "item_name": item.item_name,
-                    "pending_qty": 0,
-                    "processing_qty": 0,
-                    "total_qty": 0,
-                },
-            )
-            quantity = frappe.utils.flt(item.qty)
-            if item.status == pending_status:
-                row["pending_qty"] += quantity
-            else:
-                row["processing_qty"] += quantity
-            row["total_qty"] += quantity
+        attended_status_set = set(attended_statuses)
+        attended_items = [item for item in daily_items if item.status in attended_status_set]
+        consolidation = self._production_consolidation(daily_items, active_statuses)
 
         commands = self._group_production_commands(active_items, orders, status_map)
         attended = self._group_production_commands(attended_items, orders, {})
         active_qty = sum(frappe.utils.flt(item.qty) for item in active_items)
+        daily_qty = sum(frappe.utils.flt(item.qty) for item in daily_items)
         attended_qty = sum(frappe.utils.flt(item.qty) for item in attended_items)
 
         return {
@@ -429,9 +442,16 @@ class RestaurantObject(Document):
                 "statuses": active_statuses,
                 "item_groups": item_groups,
             },
+            "period": {
+                "date": today,
+                "start": today,
+                "end_exclusive": tomorrow,
+            },
             "counts": {
                 "active_items": len(active_items),
                 "active_qty": active_qty,
+                "daily_items": len(daily_items),
+                "daily_qty": daily_qty,
                 "commands": len(commands),
                 "consolidated_items": len(consolidation),
                 "attended_commands": len(attended),
@@ -446,7 +466,7 @@ class RestaurantObject(Document):
             "can_transition": frappe.has_permission("Restaurant Object", "write", doc=self),
             "truncated": {
                 "active": active_truncated,
-                "attended": attended_truncated,
+                "attended": False,
             },
         }
 

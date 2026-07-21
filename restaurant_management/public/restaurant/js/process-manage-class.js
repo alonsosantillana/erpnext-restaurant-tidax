@@ -226,7 +226,7 @@ ProcessManage = class ProcessManage {
     render_dashboard() {
         const counts = this.dashboard.counts || {};
         const root = this.root();
-        root.find('[data-count="consolidation"]').text(this.format_qty(counts.active_qty || 0));
+        root.find('[data-count="consolidation"]').text(this.format_qty(counts.daily_qty || 0));
         root.find('[data-count="commands"]').text(counts.commands || 0);
         root.find('[data-count="attended"]').text(this.format_qty(counts.attended_qty || 0));
 
@@ -235,7 +235,9 @@ ProcessManage = class ProcessManage {
 
         const summary = root.find(".production-center-summary").empty();
         summary.append(
+            $("<span>").text(__("Dishes today: {0}", [this.format_qty(counts.daily_qty || 0)])),
             $("<span>").text(__("Active dishes: {0}", [this.format_qty(counts.active_qty || 0)])),
+            $("<span>").text(__("Prepared today: {0}", [this.format_qty(counts.attended_qty || 0)])),
             $("<span>").text(__("Commands: {0}", [counts.commands || 0]))
         );
 
@@ -269,7 +271,7 @@ ProcessManage = class ProcessManage {
     render_consolidation(content) {
         const rows = this.dashboard.consolidation || [];
         if (!rows.length) {
-            this.render_empty(content, __("There are no active dishes"));
+            this.render_empty(content, __("There are no dishes today"));
             return;
         }
 
@@ -278,7 +280,8 @@ ProcessManage = class ProcessManage {
             .append($("<th>").text(__("Dish")))
             .append($("<th>", { class: "text-center" }).text(__("Pending")))
             .append($("<th>", { class: "text-center" }).text(__("In preparation")))
-            .append($("<th>", { class: "text-center" }).text(__("Total")));
+            .append($("<th>", { class: "text-center" }).text(__("Prepared")))
+            .append($("<th>", { class: "text-center" }).text(__("Total today")));
         table.append($("<thead>").append(header));
 
         const body = $("<tbody>");
@@ -293,6 +296,7 @@ ProcessManage = class ProcessManage {
                     ))
                     .append($("<td>", { class: "text-center production-qty pending" }).text(this.format_qty(row.pending_qty)))
                     .append($("<td>", { class: "text-center production-qty processing" }).text(this.format_qty(row.processing_qty)))
+                    .append($("<td>", { class: "text-center production-qty completed" }).text(this.format_qty(row.completed_qty)))
                     .append($("<td>", { class: "text-center production-qty total" }).text(this.format_qty(row.total_qty)))
             );
         });

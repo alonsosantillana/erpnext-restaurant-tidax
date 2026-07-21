@@ -320,6 +320,96 @@ class TestRestaurantObject(FrappeTestCase):
 		)
 
 	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
+	)
+	def test_production_dashboard_uses_full_day_and_consolidates_completed_dishes(self, get_all):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"description": "Kitchen",
+			"type": "Production Center",
+		})
+		active_item = frappe._dict(
+			name="ROW-1",
+			identifier="ITEM-1",
+			parent="ORDER-1",
+			item_code="PLATE-1",
+			item_name="Plate one",
+			item_group="FOOD",
+			qty=1,
+			status="Sent",
+			ordered_time="2026-07-21 08:00:00",
+			ordered_nro=1,
+		)
+		completed_item = frappe._dict(
+			name="ROW-2",
+			identifier="ITEM-2",
+			parent="ORDER-1",
+			item_code="PLATE-1",
+			item_name="Plate one",
+			item_group="FOOD",
+			qty=2,
+			status="Completed",
+			ordered_time="2026-07-21 09:00:00",
+			ordered_nro=2,
+		)
+		get_all.side_effect = [[active_item], [active_item, completed_item]]
+		orders = {
+			"ORDER-1": frappe._dict(
+				name="ORDER-1",
+				owner=None,
+				cambio_mozo=None,
+				cambio_mozo_nombre=None,
+				table_description="T1",
+				room_description="Room 1",
+				comentario=None,
+			)
+		}
+
+		with (
+			patch.object(center, "_validate_production_center"),
+			patch.object(
+				center,
+				"_production_company_and_profile",
+				return_value=("Test Company", "Test POS Profile"),
+			),
+			patch.object(
+				center,
+				"_production_status_map",
+				return_value={"Sent": "Processing", "Processing": "Completed"},
+			),
+			patch.object(
+				RestaurantObject,
+				"_items_group",
+				new_callable=PropertyMock,
+				return_value=["FOOD"],
+			),
+			patch.object(center, "_production_order_data", return_value=orders),
+			patch(
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.utils.nowdate",
+				return_value="2026-07-21",
+			),
+			patch(
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.has_permission",
+				return_value=True,
+			),
+		):
+			dashboard = center.production_center_dashboard()
+
+		daily_call = get_all.call_args_list[1]
+		self.assertIn(["ordered_time", ">=", "2026-07-21"], daily_call.kwargs["filters"])
+		self.assertIn(["ordered_time", "<", "2026-07-22"], daily_call.kwargs["filters"])
+		self.assertEqual(daily_call.kwargs["limit_page_length"], 0)
+		self.assertEqual(dashboard["period"]["date"], "2026-07-21")
+		self.assertEqual(dashboard["counts"]["daily_qty"], 3)
+		self.assertEqual(dashboard["counts"]["attended_qty"], 2)
+		self.assertEqual(dashboard["consolidation"][0]["pending_qty"], 1)
+		self.assertEqual(dashboard["consolidation"][0]["processing_qty"], 0)
+		self.assertEqual(dashboard["consolidation"][0]["completed_qty"], 2)
+		self.assertEqual(dashboard["consolidation"][0]["total_qty"], 3)
+		self.assertEqual(len(dashboard["attended"]), 1)
+
+	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_doc"
 	)
 	@patch(
