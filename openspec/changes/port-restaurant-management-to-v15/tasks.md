@@ -32,6 +32,7 @@
 - [x] 2.19 Reload persisted production commands whenever a previously opened kitchen view is entered again.
 - [x] 2.20 Recalculate the production-center badge from active commands after loading, adding, transitioning or removing kitchen items.
 - [x] 2.21 Show unsent order items with a mustard cart and an explicit pending-to-send label until the Order action is completed.
+- [x] 2.22 Show each table's total ordered dish quantity while retaining the active-order count for occupancy and permission rules.
 
 ## 3. Security and Data Isolation
 

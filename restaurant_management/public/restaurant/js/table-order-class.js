@@ -141,11 +141,20 @@ class TableOrder {
     refresh_local_summary() {
         const active_items = this.items_data().filter(item => flt(item.qty) > 0);
         const attending_status = this.data.attending_status || "Attending";
+        const ordered_items_qty = active_items.reduce(
+            (total, item) => total + flt(item.qty),
+            0
+        );
 
         this.data.items_count = active_items.length;
         this.data.products_not_ordered = active_items.filter(
             item => item.status === attending_status
         ).length;
+
+        if (this.order_manage && this.order_manage.table) {
+            this.order_manage.table.data.ordered_items_qty = ordered_items_qty;
+            this.order_manage.table.set_orders_count();
+        }
 
         if (this.button) this.show_items_count();
         if (this.order_manage.is_same_order(this)) {

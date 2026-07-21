@@ -18,6 +18,20 @@ from restaurant_management.restaurant_management.doctype.restaurant_object.resta
 
 
 class TestRestaurantObject(FrappeTestCase):
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
+	)
+	def test_table_counter_sums_ordered_item_quantities(self, get_all):
+		get_all.side_effect = [["ORDER-1"], [2, 1, 3]]
+		table = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "TABLE-TEST",
+			"type": "Table",
+		})
+
+		self.assertEqual(table.ordered_items_qty, 6)
+		self.assertEqual(get_all.call_count, 2)
+
 	def test_unsent_item_status_uses_mustard_pending_message(self):
 		for status in ("Pending", "Attending"):
 			status_data = RestaurantObject._status(status)

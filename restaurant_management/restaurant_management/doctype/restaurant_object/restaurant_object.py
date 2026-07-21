@@ -39,11 +39,15 @@ class RestaurantObject(Document):
                 current_user=self.current_user
             ), after_commit=True)
         else:
-            frappe.publish_realtime(self.name, dict(
+            notification = dict(
                 action="Notifications",
                 orders_count=self.orders_count,
                 current_user=self.current_user
-            ), after_commit=True)
+            )
+            if self.type == "Table":
+                notification["ordered_items_qty"] = self.ordered_items_qty
+
+            frappe.publish_realtime(self.name, notification, after_commit=True)
 
             if self.type != "Room":
                 frappe.publish_realtime(self._room.name, dict(
@@ -125,6 +129,26 @@ class RestaurantObject(Document):
         })
 
     @property
+    def ordered_items_qty(self):
+        if self.type != "Table":
+            return 0
+
+        active_orders = frappe.get_all("Table Order", filters={
+            "table": self.name,
+            "status": "Attending"
+        }, pluck="name")
+        if not active_orders:
+            return 0
+
+        quantities = frappe.get_all("Order Entry Item", filters={
+            "parenttype": "Table Order",
+            "parent": ("in", active_orders),
+            "qty": (">", 0)
+        }, pluck="qty")
+        total = sum(frappe.utils.flt(qty) for qty in quantities)
+        return int(total) if total.is_integer() else total
+
+    @property
     def orders_count_in_production_center(self):
         status_managed = self._status_managed
         items_group = self._items_group
@@ -172,6 +196,9 @@ class RestaurantObject(Document):
 
         for field in fields:
             data[field] = getattr(self, field)
+
+        if self.type == "Table":
+            data["ordered_items_qty"] = self.ordered_items_qty
 
         if self.type == "Production Center":
             data["status_managed"] = self._status_managed

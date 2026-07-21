@@ -46,6 +46,9 @@ RestaurantObject = class RestaurantObject {
     update_notifications(data) {
         this.data.current_user = data.current_user;
         this.data.orders_count = data.orders_count;
+        if (typeof data.ordered_items_qty !== "undefined") {
+            this.data.ordered_items_qty = data.ordered_items_qty;
+        }
         this.set_orders_count();
 
         // The notification is emitted after the order transaction commits.
@@ -272,7 +275,7 @@ RestaurantObject = class RestaurantObject {
 
     get template() {
         const block_style = !RM.can_open_order_manage(this) && this.data.type === "Table" ? RM.restrictions.color : "";
-        const hide_class = this.data.orders_count <= 0 ? " hide" : "";
+        const hide_class = this.indicator_count <= 0 ? " hide" : "";
         //console.log((this.data));
         this.indicator = frappe.jshtml({
             tag: "span",
@@ -281,7 +284,7 @@ RestaurantObject = class RestaurantObject {
                 style: `background-color: ${block_style}`
             },
             content: '<span class="fa fa-cutlery" style="font-size: 12px"></span> {{text}}',
-            text: this.data.orders_count
+            text: this.indicator_count
         });
 
         this.edit_button = frappe.jshtml({
@@ -483,12 +486,14 @@ RestaurantObject = class RestaurantObject {
         )
         this.description.val(this.data.description);
         this.no_of_seats.val(this.data.no_of_seats);
+        this.set_orders_count();
     }
 
     set_orders_count() {
-        this.indicator.val(this.data.orders_count);
+        const indicator_count = this.indicator_count;
+        this.indicator.val(indicator_count);
 
-        if (this.data.orders_count > 0) {
+        if (indicator_count > 0) {
             this.indicator.remove_class("hide");
 
             if (this.is_table) {
@@ -497,6 +502,10 @@ RestaurantObject = class RestaurantObject {
         } else {
             this.indicator.add_class("hide");
         }
+    }
+
+    get indicator_count() {
+        return this.is_table ? flt(this.data.ordered_items_qty) : flt(this.data.orders_count);
     }
 
     get is_table() { return this.data.type === "Table" }
