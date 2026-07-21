@@ -33,7 +33,6 @@
   "customer_name",
   "customer_tax_id",
   "customer_tipo_documento_identidad",
-  "personas",
   "comentario",
   "cambio_mozo",
   "cambio_mozo_nombre"
@@ -209,12 +208,6 @@
    "fieldtype": "Currency",
    "label": "Total Amount Free",
    "options": "currency"
-  },
-  {
-   "fieldname": "personas",
-   "fieldtype": "Select",
-   "label": "Personas",
-   "options": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20"
   },
   {
    "fieldname": "comentario",

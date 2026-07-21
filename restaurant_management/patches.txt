@@ -1,0 +1,4 @@
+[pre_model_sync]
+
+[post_model_sync]
+restaurant_management.patches.v15_0.drop_table_order_personas
