@@ -18,6 +18,13 @@ from restaurant_management.restaurant_management.doctype.restaurant_object.resta
 
 
 class TestRestaurantObject(FrappeTestCase):
+	def test_unsent_item_status_uses_mustard_pending_message(self):
+		for status in ("Pending", "Attending"):
+			status_data = RestaurantObject._status(status)
+
+			self.assertEqual(status_data["color"], "#D49B00")
+			self.assertEqual(status_data["message"], frappe._("Pending to send"))
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.publish_realtime"
 	)

@@ -314,9 +314,9 @@ class ProductItem {
             notes: null,
             process_status_data: {
                 next_action_message: 'Sent',
-                color: 'red',
+                color: '#D49B00',
                 icon: 'fa fa-cart-arrow-down',
-                status_message: 'Add',
+                status_message: __('Pending to send'),
             }
         });
 

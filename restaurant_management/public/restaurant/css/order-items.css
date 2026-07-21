@@ -108,6 +108,12 @@
     color: orangered;
 }
 
+.panel-order-items .order-item-status {
+    color: #8a6500;
+    display: block;
+    font-weight: 600;
+}
+
 .panel-order-items b, strong {
     font-weight: bolder;
 }

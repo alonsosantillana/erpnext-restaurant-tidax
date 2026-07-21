@@ -332,8 +332,8 @@ class RestaurantObject(Document):
     @staticmethod
     def _status(status="Pending"):
         _status = dict(
-            Pending=dict(icon="fa fa-cart-arrow-down", color="red", message="Pending", action_message="Add"),
-            Attending=dict(icon="fa fa-cart-arrow-down", color="orange", message="Attending", action_message="Sent"),
+            Pending=dict(icon="fa fa-cart-arrow-down", color="#D49B00", message=_("Pending to send"), action_message="Add"),
+            Attending=dict(icon="fa fa-cart-arrow-down", color="#D49B00", message=_("Pending to send"), action_message="Sent"),
             Sent=dict(icon="fa fa-paper-plane-o", color="steelblue", message="Waiting", action_message="Confirm"),
             Processing=dict(icon="fa fa-gear", color="#618685", message="Processing", action_message="Complete"),
             Completed=dict(icon="fa fa-check", color="green", message="Completed", action_message="Deliver"),

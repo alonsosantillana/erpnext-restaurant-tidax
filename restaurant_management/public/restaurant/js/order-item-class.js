@@ -40,16 +40,24 @@ class OrderItem {
             (
                 RM.check_permissions("order", this.order, "write")// &&
                 //RM.check_permissions("pos", null, "delete")
-            );
+        );
+    }
+
+    get pending_status_message() {
+        return [this.attending_status, "Pending", null, undefined, ""].includes(this.data.status)
+            ? __("Pending to send")
+            : "";
     }
 
     reset_html() {
         const ps = this.data.process_status_data;
+        const pending_status_message = this.pending_status_message;
 
         this.amount.val(RM.format_currency(this.data.amount));
         this.detail.val(this.html_detail);
         this.notes.val(this.data.notes);
         this.icon.val(`<i class="${ps.icon}" style="color: ${ps.color}"></i>`);
+        this.status_label.val(pending_status_message)[pending_status_message ? "show" : "hide"]();
 
         this.form_editor && this.form_editor.reload(this.data, false);
     }
@@ -244,6 +252,12 @@ class OrderItem {
             content: (typeof this.data.notes == "object" ? "" : this.data.notes)
         });
 
+        this.status_label = frappe.jshtml({
+            tag: "small",
+            properties: { class: "order-item-status" },
+            content: this.pending_status_message
+        });
+
         this.detail = frappe.jshtml({
             tag: "p",
             content: this.html_detail
@@ -267,6 +281,7 @@ class OrderItem {
                 ${this.amount.html()}
             </a>
             ${this.detail.html()}
+            ${this.status_label.html()}
             <p class="text-muted m-0">  ${this.notes.html()}</p>
         </div>
         `
