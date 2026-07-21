@@ -178,6 +178,39 @@ def get_fetch_values(doctype, txt, searchfield, start=0, page_len=20, filters=No
     )
 
 
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def search_customers(doctype, txt, searchfield, start, page_len, filters):
+    """Search permitted customers by ID, name or tax identifier."""
+    _require_authenticated_user()
+    if doctype != "Customer" or not frappe.has_permission("Customer", "read"):
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+    parsed_filters = frappe.parse_json(filters) if filters else {}
+    if not isinstance(parsed_filters, (dict, list)):
+        frappe.throw(_("Filters must be an object or a list"))
+    if isinstance(parsed_filters, dict):
+        parsed_filters.setdefault("disabled", 0)
+    else:
+        parsed_filters.append(["Customer", "disabled", "!=", 1])
+
+    search_text = f"%{txt or ''}%"
+    return frappe.get_list(
+        "Customer",
+        fields=["name", "customer_name", "tax_id"],
+        filters=parsed_filters,
+        or_filters=[
+            ["Customer", "name", "like", search_text],
+            ["Customer", "customer_name", "like", search_text],
+            ["Customer", "tax_id", "like", search_text],
+        ],
+        order_by="customer_name asc, name asc",
+        limit_start=max(0, int(start)),
+        limit_page_length=min(max(1, int(page_len)), 100),
+        as_list=True,
+    )
+
+
 def get_in_list_view_fields(doctype):
     meta = frappe.get_meta(doctype)
     fields = [meta.title_field or "name"]

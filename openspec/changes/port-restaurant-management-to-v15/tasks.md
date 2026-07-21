@@ -40,6 +40,7 @@
 - [x] 2.27 Display a persistent transfer-mode notice with source order, source table, destination instruction and an explicit cancel action.
 - [x] 2.28 Allow the read-only divide template, validate split quantities before mutation and reconcile both resulting accounts immediately.
 - [x] 2.29 Initialize divide-account row and account totals from quantity times the tax-inclusive item rate, matching subsequent modal recalculation.
+- [x] 2.30 Search the table-order customer Link by customer ID, customer name or tax ID while preserving Customer read permissions.
 
 ## 3. Security and Data Isolation
 

@@ -15,9 +15,36 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import (
 	RestaurantObject,
 )
+from restaurant_management.restaurant_management.doctype.desk_form.desk_form import (
+	search_customers,
+)
 
 
 class TestRestaurantObject(FrappeTestCase):
+	@patch(
+		"restaurant_management.restaurant_management.doctype.desk_form.desk_form.frappe.get_list"
+	)
+	@patch(
+		"restaurant_management.restaurant_management.doctype.desk_form.desk_form.frappe.has_permission",
+		return_value=True,
+	)
+	def test_customer_link_search_includes_tax_id(self, has_permission, get_list):
+		get_list.return_value = [["CUSTOMER-1", "Customer One", "20123456789"]]
+
+		result = search_customers("Customer", "201234", "name", 0, 10, {})
+
+		self.assertEqual(result, get_list.return_value)
+		has_permission.assert_called_once_with("Customer", "read")
+		self.assertIn(
+			["Customer", "tax_id", "like", "%201234%"],
+			get_list.call_args.kwargs["or_filters"],
+		)
+		self.assertEqual(
+			get_list.call_args.kwargs["fields"],
+			["name", "customer_name", "tax_id"],
+		)
+		self.assertEqual(get_list.call_args.kwargs["filters"], {"disabled": 0})
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
 	)

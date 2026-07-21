@@ -803,6 +803,11 @@ class TableOrder {
                 title: __(`Set ${type}`),
                 after_load: self => {
                     const input = self.get_field(type);
+                    if (type === "customer") {
+                        input.get_query = () => ({
+                            query: "restaurant_management.restaurant_management.doctype.desk_form.desk_form.search_customers"
+                        });
+                    }
                     input.set_focus();
                 }
             });
