@@ -43,11 +43,20 @@ class RestaurantObject(Document):
 
     def synchronize(self):
         if self.type == "Production Center":
-            frappe.publish_realtime(self.name, dict(
+            notification = dict(
                 action="Notifications",
                 orders_count=self.orders_count_in_production_center,
                 current_user=self.current_user
-            ), after_commit=True)
+            )
+            frappe.publish_realtime(self.name, notification, after_commit=True)
+            frappe.publish_realtime(
+                "production_center_update",
+                {
+                    "center": self.name,
+                    "orders_count": notification["orders_count"],
+                },
+                after_commit=True,
+            )
         else:
             notification = dict(
                 action="Notifications",

@@ -138,7 +138,7 @@
 
 .production-command-item {
     display: grid;
-    grid-template-columns: 42px 1fr;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
     gap: 3px 8px;
     padding: 6px 0;
     border-bottom: 1px dashed var(--border-color, #dfe2e5);
@@ -154,8 +154,14 @@
 }
 
 .production-command-note {
+    grid-column: 2 / -1;
     padding: 3px 6px;
     border-radius: 4px;
+}
+
+.production-item-action {
+    align-self: center;
+    white-space: nowrap;
 }
 
 .production-command-footer {

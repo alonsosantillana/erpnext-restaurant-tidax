@@ -58,7 +58,7 @@ RestaurantObject = class RestaurantObject {
         // Reloading here makes an open production center reconcile against
         // persisted state even if the global order event was missed.
         if (this.data.type === "Production Center" && this.process_manage != null) {
-            this.process_manage.reload();
+            this.process_manage.schedule_reload();
         }
     }
 

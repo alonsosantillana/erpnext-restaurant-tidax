@@ -3,7 +3,7 @@
 # See license.txt
 from __future__ import unicode_literals
 
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -237,15 +237,38 @@ class TestRestaurantObject(FrappeTestCase):
 		):
 			center.synchronize()
 
-		publish_realtime.assert_called_once_with(
-			"PC-TEST",
-			{
-				"action": "Notifications",
-				"orders_count": 2,
-				"current_user": "cook@example.com",
-			},
-			after_commit=True,
+		notification = {
+			"action": "Notifications",
+			"orders_count": 2,
+			"current_user": "cook@example.com",
+		}
+		publish_realtime.assert_has_calls(
+			[
+				call("PC-TEST", notification, after_commit=True),
+				call(
+					"production_center_update",
+					{"center": "PC-TEST", "orders_count": 2},
+					after_commit=True,
+				),
+			]
 		)
+		self.assertEqual(publish_realtime.call_count, 2)
+
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.db.get_value",
+		return_value="Sent",
+	)
+	def test_single_dish_transition_uses_one_identifier(self, get_value):
+		center = RestaurantObject({"doctype": "Restaurant Object", "name": "PC-TEST"})
+		with patch.object(
+			center,
+			"set_commands_status",
+			return_value={"status": "Processing"},
+		) as transition:
+			result = center.set_status_command("ITEM-1", expected_status="Sent")
+
+		transition.assert_called_once_with(identifiers=["ITEM-1"], expected_status="Sent")
+		self.assertEqual(result["status"], "Processing")
 
 	@patch(
 		"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.frappe.get_doc"

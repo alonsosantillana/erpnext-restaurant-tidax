@@ -73,9 +73,17 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 - **WHEN** an order is sent or a kitchen command changes state and the transaction commits
 - **THEN** every open instance of the affected Production Center reconciles its active view and all view counters against persisted server data
 
+#### Scenario: Realtime update while hidden
+- **WHEN** an update arrives while the Production Center browser tab is hidden
+- **THEN** the client marks the view as stale and reconciles immediately when the tab becomes visible
+
 #### Scenario: Atomic command transition
 - **WHEN** an authorized kitchen user starts or completes a command whose items still share the expected state
 - **THEN** all selected items advance through the configured server-side transition in one transaction and timing is recorded once
+
+#### Scenario: Individual dish transition
+- **WHEN** an authorized kitchen user starts or completes one dish inside a command
+- **THEN** only that dish advances and the remaining dishes retain their current state
 
 #### Scenario: Conflicting command transition
 - **WHEN** another client already changed any selected item or an item is outside the Production Center scope

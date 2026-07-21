@@ -53,6 +53,7 @@
 - [x] 2.40 Apply the POS Profile tax-inclusive setting to every loaded invoice tax row so restaurant prices are not taxed twice in order and discount totals.
 - [x] 2.41 Route the Account action through an asynchronous, permission-checked print request that validates the pre-account, Silent Print, printer user and master-tab configuration and reports queue success or failure.
 - [x] 2.42 Replace legacy kitchen popups with center-scoped Commands, Dish Consolidation and Attended Orders views, atomic command transitions and realtime reconciliation inside Production Center.
+- [x] 2.43 Support independent dish transitions alongside whole-command actions and retain/reconcile production updates received while the P3 tab is hidden.
 
 ## 3. Security and Data Isolation
 

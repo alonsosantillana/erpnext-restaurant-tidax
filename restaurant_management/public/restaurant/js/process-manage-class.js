@@ -6,20 +6,43 @@ ProcessManage = class ProcessManage {
         this.active_view = "commands";
         this.dashboard = null;
         this.loading = false;
+        this.transitioning = false;
         this.pending_reload = false;
+        this.stale = true;
         this.reload_timeout = null;
         this.reconciliation_interval = null;
         this.request_serial = 0;
 
         this.initialize();
+        this.init_realtime();
     }
 
     initialize() {
         this.title = this.table.room.data.description + " (" + this.table.data.description + ")";
         this.modal = RMHelper.default_full_modal(this.title, () => this.make());
+        this.modal.modal.$wrapper
+            .on("hidden.bs.modal.production-center", () => {
+                this.status = "close";
+                this.stop_reconciliation();
+            })
+            .on("shown.bs.modal.production-center", () => {
+                this.status = "open";
+                this.start_reconciliation();
+                if (this.stale) this.schedule_reload();
+            });
+    }
+
+    init_realtime() {
+        frappe.realtime.on("production_center_update", data => {
+            if (data && data.center === this.table.data.name) this.schedule_reload();
+        });
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden && this.is_open() && this.stale) this.schedule_reload();
+        });
     }
 
     make() {
+        this.status = "open";
         this.make_dom();
         this.start_reconciliation();
         this.reload();
@@ -39,12 +62,7 @@ ProcessManage = class ProcessManage {
     }
 
     is_open() {
-        return Boolean(
-            this.modal &&
-            this.modal.modal &&
-            this.modal.modal.$wrapper &&
-            this.modal.modal.$wrapper.is(":visible")
-        );
+        return this.status === "open";
     }
 
     make_dom() {
@@ -67,7 +85,14 @@ ProcessManage = class ProcessManage {
                 const key = $(event.currentTarget).data("command-key");
                 const command = (this.dashboard && this.dashboard.commands || [])
                     .find(row => row.key === key);
-                if (command) this.transition_command(command);
+                if (command) this.transition_items(command, command.identifiers, false);
+            })
+            .on("click.production-center", ".production-item-action", event => {
+                const key = $(event.currentTarget).data("command-key");
+                const identifier = $(event.currentTarget).data("item-identifier");
+                const command = (this.dashboard && this.dashboard.commands || [])
+                    .find(row => row.key === key);
+                if (command && identifier) this.transition_items(command, [identifier], true);
             });
 
         refresh_button.on("click", () => this.reload());
@@ -121,7 +146,10 @@ ProcessManage = class ProcessManage {
     }
 
     reload() {
-        if (!this.is_open() || document.hidden) return;
+        if (!this.is_open() || document.hidden) {
+            this.stale = true;
+            return;
+        }
         if (this.loading) {
             this.pending_reload = true;
             return;
@@ -143,6 +171,7 @@ ProcessManage = class ProcessManage {
 
                 if (response && !response.exc && response.message) {
                     this.dashboard = response.message;
+                    this.stale = false;
                     this.render_dashboard();
                 } else if (!this.dashboard) {
                     this.show_error();
@@ -157,9 +186,11 @@ ProcessManage = class ProcessManage {
     }
 
     schedule_reload() {
+        this.stale = true;
         clearTimeout(this.reload_timeout);
+        if (!this.is_open() || document.hidden) return;
         this.reload_timeout = setTimeout(() => {
-            if (this.is_open() && !document.hidden) this.reload();
+            this.reload();
         }, 150);
     }
 
@@ -310,6 +341,17 @@ ProcessManage = class ProcessManage {
                 $("<strong>", { class: "production-command-item-qty" }).text(`[${this.format_qty(item.qty)}]`),
                 $("<span>", { class: "production-command-item-name" }).text(item.item_name || item.item_code)
             );
+            if (!attended && this.dashboard.can_transition && command.next_status) {
+                row.append(
+                    $("<button>", {
+                        type: "button",
+                        class: "btn btn-xs btn-default production-item-action"
+                    })
+                        .data("command-key", command.key)
+                        .data("item-identifier", item.identifier)
+                        .text(this.action_label(command.next_status, true))
+                );
+            }
             if (item.notes) row.append($("<small>", { class: "production-command-note" }).text(item.notes));
             item_list.append(row);
         });
@@ -318,39 +360,51 @@ ProcessManage = class ProcessManage {
         const footer = $("<footer>", { class: "production-command-footer" }).append(
             $("<span>").text(__("Dishes: {0}", [this.format_qty(command.qty || 0)]))
         );
-        if (!attended && this.dashboard.can_transition && command.next_status) {
+        if (
+            !attended &&
+            this.dashboard.can_transition &&
+            command.next_status &&
+            command.identifiers.length > 1
+        ) {
             footer.append(
                 $("<button>", {
                     type: "button",
                     class: "btn btn-primary production-command-action"
                 })
                     .data("command-key", command.key)
-                    .text(this.action_label(command.next_status))
+                    .text(this.action_label(command.next_status, false))
             );
         }
         card.append(footer);
         return card;
     }
 
-    transition_command(command) {
-        if (this.loading || !command.identifiers || !command.identifiers.length) return;
-        RM.working(__("Updating command"), false);
+    transition_items(command, identifiers, single_item) {
+        if (this.transitioning || !identifiers || !identifiers.length) return;
+        this.transitioning = true;
+        this.root().find(".production-command-action, .production-item-action").prop("disabled", true);
+        RM.working(single_item ? __("Updating dish") : __("Updating command"), false);
         frappeHelper.api.call({
             model: "Restaurant Object",
             name: this.table.data.name,
             method: "set_commands_status",
             args: {
-                identifiers: command.identifiers,
+                identifiers: identifiers,
                 expected_status: command.status
             },
             always: response => {
+                this.transitioning = false;
                 RM.ready();
                 if (response && !response.exc && response.message) {
                     frappe.show_alert({
-                        message: __("Command updated to {0}", [this.status_label(response.message.status)]),
+                        message: single_item
+                            ? __("Dish updated to {0}", [this.status_label(response.message.status)])
+                            : __("Command updated to {0}", [this.status_label(response.message.status)]),
                         indicator: "green"
                     });
                 }
+                this.root().find(".production-command-action, .production-item-action").prop("disabled", false);
+                this.stale = true;
                 this.reload();
             }
         });
@@ -365,13 +419,20 @@ ProcessManage = class ProcessManage {
         );
     }
 
-    action_label(next_status) {
-        return {
-            Processing: __("Start command"),
-            Completed: __("Complete command"),
-            Delivering: __("Deliver command"),
-            Delivered: __("Mark as delivered")
-        }[next_status] || __("Advance command");
+    action_label(next_status, single_item) {
+        const command_labels = {
+            Processing: __("Start entire command"),
+            Completed: __("Complete entire command"),
+            Delivering: __("Deliver entire command"),
+            Delivered: __("Mark command as delivered")
+        };
+        const item_labels = {
+            Processing: __("Start dish"),
+            Completed: __("Complete dish"),
+            Delivering: __("Deliver dish"),
+            Delivered: __("Mark dish as delivered")
+        };
+        return (single_item ? item_labels : command_labels)[next_status] || __("Advance");
     }
 
     status_label(status) {
