@@ -372,6 +372,17 @@ class OrderItemEditor extends DeskForm {
         // dish therefore needs an isolated copy so another editor cannot leave
         // Notes or Discount Percentage in a read-only state.
         this.desk_form = JSON.parse(JSON.stringify(RM.order_item_editor_form));
+        this.desk_form.desk_form_fields.forEach(df => {
+            if (!df.fieldname) return;
+            df.get_status = control => {
+                if (cint(control.df.hidden) || cint(control.df.hidden_due_to_dependency)) {
+                    return "None";
+                }
+                return cint(control.df.read_only) || control.df.fieldtype === "Read Only"
+                    ? "Read"
+                    : "Write";
+            };
+        });
         this.ready = super.initialize();
     }
 

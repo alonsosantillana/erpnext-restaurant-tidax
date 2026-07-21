@@ -61,6 +61,7 @@
 - [x] 2.48 Serialize repeated product selections per order, persist the latest quantity safely and defer command timestamps until Order is pressed.
 - [x] 2.49 Preserve the contributing preparation-target source in daily dish consolidation and provide an Escape-aware full-screen Production Center control.
 - [x] 2.50 Initialize each dish editor before selection and isolate its field metadata so Notes and permitted line discounts remain editable.
+- [x] 2.51 Make dish-editor controls use explicit order editability instead of independent child-DocType permissions.
 
 ## 3. Security and Data Isolation
 

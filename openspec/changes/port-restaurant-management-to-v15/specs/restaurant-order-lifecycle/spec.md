@@ -24,7 +24,7 @@ Creating, editing, dividing, transferring, sending, deleting or invoicing an ord
 
 #### Scenario: Edit unsent dish details
 - **WHEN** an authorized operator opens an unsent dish and the POS Profile permits discount changes
-- **THEN** Notes and Discount Percentage are editable, remain isolated from other dish editors and persist through the serialized item mutation flow
+- **THEN** Notes and Discount Percentage use the order's explicit editability rules instead of child-DocType permissions, remain isolated from other dish editors and persist through the serialized item mutation flow
 
 #### Scenario: Successful split
 - **WHEN** an authorized user divides valid quantities into a second order
