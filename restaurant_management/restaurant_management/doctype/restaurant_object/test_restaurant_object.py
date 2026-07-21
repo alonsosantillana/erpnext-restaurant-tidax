@@ -3,7 +3,7 @@
 # See license.txt
 from __future__ import unicode_literals
 
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -12,9 +12,41 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 	add_room,
 	get_items,
 )
+from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import (
+	RestaurantObject,
+)
 
 
 class TestRestaurantObject(FrappeTestCase):
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.publish_realtime"
+	)
+	def test_production_center_notification_is_published_after_commit(self, publish_realtime):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"type": "Production Center",
+			"current_user": "cook@example.com",
+		})
+
+		with patch.object(
+			RestaurantObject,
+			"orders_count_in_production_center",
+			new_callable=PropertyMock,
+			return_value=2,
+		):
+			center.synchronize()
+
+		publish_realtime.assert_called_once_with(
+			"PC-TEST",
+			{
+				"action": "Notifications",
+				"orders_count": 2,
+				"current_user": "cook@example.com",
+			},
+			after_commit=True,
+		)
+
 	def test_restaurant_order_requires_customer_selection(self):
 		desk_form = frappe.get_doc("Desk Form", "restaurant-order-customer")
 		customer_field = next(

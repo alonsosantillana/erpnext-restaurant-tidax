@@ -28,6 +28,7 @@
 - [x] 2.15 Show locally added order lines immediately without depending on realtime reconciliation to release the hidden cart state.
 - [x] 2.16 Make quantity, rate, discount, numeric-pad and delete controls update the selected line at the correct time with bounded values and server reconciliation.
 - [x] 2.17 Reconcile the locally persisted item state and pending count so the Order action is enabled without depending on realtime delivery.
+- [x] 2.18 Publish production-center notifications after commit and reconcile open kitchen views against persisted commands.
 
 ## 3. Security and Data Isolation
 

@@ -47,6 +47,13 @@ RestaurantObject = class RestaurantObject {
         this.data.current_user = data.current_user;
         this.data.orders_count = data.orders_count;
         this.set_orders_count();
+
+        // The notification is emitted after the order transaction commits.
+        // Reloading here makes an open production center reconcile against
+        // persisted state even if the global order event was missed.
+        if (this.data.type === "Production Center" && this.process_manage != null) {
+            this.process_manage.reload();
+        }
     }
 
     remove() {

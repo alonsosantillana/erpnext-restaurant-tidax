@@ -37,20 +37,20 @@ class RestaurantObject(Document):
                 action="Notifications",
                 orders_count=self.orders_count_in_production_center,
                 current_user=self.current_user
-            ))
+            ), after_commit=True)
         else:
             frappe.publish_realtime(self.name, dict(
                 action="Notifications",
                 orders_count=self.orders_count,
                 current_user=self.current_user
-            ))
+            ), after_commit=True)
 
             if self.type != "Room":
                 frappe.publish_realtime(self._room.name, dict(
                     action="Notifications",
                     orders_count=self._room.orders_count,
                     current_user=self.current_user
-                ))
+                ), after_commit=True)
                 
     def validate_transaction(self, user=None):
         user = user or frappe.session.user

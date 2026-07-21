@@ -6,6 +6,7 @@ ProcessManage = class ProcessManage {
         this.items = {};
         this.command_container_name = this.table.data.name + "-command_container";
         this.new_items_keys = [];
+        this.time_elapsed_interval = null;
 
         this.initialize();
     }
@@ -641,6 +642,7 @@ ProcessManage = class ProcessManage {
             args: {},
             always: (r) => {
                 RM.ready();
+                if (!r || r.exc || !Array.isArray(r.message)) return;
                 this.make_food_commands(r.message);
             },
         });
@@ -655,6 +657,7 @@ ProcessManage = class ProcessManage {
 
             if (_items.includes(item.identifier)) {
                 this.items[item.identifier].data = item;
+                this.items[item.identifier].refresh_html();
             } else {
                 this.add_item(item);
             }
@@ -670,7 +673,9 @@ ProcessManage = class ProcessManage {
     }
 
     time_elapsed() {
-        setInterval(() => {
+        if (this.time_elapsed_interval != null) return;
+
+        this.time_elapsed_interval = setInterval(() => {
             this.in_items(item => {
                 item.time_elapsed
             });
@@ -692,7 +697,7 @@ ProcessManage = class ProcessManage {
     check_item(item) {
         if (Object.keys(this.items).includes(item.identifier)) {
             const _item = this.items[item.identifier];
-            if (this.include_status(item.status)) {
+            if (this.include_status(item.status) && this.include_item_group(item.item_group)) {
                 _item.data = item;
                 _item.refresh_html();
             } else {
