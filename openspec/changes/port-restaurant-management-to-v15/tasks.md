@@ -35,6 +35,7 @@
 - [x] 2.22 Show each table's total ordered dish quantity while retaining the active-order count for occupancy and permission rules.
 - [x] 2.23 Show ordered dishes above each table and keep active diners with configured seating capacity visible below it.
 - [x] 2.24 Reconcile source and destination tables idempotently after transfers, with authoritative response data and silent polling fallback.
+- [x] 2.25 Reload persisted orders whenever a table is opened and select its active order when the reused manager has no current selection.
 
 ## 3. Security and Data Isolation
 

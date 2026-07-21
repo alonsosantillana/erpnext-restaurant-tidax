@@ -4,6 +4,7 @@ class OrderManage extends ObjectManage {
     #items = {};
     #numpad = null;
     orders_reloading = false;
+    select_order_after_reload = false;
 
     constructor(options) {
         super(options);
@@ -71,6 +72,7 @@ class OrderManage extends ObjectManage {
         if (!this.is_enabled_to_open()) return;
 
         this.modal.show();
+        this.reload_orders_silently(true);
         if (this.transferring_order) {
             if (this.current_order != null) {
                 //**To move windows over the current, on transferring order**//
@@ -775,7 +777,8 @@ class OrderManage extends ObjectManage {
         });
     }
 
-    reload_orders_silently() {
+    reload_orders_silently(select_if_empty = false) {
+        this.select_order_after_reload = this.select_order_after_reload || select_if_empty;
         if (this.orders_reloading) return;
         this.orders_reloading = true;
 
@@ -811,6 +814,15 @@ class OrderManage extends ObjectManage {
                     }
                 });
 
+                if (this.select_order_after_reload && this.current_order == null && persisted_orders.length > 0) {
+                    const order_name = persisted_orders[0].name;
+                    setTimeout(() => {
+                        const order = this.get_order(order_name);
+                        if (order && this.current_order == null) order.select();
+                    });
+                }
+
+                this.select_order_after_reload = false;
                 this.orders_reloading = false;
                 this.check_permissions_status();
             },
