@@ -198,7 +198,53 @@ def lookup_customer_identity(tax_id):
     }
 
 
-def _create_customer_from_identity(identity):
+def _is_leaf_customer_group(customer_group):
+    return bool(
+        customer_group
+        and frappe.db.get_value("Customer Group", customer_group, "is_group") == 0
+    )
+
+
+def _resolve_customer_group(customer_type, pos_profile=None):
+    default_group = frappe.db.get_default("Customer Group")
+    if _is_leaf_customer_group(default_group):
+        return default_group
+
+    if pos_profile:
+        pos_groups = frappe.get_all(
+            "POS Customer Group",
+            filters={"parent": pos_profile},
+            pluck="customer_group",
+            order_by="idx asc",
+        )
+        for customer_group in pos_groups:
+            if _is_leaf_customer_group(customer_group):
+                return customer_group
+
+    used_groups = frappe.get_all(
+        "Customer",
+        filters={"disabled": 0, "customer_type": customer_type},
+        fields=["customer_group", "count(name) as customer_count"],
+        group_by="customer_group",
+        order_by="customer_count desc",
+    )
+    for row in used_groups:
+        if _is_leaf_customer_group(row.customer_group):
+            return row.customer_group
+
+    fallback_group = frappe.db.get_value(
+        "Customer Group",
+        {"is_group": 0},
+        "name",
+        order_by="lft asc",
+    )
+    if fallback_group:
+        return fallback_group
+
+    frappe.throw(_("Configure at least one non-group Customer Group before creating customers"))
+
+
+def _create_customer_from_identity(identity, pos_profile=None):
     if not frappe.has_permission("Customer", "create"):
         frappe.throw(_("Not permitted to create customers"), frappe.PermissionError)
 
@@ -210,7 +256,7 @@ def _create_customer_from_identity(identity):
     customer.customer_name = identity["party_name"]
     customer.customer_type = identity["party_type"]
     customer.tax_id = identity["tax_id"]
-    customer.customer_group = frappe.db.get_default("Customer Group")
+    customer.customer_group = _resolve_customer_group(identity["party_type"], pos_profile)
     customer.territory = frappe.db.get_default("Territory")
 
     customer_meta = frappe.get_meta("Customer")
@@ -279,7 +325,7 @@ def create_and_assign_customer(order_name, tax_id, client=None):
         identity = _lookup_party_identity(tax_id)
         if not identity.get("found"):
             frappe.throw(_("No information was found for this DNI/RUC"))
-        customer, address_name = _create_customer_from_identity(identity)
+        customer, address_name = _create_customer_from_identity(identity, order.pos_profile)
         created = True
 
     order_data = _assign_customer_to_order(order, customer, client)

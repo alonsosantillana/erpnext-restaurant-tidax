@@ -9,6 +9,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from restaurant_management.api import (
 	_create_customer_from_identity,
+	_resolve_customer_group,
 	call as restaurant_call,
 	create_and_assign_customer,
 	lookup_customer_identity,
@@ -27,6 +28,26 @@ from restaurant_management.restaurant_management.doctype.desk_form.desk_form imp
 
 
 class TestRestaurantObject(FrappeTestCase):
+	@patch("restaurant_management.api.frappe.get_all")
+	@patch("restaurant_management.api.frappe.db.get_value")
+	@patch("restaurant_management.api.frappe.db.get_default")
+	def test_customer_group_falls_back_from_group_default_to_used_leaf(
+		self, get_default, get_value, get_all
+	):
+		get_default.return_value = "All Customer Groups"
+		get_value.side_effect = lambda doctype, name, fieldname, **kwargs: (
+			1 if name == "All Customer Groups" else 0
+		)
+		get_all.side_effect = [
+			[],
+			[frappe._dict(customer_group="Commercial", customer_count=10)],
+		]
+
+		self.assertEqual(
+			_resolve_customer_group("Company", "Restaurant POS"),
+			"Commercial",
+		)
+
 	@patch("restaurant_management.api._lookup_party_identity")
 	@patch("restaurant_management.api._find_customer_by_tax_id")
 	@patch("restaurant_management.api.frappe.has_permission", return_value=True)
@@ -73,11 +94,12 @@ class TestRestaurantObject(FrappeTestCase):
 		order.check_permission.assert_called_once_with("write")
 		assign_customer.assert_called_once_with(order, customer, "client-1")
 
+	@patch("restaurant_management.api._resolve_customer_group", return_value="Commercial")
 	@patch("restaurant_management.api.frappe.get_meta")
 	@patch("restaurant_management.api.frappe.new_doc")
 	@patch("restaurant_management.api.frappe.has_permission", return_value=True)
 	def test_verified_ruc_maps_to_customer_and_registered_address(
-		self, has_permission, new_doc, get_meta
+		self, has_permission, new_doc, get_meta, resolve_customer_group
 	):
 		customer = MagicMock()
 		customer.name = "CUST-NEW"
@@ -108,6 +130,7 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(customer.customer_name, "Verified Company")
 		self.assertEqual(customer.customer_type, "Company")
 		self.assertEqual(customer.tax_id, "20123456789")
+		self.assertEqual(customer.customer_group, "Commercial")
 		self.assertEqual(address.address_line1, "Av. Principal 123")
 		address.append.assert_called_once_with("links", {
 			"link_doctype": "Customer",
