@@ -269,6 +269,61 @@ class TestTableOrder(unittest.TestCase):
 		aggregate.assert_called_once_with()
 		synchronize.assert_called_once_with({"item": "ITEM-1", "client": "CLIENT-1"})
 
+	@patch(
+		"restaurant_management.restaurant_management.restaurant_manage.check_exceptions"
+	)
+	def test_update_item_quantity_persists_absolute_unsent_qty(self, check_exceptions):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"entry_items": [{
+				"doctype": "Order Entry Item",
+				"identifier": "ITEM-1",
+				"item_code": "PLT-001",
+				"status": "Attending",
+				"qty": 1,
+				"rate": 35,
+				"price_list_rate": 35,
+			}],
+		})
+		event = {"action": "Update", "data": {}}
+
+		with (
+			patch.object(frappe.db, "sql") as sql,
+			patch.object(order, "reload") as reload_order,
+			patch.object(order, "update_item", return_value="db_commit") as update_item,
+			patch.object(order, "aggregate") as aggregate,
+			patch.object(order, "synchronize", return_value=event) as synchronize,
+		):
+			result = order.update_item_quantity(
+				"ITEM-1", qty=4, client="CLIENT-1"
+			)
+
+		entry = update_item.call_args.args[0]
+		self.assertEqual(entry["qty"], 4)
+		self.assertEqual(entry["status"], "Attending")
+		self.assertEqual(result, event)
+		sql.assert_called_once_with(
+			"SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE",
+			("OR-2026-00001",),
+		)
+		self.assertEqual(reload_order.call_count, 2)
+		aggregate.assert_called_once_with()
+		synchronize.assert_called_once_with({"item": "ITEM-1", "client": "CLIENT-1"})
+
+	@patch(
+		"restaurant_management.restaurant_management.restaurant_manage.check_exceptions"
+	)
+	def test_update_item_quantity_rejects_fractional_or_zero_qty(self, check_exceptions):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+		})
+
+		for quantity in (0, -1, 1.5):
+			with self.subTest(quantity=quantity), self.assertRaises(frappe.ValidationError):
+				order.update_item_quantity("ITEM-1", qty=quantity)
+
 	def test_items_list_includes_server_calculated_tax_amount(self):
 		order = TableOrder({
 			"doctype": "Table Order",

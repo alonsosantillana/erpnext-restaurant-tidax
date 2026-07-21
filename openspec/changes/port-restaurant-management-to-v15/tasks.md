@@ -65,6 +65,7 @@
 - [x] 2.52 Persist the visible Notes and Discount Percentage values directly on native change or blur instead of reading stale Frappe control state.
 - [x] 2.53 Provide an explicit server-backed Save changes action for dish Notes and Discount Percentage with state, permission and range validation.
 - [x] 2.54 Hide Item Tax Rate and Valuation Rate from the dish editor while retaining both internal calculation fields.
+- [x] 2.55 Persist absolute dish quantities through one atomic operation shared by +/- and numeric-pad confirmation.
 
 ## 3. Security and Data Isolation
 

@@ -1,13 +1,19 @@
 class NumPad {
     #input = null;
     #html = "";
+    #replace_value_on_next_key = false;
     constructor(options) {
         Object.assign(this, options);
         this.make();
     }
 
     set html(val){this.#html = val}
-    set input(val){this.#input = val}
+    set input(val){
+        this.#input = val;
+        if (this.replace_value_on_first_key && val) {
+            this.#replace_value_on_next_key = true;
+        }
+    }
 
     get input(){return this.#input}
     get html(){return this.#html}
@@ -67,8 +73,14 @@ class NumPad {
                             }
                         } else if (this.input && !this.input.is_disabled) {
                             if (col.action === "delete") {
+                                this.#replace_value_on_next_key = false;
                                 this.input.delete_value();
                             } else {
+                                if (this.#replace_value_on_next_key) {
+                                    this.input.val("", false);
+                                    this.input.cursor_position = 0;
+                                    this.#replace_value_on_next_key = false;
+                                }
                                 this.input.write(key);
                             }
                         }

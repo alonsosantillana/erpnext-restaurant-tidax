@@ -225,6 +225,34 @@ class TableOrder {
         this.process_item_mutation_queue();
     }
 
+    queue_item_quantity(order_item, qty) {
+        const identifier = order_item.data.identifier;
+        const pending_index = this.item_mutation_queue.findIndex(
+            pending => pending.identifier === identifier
+        );
+
+        if (pending_index >= 0) {
+            const pending = this.item_mutation_queue[pending_index];
+            if (pending.type === "set") {
+                pending.payload.qty = qty;
+                pending.payload.status = "Pending";
+            } else if (pending.type !== "delete") {
+                pending.type = "quantity";
+                pending.qty = qty;
+                delete pending.delta;
+                delete pending.payload;
+            }
+        } else {
+            this.item_mutation_queue.push({
+                identifier,
+                type: "quantity",
+                qty,
+            });
+        }
+
+        this.process_item_mutation_queue();
+    }
+
     process_item_mutation_queue() {
         if (this.item_mutation_in_flight || !this.item_mutation_queue.length) return;
 
@@ -235,14 +263,18 @@ class TableOrder {
 
         const method = mutation.type === "increment"
             ? "increment_item"
-            : (mutation.type === "delete" ? "delete_item" : "push_item");
+            : (mutation.type === "quantity"
+                ? "update_item_quantity"
+                : (mutation.type === "delete" ? "delete_item" : "push_item"));
         const item_arg = mutation.type === "increment"
             ? { identifier: mutation.identifier, delta: mutation.delta }
-            : {
+            : (mutation.type === "quantity"
+                ? { identifier: mutation.identifier, qty: mutation.qty, client: RM.client }
+                : {
                 item: mutation.type === "delete"
                     ? mutation.identifier
                     : mutation.payload,
-            };
+            });
 
         frappeHelper.api.call({
             model: "Table Order",

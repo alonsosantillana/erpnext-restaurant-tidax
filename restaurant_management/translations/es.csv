@@ -175,3 +175,6 @@ Not permitted to create customers,No tiene permiso para crear clientes,
 Not permitted to create the customer's registered address,No tiene permiso para crear la dirección registrada del cliente,
 A customer with this document already exists,Ya existe un cliente con este documento,
 Configure at least one non-group Customer Group before creating customers,Configure al menos un Grupo de clientes que no sea agrupador antes de crear clientes,
+Quantity must be at least 1. Use Delete to remove the item.,La cantidad debe ser al menos 1. Use Eliminar para retirar el plato.
+Quantity must be a whole number greater than zero,La cantidad debe ser un número entero mayor que cero.
+Only unsent dishes can change their quantity,Solo los platos no enviados pueden cambiar su cantidad.

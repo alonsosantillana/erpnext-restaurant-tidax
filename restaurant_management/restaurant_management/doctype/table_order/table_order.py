@@ -997,6 +997,45 @@ class TableOrder(Document):
 
         return self.synchronize(dict(item=identifier, client=client))
 
+    def update_item_quantity(self, identifier, qty, client=None):
+        from restaurant_management.restaurant_management.restaurant_manage import check_exceptions
+
+        check_exceptions(
+            dict(name="Table Order", short_name="order", action="write", data=self),
+            "You cannot modify an order from another User",
+        )
+
+        quantity = flt(qty)
+        if quantity < 1 or quantity != cint(quantity):
+            frappe.throw(_("Quantity must be a whole number greater than zero"))
+        quantity = cint(quantity)
+
+        frappe.db.sql(
+            "SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE",
+            (self.name,),
+        )
+        self.reload()
+        matching_items = [
+            item for item in self.entry_items if item.identifier == identifier
+        ]
+        if len(matching_items) != 1:
+            frappe.throw(_("The selected dish no longer exists"))
+
+        item = matching_items[0]
+        if item.status != status_attending:
+            frappe.throw(_("Only unsent dishes can change their quantity"))
+
+        entry = item.as_dict()
+        entry["qty"] = quantity
+        entry["status"] = status_attending
+
+        action = self.update_item(entry)
+        if action == "db_commit":
+            self.reload()
+        self.aggregate()
+
+        return self.synchronize(dict(item=identifier, client=client))
+
     @property
     def get_items(self):
         return self.data()

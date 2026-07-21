@@ -237,7 +237,7 @@ class OrderManage extends ObjectManage {
                 content: '<span class="fa fa-minus">',
                 on: {
                     'click': () => {
-                        this.adjust_current_input(-1);
+                        this.adjust_quantity(-1);
                     }
                 }
             },
@@ -290,7 +290,7 @@ class OrderManage extends ObjectManage {
                 content: '<span class="fa fa-plus">',
                 on: {
                     'click': () => {
-                        this.adjust_current_input(1);
+                        this.adjust_quantity(1);
                     }
                 }
             },
@@ -362,33 +362,47 @@ class OrderManage extends ObjectManage {
         this.#objects.Rate.float();
     }
 
-    adjust_current_input(delta) {
-        if (RM.busy || !this.num_pad.input || this.num_pad.input.is_disabled) return;
+    adjust_quantity(delta) {
+        const input = this.objects.Qty;
+        const can_queue_quantity = this.current_order
+            && this.current_order.has_pending_item_mutations();
+        if ((RM.busy && !can_queue_quantity) || !input || input.is_disabled) return;
 
-        const input = this.num_pad.input;
-        const fieldname = input.properties.name;
         const current_value = flt(input.val());
-        let value = current_value + delta;
+        const value = Math.max(1, current_value + delta);
 
-        if (fieldname === "qty") value = Math.max(1, value);
-        if (fieldname === "discount") value = Math.min(100, Math.max(0, value));
-        if (fieldname === "rate") value = Math.max(0, value);
-        if (value === current_value) return;
+        if (value === current_value) {
+            frappe.show_alert({
+                message: __("Quantity must be at least 1. Use Delete to remove the item."),
+                indicator: "orange"
+            });
+            return;
+        }
 
+        this.num_pad.input = input;
         input.val(value, false);
         this.update_detail(input);
         input.focus();
     }
 
     update_detail(input) {
-        if (RM.busy) return;
+        if (!input) return;
 
-        const set_data = (item, qty, discount, rate) => {
+        const fieldname = input.properties.name;
+        const can_queue_quantity = fieldname === "qty"
+            && this.current_order
+            && this.current_order.has_pending_item_mutations();
+        if (RM.busy && !can_queue_quantity) return;
+
+        const set_data = (item, qty, discount, rate, quantity_only = false) => {
             item.data.qty = qty;
             item.data.discount_percentage = discount;
             item.data.rate = rate;
             item.data.status = "Pending";
-            item.update();
+            item.update(!quantity_only);
+            if (quantity_only) {
+                item.order.queue_item_quantity(item, qty);
+            }
             if (qty > 0) {
                 item.select();
             }
@@ -417,16 +431,16 @@ class OrderManage extends ObjectManage {
             discount = Math.min(100, Math.max(0, discount));
             rate = Math.max(0, rate);
 
-            if (input.properties.name === "qty") {
-                set_data(current_item, qty, discount, rate);
+            if (fieldname === "qty") {
+                set_data(current_item, qty, discount, rate, true);
             }
-            if (input.properties.name === "discount") {
+            if (fieldname === "discount") {
                 this.objects.Discount.val(discount, false);
                 rate = (base_rate * (1 - discount / 100));
                 this.objects.Rate.val(rate, false);
                 set_data(current_item, qty, discount, rate);
             }
-            if (input.properties.name === "rate") {
+            if (fieldname === "rate") {
                 this.objects.Rate.val(rate, false);
                 const _discount = base_rate > 0 ? (((base_rate - rate) / base_rate) * 100) : 0;
                 discount = _discount >= 0 ? _discount : 0
@@ -564,6 +578,7 @@ class OrderManage extends ObjectManage {
         setTimeout(() => {
             this.num_pad = new NumPad({
                 wrapper: this.components.Pad.obj,
+                replace_value_on_first_key: true,
                 on_enter: () => {
                     if (this.num_pad.input && !this.num_pad.input.is_disabled) {
                         this.update_detail(this.num_pad.input);
