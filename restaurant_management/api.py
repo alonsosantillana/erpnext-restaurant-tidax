@@ -54,6 +54,102 @@ def _require_authenticated_user():
         frappe.throw(_("Authentication required"), frappe.AuthenticationError)
 
 
+def _get_account_print_configuration():
+    installed_apps = set(frappe.get_installed_apps())
+    if "silent_print" not in installed_apps:
+        frappe.throw(_("Silent Print is not installed"))
+
+    print_format = frappe.db.get_single_value("Restaurant Settings", "print_format")
+    if not print_format:
+        frappe.throw(_("Configure the pre-account Print Format in Restaurant Settings"))
+
+    print_format_data = frappe.db.get_value(
+        "Print Format",
+        print_format,
+        ["doc_type", "disabled"],
+        as_dict=True,
+    )
+    if not print_format_data or print_format_data.doc_type != "Table Order":
+        frappe.throw(_("The pre-account Print Format must belong to Table Order"))
+    if print_format_data.disabled:
+        frappe.throw(_("The pre-account Print Format is disabled"))
+
+    silent_format = frappe.db.get_value(
+        "Silent Print Format",
+        print_format,
+        [
+            "default_print_type",
+            "page_size",
+            "custom_width",
+            "custom_height",
+        ],
+        as_dict=True,
+    )
+    if not silent_format:
+        frappe.throw(
+            _("Create a Silent Print Format for {0}").format(print_format)
+        )
+    if not silent_format.default_print_type:
+        frappe.throw(
+            _("Configure the Print Type in Silent Print Format {0}").format(
+                print_format
+            )
+        )
+    if silent_format.page_size == "Custom" and (
+        not silent_format.custom_width or not silent_format.custom_height
+    ):
+        frappe.throw(
+            _("Configure the custom paper width and height for {0}").format(
+                print_format
+            )
+        )
+
+    print_user = frappe.db.get_single_value("Silent Print Settings", "print_user")
+    if not print_user:
+        frappe.throw(_("Configure the Print User in Silent Print Settings"))
+    if not frappe.db.get_value("User", print_user, "enabled"):
+        frappe.throw(_("The configured Print User is disabled"))
+
+    tab_id = frappe.db.get_single_value("Silent Print Settings", "tab_id")
+    if not tab_id:
+        frappe.throw(_("Select the master printer tab before printing"))
+
+    return frappe._dict(
+        print_format=print_format,
+        print_type=silent_format.default_print_type,
+        print_user=print_user,
+        tab_id=tab_id,
+    )
+
+
+@frappe.whitelist(methods=["POST"])
+def print_order_account(order_name):
+    """Validate, render and enqueue one restaurant pre-account print."""
+    _require_authenticated_user()
+
+    order = frappe.get_doc("Table Order", order_name)
+    order.check_permission("print")
+    if order.items_count == 0:
+        frappe.throw(_("The order has no dishes to print"))
+
+    configuration = _get_account_print_configuration()
+    print_silently = frappe.get_attr(
+        "silent_print.utils.print_format.print_silently"
+    )
+    print_silently(
+        doctype="Table Order",
+        name=order.name,
+        print_format=configuration.print_format,
+        print_type=configuration.print_type,
+    )
+
+    return {
+        "queued": True,
+        "print_format": configuration.print_format,
+        "print_type": configuration.print_type,
+    }
+
+
 @frappe.whitelist()
 def call(model, name, method, args=None):
     """Call an explicitly supported restaurant document action."""

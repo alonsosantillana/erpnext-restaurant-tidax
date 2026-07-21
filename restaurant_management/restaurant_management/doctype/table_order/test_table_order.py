@@ -15,10 +15,75 @@ from restaurant_management.restaurant_management.doctype.table_order.table_order
 	get_voucher_config,
 	TableOrder,
 )
-from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHODS
+from restaurant_management.api import (
+	DOCUMENT_METHODS,
+	READ_ONLY_DOCUMENT_METHODS,
+	_get_account_print_configuration,
+	print_order_account,
+)
 
 
 class TestTableOrder(unittest.TestCase):
+	@patch("restaurant_management.api.frappe.get_installed_apps", return_value=["silent_print"])
+	@patch("restaurant_management.api.frappe.db.get_single_value")
+	@patch("restaurant_management.api.frappe.db.get_value")
+	def test_account_print_configuration_is_complete(
+		self, get_value, get_single_value, get_installed_apps
+	):
+		get_single_value.side_effect = lambda doctype, fieldname: {
+			("Restaurant Settings", "print_format"): "Order Account",
+			("Silent Print Settings", "print_user"): "Administrator",
+			("Silent Print Settings", "tab_id"): "12345",
+		}.get((doctype, fieldname))
+
+		def configured_value(doctype, name, fieldname, **kwargs):
+			if doctype == "Print Format":
+				return frappe._dict(doc_type="Table Order", disabled=0)
+			if doctype == "Silent Print Format":
+				return frappe._dict(
+					default_print_type="ORDER",
+					page_size="Custom",
+					custom_width="80mm",
+					custom_height="200mm",
+				)
+			if doctype == "User":
+				return 1
+
+		get_value.side_effect = configured_value
+
+		configuration = _get_account_print_configuration()
+
+		self.assertEqual(configuration.print_format, "Order Account")
+		self.assertEqual(configuration.print_type, "ORDER")
+		self.assertEqual(configuration.print_user, "Administrator")
+		self.assertEqual(configuration.tab_id, "12345")
+
+	@patch("restaurant_management.api._get_account_print_configuration")
+	@patch("restaurant_management.api.frappe.get_attr")
+	@patch("restaurant_management.api.frappe.get_doc")
+	def test_account_print_is_permission_checked_and_enqueued(
+		self, get_doc, get_attr, get_configuration
+	):
+		order = MagicMock(name="OR-2026-00003", items_count=5)
+		order.name = "OR-2026-00003"
+		get_doc.return_value = order
+		get_configuration.return_value = frappe._dict(
+			print_format="Order Account",
+			print_type="ORDER",
+		)
+		print_silently = get_attr.return_value
+
+		result = print_order_account("OR-2026-00003")
+
+		order.check_permission.assert_called_once_with("print")
+		print_silently.assert_called_once_with(
+			doctype="Table Order",
+			name="OR-2026-00003",
+			print_format="Order Account",
+			print_type="ORDER",
+		)
+		self.assertEqual(result["queued"], True)
+
 	def test_pos_profile_tax_inclusion_overrides_loaded_tax_rows(self):
 		invoice = frappe._dict(taxes=[
 			frappe._dict(included_in_print_rate=0),

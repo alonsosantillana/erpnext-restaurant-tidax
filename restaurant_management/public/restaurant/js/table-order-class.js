@@ -623,39 +623,34 @@ class TableOrder {
         }
     }
     // TIDAX
-    print_account_tdx(){
-        //this.print_account();
-        this.print_account_silent();
+    print_account_tdx() {
+        return this.print_account_silent();
     }
 
     // TIDAX: IMPRESION DE PRE-CUENTA
-    print_account_silent(){
-        var formato_impresion;
-        frappe.call({
-            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+    print_account_silent() {
+        RM.working(__("Preparing account"));
+        return frappe.call({
+            method: "restaurant_management.api.print_order_account",
+            type: "POST",
             args: {
-                filtro: "print_format"
+                order_name: this.data.name
             },
-            callback: function(r) {
-                if (r.message) {
-                    formato_impresion = r.message[0].value;
-                }
-                else {
-                    frappe.msgprint("El formato no pudo ser encontrado");
+            callback: r => {
+                if (r.message && r.message.queued) {
+                    frappe.show_alert({
+                        message: __("Account sent to print bridge ({0})", [r.message.print_type]),
+                        indicator: "green"
+                    });
                 }
             },
-            async: false
-        });
-
-
-        frappe.call({
-            method: 'silent_print.utils.print_format.print_silently',
-            args: {
-                doctype: "Table Order",
-                name: this.data.name,
-                print_format: formato_impresion,
-                print_type: "ACCOUNT"
-            }
+            error: () => {
+                frappe.show_alert({
+                    message: __("The account could not be sent to the printer"),
+                    indicator: "red"
+                });
+            },
+            always: () => RM.ready()
         });
     }
 
