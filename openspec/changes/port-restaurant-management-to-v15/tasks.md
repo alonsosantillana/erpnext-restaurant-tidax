@@ -58,6 +58,7 @@
 - [x] 2.45 Keep mixed-status dishes in their original command card and drive each dish action from its own current status.
 - [x] 2.46 Add a progressive mixed-command action that advances only dishes in the earliest pending state.
 - [x] 2.47 Add auditable kitchen timestamps, Item-to-Item-Group target fallback, calculated durations, comparable completed-dish averages and compact timing indicators across all Production Center views.
+- [x] 2.48 Serialize repeated product selections per order, persist the latest quantity safely and defer command timestamps until Order is pressed.
 
 ## 3. Security and Data Isolation
 

@@ -112,42 +112,7 @@ class OrderItem {
 
         this.order.aggregate(true);
         if (!server) return;
-
-        RM.working("Update Item", false);
-
-        window.saving = true;
-
-        this.data = Object.entries(this.data).reduce((acc, [key, value]) => {
-            acc[key] = value === 0 ? 0 : value || "";
-            return acc;
-        }, {});
-
-        frappeHelper.api.call({
-            model: "Table Order",
-            name: this.order.data.name,
-            method: this.data.qty > 0 ? "push_item" : "delete_item",
-            args: { item: this.data.qty > 0 ? this.data : this.data.identifier },
-            always: (r) => {
-                if (r.exc) {
-                    this.order.get_items();
-                } else if (deleting) {
-                    this.order.delete_item(this.data.identifier);
-                    this.order.refresh_local_summary();
-                } else {
-                    if (r.message) {
-                        this.order.order_manage.check_data(r.message);
-                    }
-                    if (this.data.status === "Pending") {
-                        this.data.status = this.order.data.attending_status || "Attending";
-                    }
-                    this.order.refresh_local_summary();
-                }
-                this.order.aggregate(true);
-
-                window.saving = false;
-                RM.ready();
-            }
-        });
+        this.order.queue_item_mutation(this, deleting);
     }
 
     calculate() {

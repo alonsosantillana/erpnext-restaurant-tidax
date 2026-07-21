@@ -669,6 +669,12 @@ class TableOrder(Document):
             for pt in PrCeGr:
                 centro_pro += pt.description + "| "
 
+            entry_status = (
+                status_attending
+                if entry.get("status") in ["Pending", "", None]
+                else entry.get("status")
+            )
+            is_unsent = entry_status == status_attending
             data = dict(
                 item_code=item.item_code,
                 qty=item.qty,
@@ -680,12 +686,12 @@ class TableOrder(Document):
                 amount=invoice.grand_total,
                 discount_percentage=item.discount_percentage,
                 discount_amount=item.discount_amount,
-                status="Attending" if entry["status"] in ["Pending", "", None] else entry["status"],
+                status=entry_status,
                 identifier=entry["identifier"],
                 notes=entry["notes"],
                 table_description=f'{self.room_description} ({self.table_description})',
-                ordered_time=entry["ordered_time"] or frappe.utils.now_datetime(),
-                ordered_nro=entry.get("ordered_nro") or 1,
+                ordered_time=None if is_unsent else entry.get("ordered_time"),
+                ordered_nro=0 if is_unsent else (entry.get("ordered_nro") or 1),
                 ordered_finish=entry.get("ordered_finish") or 0,
                 processing_started_at=entry.get("processing_started_at"),
                 processing_started_by=entry.get("processing_started_by"),
@@ -711,9 +717,10 @@ class TableOrder(Document):
                 self.append('entry_items', data)
                 return "aggregate"
             else:
-                _data = ','.join('='.join((f"`{key}`", f"'{'' if val is None else val}'")) for (key, val) in data.items())
-                frappe.db.sql("""UPDATE `tabOrder Entry Item` set {data} WHERE `identifier` = '{identifier}'""".format(
-                    identifier=entry["identifier"], data=_data)
+                frappe.db.set_value(
+                    "Order Entry Item",
+                    {"identifier": entry["identifier"]},
+                    data,
                 )
                 return "db_commit"
 
@@ -724,6 +731,12 @@ class TableOrder(Document):
         self.entry_items = []
         for item in invoice.items:
             entry_item = entry_items[item.serial_no] if item.serial_no in entry_items else None
+            entry_status = (
+                status_attending
+                if entry_item.get("status") in ["Pending", "", None]
+                else entry_item.get("status")
+            )
+            is_unsent = entry_status == status_attending
 
             self.append('entry_items', dict(
                 item_code=item.item_code,
@@ -735,10 +748,10 @@ class TableOrder(Document):
                 amount=item.amount,
                 discount_percentage=item.discount_percentage,
                 discount_amount=item.discount_amount,
-                status="Attending" if entry_item["status"] in ["Pending", "", None] else entry_item["status"],
+                status=entry_status,
                 identifier=entry_item["identifier"],
                 notes=entry_item["notes"],
-                ordered_time=entry_item["ordered_time"],
+                ordered_time=None if is_unsent else entry_item.get("ordered_time"),
                 processing_started_at=entry_item.get("processing_started_at"),
                 processing_started_by=entry_item.get("processing_started_by"),
                 completed_at=entry_item.get("completed_at"),
@@ -756,7 +769,7 @@ class TableOrder(Document):
                 # TIDAX : Adicion
                 unit_value=entry_item["unit_value"],
                 ordered_finish=entry_item["ordered_finish"],
-                ordered_nro=entry_item["ordered_nro"]
+                ordered_nro=0 if is_unsent else (entry_item.get("ordered_nro") or 1)
             ))
             item.serial_no = None
 

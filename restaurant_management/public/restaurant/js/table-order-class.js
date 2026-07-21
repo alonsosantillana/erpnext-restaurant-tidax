@@ -8,6 +8,8 @@ class TableOrder {
         this.pay_form = null;
         this.current_item = null;
         this.button = null;
+        this.item_mutation_queue = [];
+        this.item_mutation_in_flight = false;
         this.item_pending_to_send_status = ["Adding", null, undefined, ""];
         this.make();
 
@@ -168,6 +170,82 @@ class TableOrder {
             this.order_manage.order_status_message();
             this.order_manage.check_buttons_status();
         }
+    }
+
+    queue_item_mutation(order_item, deleting = false) {
+        const payload = Object.entries(order_item.data).reduce((result, [key, value]) => {
+            result[key] = value === 0 ? 0 : value || "";
+            return result;
+        }, {});
+        const mutation = {
+            identifier: order_item.data.identifier,
+            order_item,
+            deleting,
+            payload,
+        };
+        const pending_index = this.item_mutation_queue.findIndex(
+            pending => pending.identifier === mutation.identifier
+        );
+
+        if (pending_index >= 0) {
+            // Keep the latest local value when the operator clicks repeatedly
+            // while an earlier request for the same dish is still running.
+            this.item_mutation_queue[pending_index] = mutation;
+        } else {
+            this.item_mutation_queue.push(mutation);
+        }
+
+        this.process_item_mutation_queue();
+    }
+
+    process_item_mutation_queue() {
+        if (this.item_mutation_in_flight || !this.item_mutation_queue.length) return;
+
+        const mutation = this.item_mutation_queue.shift();
+        this.item_mutation_in_flight = true;
+        window.saving = true;
+        RM.working("Update Item", false);
+
+        frappeHelper.api.call({
+            model: "Table Order",
+            name: this.data.name,
+            method: mutation.deleting ? "delete_item" : "push_item",
+            args: {
+                item: mutation.deleting ? mutation.identifier : mutation.payload,
+            },
+            always: (r) => {
+                const failed = !r || r.exc;
+                const has_pending_mutations = this.item_mutation_queue.length > 0;
+
+                if (failed) {
+                    this.item_mutation_queue = [];
+                    this.get_items();
+                } else if (!has_pending_mutations) {
+                    if (mutation.deleting) {
+                        this.delete_item(mutation.identifier);
+                    } else if (r.message) {
+                        this.order_manage.check_data(r.message);
+                    } else {
+                        this.get_items();
+                    }
+                    this.refresh_local_summary();
+                }
+
+                this.item_mutation_in_flight = false;
+                if (!failed && this.item_mutation_queue.length) {
+                    this.process_item_mutation_queue();
+                    return;
+                }
+
+                this.aggregate(true);
+                window.saving = false;
+                RM.ready();
+            }
+        });
+    }
+
+    has_pending_item_mutations() {
+        return this.item_mutation_in_flight || this.item_mutation_queue.length > 0;
     }
 
     push_item(new_item) {

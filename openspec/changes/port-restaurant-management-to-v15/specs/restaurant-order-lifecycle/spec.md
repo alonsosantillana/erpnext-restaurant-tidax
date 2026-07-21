@@ -14,6 +14,14 @@ The system SHALL enforce a single server-side transition model for Order Entry I
 ### Requirement: Atomic order mutations
 Creating, editing, dividing, transferring, sending, deleting or invoicing an order MUST be atomic within the request transaction.
 
+#### Scenario: Repeated product selection while saving
+- **WHEN** an operator selects the same product repeatedly before the previous persistence request finishes
+- **THEN** the client serializes and consolidates the mutations so the latest visible quantity is persisted and survives a reload
+
+#### Scenario: Unsent product timing
+- **WHEN** a product is selected or its quantity is changed before the operator presses Order
+- **THEN** it remains without an ordered timestamp or command number until the server sends it to production
+
 #### Scenario: Successful split
 - **WHEN** an authorized user divides valid quantities into a second order
 - **THEN** both orders and all child quantities are persisted consistently without duplicate identifiers

@@ -580,6 +580,13 @@ RestaurantManage = class RestaurantManage {
 				this.reconcile_order_transfer(r);
 			} else {
 				if (table.order_manage != null) {
+					const local_order = table.order_manage.get_order(order.data.name);
+					if (local_order && local_order.has_pending_item_mutations()) {
+						// The direct response of the final queued mutation will carry
+						// the authoritative quantity. Applying an earlier realtime
+						// event here could restore a stale value between rapid clicks.
+						return;
+					}
 					setTimeout(() => {
 						table.order_manage.check_data(r);
 					});

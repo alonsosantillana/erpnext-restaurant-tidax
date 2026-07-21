@@ -116,6 +116,74 @@ class TestTableOrder(unittest.TestCase):
 		self.assertEqual(result, event)
 		synchronize.assert_called_once_with({"item": "ITEM-1"})
 
+	def test_existing_unsent_item_persists_latest_qty_without_order_time(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"customer": "CUSTOMER-1",
+			"room_description": "Room 1",
+			"table_description": "T1",
+		})
+		invoice = MagicMock(
+			base_total_taxes_and_charges=5.34,
+			grand_total=105,
+		)
+		invoice.items = [frappe._dict(
+				item_code="PLT-001",
+				item_group="PLATOS FRIOS",
+				qty=3,
+				rate=35,
+				price_list_rate=35,
+				item_tax_template="",
+				item_tax_rate="{}",
+				discount_percentage=0,
+				discount_amount=0,
+			)]
+		entry = {
+			"identifier": "ITEM-1",
+			"item_code": "PLT-001",
+			"qty": 3,
+			"rate": 35,
+			"price_list_rate": 35,
+			"item_tax_template": "",
+			"item_tax_rate": "{}",
+			"discount_percentage": 0,
+			"status": "Pending",
+			"notes": "",
+			"ordered_time": "2026-07-21 07:26:46",
+			"ordered_nro": 7,
+			"ordered_finish": 0,
+			"processing_started_at": None,
+			"processing_started_by": None,
+			"completed_at": None,
+			"completed_by": None,
+			"waiting_time_minutes": 0,
+			"preparation_time_minutes": 0,
+			"total_time_minutes": 0,
+			"preparation_time_target": 0,
+			"preparation_time_source": None,
+			"has_batch_no": 0,
+			"batch_no": None,
+			"has_serial_no": 0,
+			"serial_no": None,
+		}
+
+		with (
+			patch.object(order, "get_invoice", return_value=invoice),
+			patch.object(order, "validate"),
+			patch.object(frappe.db, "sql", return_value=[]),
+			patch.object(frappe.db, "count", return_value=1),
+			patch.object(frappe.db, "set_value") as set_value,
+		):
+			action = order.update_item(entry)
+
+		self.assertEqual(action, "db_commit")
+		values = set_value.call_args.args[2]
+		self.assertEqual(values["qty"], 3)
+		self.assertEqual(values["status"], "Attending")
+		self.assertIsNone(values["ordered_time"])
+		self.assertEqual(values["ordered_nro"], 0)
+
 	def test_items_list_includes_server_calculated_tax_amount(self):
 		order = TableOrder({
 			"doctype": "Table Order",
