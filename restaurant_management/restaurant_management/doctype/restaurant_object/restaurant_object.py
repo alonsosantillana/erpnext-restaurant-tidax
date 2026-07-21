@@ -46,6 +46,7 @@ class RestaurantObject(Document):
             )
             if self.type == "Table":
                 notification["ordered_items_qty"] = self.ordered_items_qty
+                notification["dinners_count"] = self.dinners_count
 
             frappe.publish_realtime(self.name, notification, after_commit=True)
 
@@ -149,6 +150,17 @@ class RestaurantObject(Document):
         return int(total) if total.is_integer() else total
 
     @property
+    def dinners_count(self):
+        if self.type != "Table":
+            return 0
+
+        dinners = frappe.get_all("Table Order", filters={
+            "table": self.name,
+            "status": "Attending"
+        }, pluck="dinners")
+        return sum(frappe.utils.cint(value) for value in dinners)
+
+    @property
     def orders_count_in_production_center(self):
         status_managed = self._status_managed
         items_group = self._items_group
@@ -199,6 +211,7 @@ class RestaurantObject(Document):
 
         if self.type == "Table":
             data["ordered_items_qty"] = self.ordered_items_qty
+            data["dinners_count"] = self.dinners_count
 
         if self.type == "Production Center":
             data["status_managed"] = self._status_managed

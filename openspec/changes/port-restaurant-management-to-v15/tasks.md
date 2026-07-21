@@ -33,6 +33,7 @@
 - [x] 2.20 Recalculate the production-center badge from active commands after loading, adding, transitioning or removing kitchen items.
 - [x] 2.21 Show unsent order items with a mustard cart and an explicit pending-to-send label until the Order action is completed.
 - [x] 2.22 Show each table's total ordered dish quantity while retaining the active-order count for occupancy and permission rules.
+- [x] 2.23 Show active diners before ordered dishes on each table and reserve configured seating capacity for edit mode.
 
 ## 3. Security and Data Isolation
 

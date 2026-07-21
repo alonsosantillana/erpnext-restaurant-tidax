@@ -98,6 +98,10 @@ class TableOrder(Document):
     def validate(self):
         self.set_default_customer()
 
+    def on_update(self):
+        if self.get_doc_before_save() and self.has_value_changed("dinners"):
+            self._table.synchronize()
+
     def set_default_customer(self):
         if self.customer:
             return

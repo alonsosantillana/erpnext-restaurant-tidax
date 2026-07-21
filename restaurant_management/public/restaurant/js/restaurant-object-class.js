@@ -49,6 +49,9 @@ RestaurantObject = class RestaurantObject {
         if (typeof data.ordered_items_qty !== "undefined") {
             this.data.ordered_items_qty = data.ordered_items_qty;
         }
+        if (typeof data.dinners_count !== "undefined") {
+            this.data.dinners_count = data.dinners_count;
+        }
         this.set_orders_count();
 
         // The notification is emitted after the order transaction commits.
@@ -275,13 +278,29 @@ RestaurantObject = class RestaurantObject {
 
     get template() {
         const block_style = !RM.can_open_order_manage(this) && this.data.type === "Table" ? RM.restrictions.color : "";
-        const hide_class = this.indicator_count <= 0 ? " hide" : "";
+        const table_is_active = this.is_table && flt(this.data.orders_count) > 0;
+        const people_hide_class = !table_is_active ? " hide" : "";
+        const dishes_hide_class = this.is_table
+            ? (!table_is_active ? " hide" : "")
+            : (this.indicator_count <= 0 ? " hide" : "");
         //console.log((this.data));
+        this.dinners_indicator = frappe.jshtml({
+            tag: "span",
+            properties: {
+                class: `people-count ${people_hide_class}`,
+                style: `background-color: ${block_style}`,
+                title: __("People at table")
+            },
+            content: '<span class="fa fa-users" style="font-size: 12px"></span> {{text}}',
+            text: this.dinners_count
+        });
+
         this.indicator = frappe.jshtml({
             tag: "span",
             properties: {
-                class: `order-count ${hide_class}`,
-                style: `background-color: ${block_style}`
+                class: `order-count ${dishes_hide_class}`,
+                style: `background-color: ${block_style}`,
+                title: __("Ordered dishes")
             },
             content: '<span class="fa fa-cutlery" style="font-size: 12px"></span> {{text}}',
             text: this.indicator_count
@@ -320,7 +339,7 @@ RestaurantObject = class RestaurantObject {
 
         this.no_of_seats = frappe.jshtml({
             tag: "span",
-            properties: { class: "d-table-seats" },
+            properties: { class: "d-table-seats", title: __("Table capacity") },
             content: `<span class="fa fa-user" style="font-size: 14px"></span> {{text}}`,
             text: this.data.no_of_seats
         });
@@ -329,6 +348,7 @@ RestaurantObject = class RestaurantObject {
         <div class="resize-handle-container">
             <div class="resize-handle c ne"></div><div class="resize-handle c nw"></div><div class="resize-handle c sw"></div><div class="resize-handle c se"></div>
 		    <div class="resize-handle b v w"></div><div class="resize-handle b v e"></div><div class="resize-handle b h n"></div><div class="resize-handle b h s"></div>
+            ${this.dinners_indicator.html()}
             ${this.indicator.html()}
             ${this.description.html()}
 		</div>
@@ -493,6 +513,17 @@ RestaurantObject = class RestaurantObject {
         const indicator_count = this.indicator_count;
         this.indicator.val(indicator_count);
 
+        if (this.is_table) {
+            const table_is_active = flt(this.data.orders_count) > 0;
+            this.dinners_indicator.val(this.dinners_count);
+
+            [this.dinners_indicator, this.indicator].forEach(counter => {
+                counter[table_is_active ? "remove_class" : "add_class"]("hide");
+                counter.css("background-color", RM.can_open_order_manage(this) ? "" : RM.restrictions.color);
+            });
+            return;
+        }
+
         if (indicator_count > 0) {
             this.indicator.remove_class("hide");
 
@@ -506,6 +537,10 @@ RestaurantObject = class RestaurantObject {
 
     get indicator_count() {
         return this.is_table ? flt(this.data.ordered_items_qty) : flt(this.data.orders_count);
+    }
+
+    get dinners_count() {
+        return this.is_table ? flt(this.data.dinners_count) : 0;
     }
 
     get is_table() { return this.data.type === "Table" }

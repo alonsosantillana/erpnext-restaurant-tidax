@@ -786,6 +786,10 @@ class TableOrder {
 
                     RM.sound_submit();
                     this.data[type] = self.get_value(type);
+                    if (type === "dinners" && this.order_manage.table) {
+                        this.order_manage.table.data.dinners_count = flt(this.data[type]);
+                        this.order_manage.table.set_orders_count();
+                    }
                     this.make_invoice();
                 },
                 title: __(`Set ${type}`),

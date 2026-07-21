@@ -32,6 +32,23 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(table.ordered_items_qty, 6)
 		self.assertEqual(get_all.call_count, 2)
 
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all",
+		return_value=[2, 3],
+	)
+	def test_table_people_counter_sums_active_order_dinners(self, get_all):
+		table = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "TABLE-TEST",
+			"type": "Table",
+		})
+
+		self.assertEqual(table.dinners_count, 5)
+		get_all.assert_called_once_with("Table Order", filters={
+			"table": "TABLE-TEST",
+			"status": "Attending"
+		}, pluck="dinners")
+
 	def test_unsent_item_status_uses_mustard_pending_message(self):
 		for status in ("Pending", "Attending"):
 			status_data = RestaurantObject._status(status)

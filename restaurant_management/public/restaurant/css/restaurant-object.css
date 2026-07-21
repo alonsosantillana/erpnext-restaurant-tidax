@@ -77,7 +77,7 @@
 
 .restaurant-manage .floor-map .d-table .d-table-seats {
     position: absolute;
-    display: inline-block;
+    display: none;
     bottom: 0;
     left: 50%;
     height: 20px;
@@ -93,6 +93,11 @@
     z-index: 3;
 }
 
+.restaurant-manage.editing .floor-map .d-table:not(.p-center) .d-table-seats {
+    display: inline-block;
+}
+
+.restaurant-manage .floor-map .d-table .people-count,
 .restaurant-manage .floor-map .d-table .order-count {
     display: block;
     position: absolute;
@@ -110,10 +115,19 @@
     z-index: 10;
 }
 
+.restaurant-manage .floor-map .d-table .people-count {
+    margin-left: -41px;
+}
+
+.restaurant-manage .floor-map .d-table:not(.p-center) .order-count {
+    margin-left: 1px;
+}
+
 .restaurant-manage .floor-map .d-table .order-count.block {
     background: red !important;
 }
 
+.restaurant-manage.editing .floor-map .d-table .people-count,
 .restaurant-manage.editing .floor-map .d-table .order-count {
      display: none;
 }
