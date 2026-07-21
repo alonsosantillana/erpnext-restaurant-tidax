@@ -76,6 +76,13 @@ class TableOrder {
         return `<span class='badge badge-tag' style="${background_color}">{{text}}</span>${this.data.short_name}`;
     }
 
+    get is_rendered() {
+        return Boolean(
+            this.button && this.button.obj && this.button.obj.isConnected &&
+            this.container && this.container.obj && this.container.obj.isConnected
+        );
+    }
+
     hide_items() {
         this.in_items((item) => {
             item.hide();

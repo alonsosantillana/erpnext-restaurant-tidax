@@ -796,6 +796,11 @@ class OrderManage extends ObjectManage {
                 const persisted_orders = r.message;
                 const persisted_names = new Set(persisted_orders.map(order => order.name));
                 const stale_orders = [];
+                const preferred_order_name = this.current_order
+                    ? this.current_order.data.name
+                    : (this.select_order_after_reload && persisted_orders.length > 0
+                        ? persisted_orders[0].name
+                        : null);
 
                 this.in_orders(order => {
                     if (!persisted_names.has(order.data.name)) {
@@ -805,7 +810,12 @@ class OrderManage extends ObjectManage {
                 stale_orders.forEach(order_name => this.delete_order(order_name));
 
                 persisted_orders.forEach(order => {
-                    const current = this.get_order(order.name);
+                    let current = this.get_order(order.name);
+                    if (current && !current.is_rendered) {
+                        this.delete_order(order.name);
+                        current = null;
+                    }
+
                     if (current) {
                         current.data = Object.assign({}, order.data);
                         current.show_items_count();
@@ -814,10 +824,9 @@ class OrderManage extends ObjectManage {
                     }
                 });
 
-                if (this.select_order_after_reload && this.current_order == null && persisted_orders.length > 0) {
-                    const order_name = persisted_orders[0].name;
+                if (preferred_order_name && this.current_order == null) {
                     setTimeout(() => {
-                        const order = this.get_order(order_name);
+                        const order = this.get_order(preferred_order_name);
                         if (order && this.current_order == null) order.select();
                     });
                 }
