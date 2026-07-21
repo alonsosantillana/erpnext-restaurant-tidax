@@ -229,9 +229,22 @@ class TableOrder {
                 });
             }
 
+            const discounted_amount = this.discounted_amount(amount);
             this.order_manage.components.Tax.val(`${__("Tax")}: ${RM.format_currency(tax)}`);
-            this.order_manage.components.Total.val(`${__("Total")}: ${RM.format_currency(amount)}`);
+            this.order_manage.components.Total.val(`${__("Total")}: ${RM.format_currency(discounted_amount)}`);
+            this.order_manage.refresh_discount_button();
         }
+    }
+
+    global_discount_amount(amount = this.amount) {
+        const percent = flt(this.data.discount_global_percent);
+        const fixed_amount = flt(this.data.discount);
+        if (percent > 0) return amount * percent / 100;
+        return Math.min(fixed_amount, amount);
+    }
+
+    discounted_amount(amount = this.amount) {
+        return Math.max(amount - this.global_discount_amount(amount), 0);
     }
 
     check_items(options = {}) {
@@ -787,7 +800,7 @@ class TableOrder {
             customer: ["customer", "customer_name", "customer_tax_id"],
             guest_count: ["guest_count"],
             mozo: ["cambio_mozo", "cambio_mozo_nombre"],
-            discount: ["discount"]
+            discount: ["discount", "discount_global_percent"]
         };
 
         (fields_by_type[type] || []).forEach(fieldname => {
@@ -820,6 +833,9 @@ class TableOrder {
                             : 1
                     );
                 }
+                if (type === "discount") {
+                    this.configure_discount_form(self);
+                }
                 input.set_focus();
             };
 
@@ -836,13 +852,64 @@ class TableOrder {
                         this.order_manage.table.data.guest_count = flt(this.data[fieldname]);
                         this.order_manage.table.set_orders_count();
                     }
-                    this.make_invoice();
+                    if (type === "discount") {
+                        this.render();
+                        this.order_manage.check_buttons_status();
+                    } else {
+                        this.make_invoice();
+                    }
                 },
-                title: __(`Set ${type}`),
+                title: type === "discount" ? __("Global Discount") : __(`Set ${type}`),
                 after_load: configure_form,
                 on_reload: configure_form
             });
         }
+    }
+
+    configure_discount_form(form) {
+        const discount_field = form.get_field("discount");
+        const percent_field = form.get_field("discount_global_percent");
+        if (!discount_field || !percent_field) return;
+
+        let summary = form.body.find(".restaurant-global-discount-summary");
+        if (!summary.length) {
+            summary = $("<div class='restaurant-global-discount-summary alert alert-info'></div>");
+            form.body.find(".form-layout").after(summary);
+        }
+
+        const refresh_summary = () => {
+            const order_amount = flt(this.data.amount);
+            const percent = flt(percent_field.get_value());
+            const fixed_amount = flt(discount_field.get_value());
+            const discount_amount = percent > 0
+                ? order_amount * percent / 100
+                : Math.min(fixed_amount, order_amount);
+            const final_amount = Math.max(order_amount - discount_amount, 0);
+
+            summary.html(`
+                <div>${__("Order total")}: <strong>${RM.format_currency(order_amount)}</strong></div>
+                <div>${__("Global Discount")}: <strong>${RM.format_currency(discount_amount)}</strong></div>
+                <div>${__("Discounted total")}: <strong>${RM.format_currency(final_amount)}</strong></div>
+            `);
+        };
+
+        if (!form.global_discount_handlers_initialized) {
+            discount_field.df.onchange = () => {
+                if (flt(discount_field.get_value()) > 0 && flt(percent_field.get_value()) > 0) {
+                    percent_field.set_value(0);
+                }
+                refresh_summary();
+            };
+            percent_field.df.onchange = () => {
+                if (flt(percent_field.get_value()) > 0 && flt(discount_field.get_value()) > 0) {
+                    discount_field.set_value(0);
+                }
+                refresh_summary();
+            };
+            form.global_discount_handlers_initialized = true;
+        }
+
+        refresh_summary();
     }
 
     delete_current_item() {

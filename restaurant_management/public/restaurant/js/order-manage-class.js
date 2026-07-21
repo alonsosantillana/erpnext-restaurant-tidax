@@ -130,7 +130,6 @@ class OrderManage extends ObjectManage {
         this.#components.new_customer = RMHelper.default_button("New Customer", 'addpeople', () => this.consultar_cliente()); //TIDAX
         this.#components.guest_count = RMHelper.default_button("Guest Count", 'peoples', () => this.update_current_order('guest_count'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
-        this.#components.discount_global = RMHelper.default_button("Discount", 'discount', () => this.update_current_order('discount')); //TIDAX
         
         this.modal.title_container.empty().append(
             RMHelper.return_main_button(this.title, () => this.modal.hide()).html()
@@ -142,7 +141,6 @@ class OrderManage extends ObjectManage {
             ${this.components.new_customer.html()} 
             ${this.components.customer.html()}
 			${this.components.guest_count.html()}
-            ${this.components.discount_global.html()}
 		`);
     }
 
@@ -452,7 +450,7 @@ class OrderManage extends ObjectManage {
                 [
                     {
                         name: "Pad",
-                        props: { class: "", rowspan: 4, style: "width: 65% !important; padding: 0" },
+                        props: { class: "", rowspan: 5, style: "width: 65% !important; padding: 0" },
                         action: "none"
                     },
                     {
@@ -479,6 +477,16 @@ class OrderManage extends ObjectManage {
                         name: "Divide",
                         props: { class: "lg pad-btn" }, content: '<span class="fa fa-files-o pull-right"></span>',
                         action: "divide"
+                    }
+                ]
+            ],
+            [
+                [
+                    {
+                        name: "Discount",
+                        props: { class: "lg pad-btn" },
+                        content: '<span class="fa fa-percent pull-right"></span>',
+                        action: "set_discount"
                     }
                 ]
             ],
@@ -590,6 +598,26 @@ class OrderManage extends ObjectManage {
         ).reset_confirm();
     }
 
+    refresh_discount_button() {
+        const button = this.#components.Discount;
+        if (!button) return;
+
+        let detail = "";
+        if (this.current_order) {
+            const percent = flt(this.current_order.data.discount_global_percent);
+            const amount = flt(this.current_order.data.discount);
+            if (percent > 0) {
+                detail = `: ${percent}%`;
+            } else if (amount > 0) {
+                detail = `: ${RM.format_currency(amount)}`;
+            }
+        }
+
+        button.set_content(
+            `<span class="fa fa-percent pull-right"></span>${__('Discount')}${detail}{{text}}`
+        );
+    }
+
     disable_components() {
         this.reset_order_button();
         this.in_components((component, k) => {
@@ -657,15 +685,18 @@ class OrderManage extends ObjectManage {
                 }
                 this.#components.customer.enable().show();
                 this.#components.guest_count.enable().show();
-                //this.#components.discount_global.enable().show(); //TIDAX
-                this.#components.discount_global.disable().hide(); //TIDAX
+                this.#components.Discount.prop(
+                    "disabled",
+                    this.current_order.items_count === 0
+                        || !Number(RM.pos_profile.allow_discount_change)
+                );
                 this.#components.Transfer.enable();
             } else {
                 this.#components.new_customer.disable().hide(); //TIDAX
                 this.#components.change_mozo.disable().hide(); //TIDAX
                 this.#components.customer.disable().hide();
                 this.#components.guest_count.disable().hide();
-                this.#components.discount_global.disable().hide(); //TIDAX
+                this.#components.Discount.disable();
                 this.#components.Transfer.disable();
                 this.#components.Order.disable();
                 this.#components.Divide.disable();
@@ -678,6 +709,7 @@ class OrderManage extends ObjectManage {
             "disabled",
             !RM.check_permissions("order", this.current_order, "print") || this.current_order.items_count === 0
         );
+        this.refresh_discount_button();
     }
 
     check_item_editor_status(item = null) {
@@ -722,11 +754,6 @@ class OrderManage extends ObjectManage {
         objects.Trash.prop("disabled", !can_delete);
         if (frappe.model.can_create("Customer")) {
             this.#components.new_customer.enable().show();
-        }
-        // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
-        if (frappe.session.user.includes("cajero")
-            && (item.data.status == "Completed" || item.data.status == "Sent" || item.data.status == "Processing")) {
-            this.#components.discount_global.enable().show();
         }
         this.#components.change_mozo.enable().show();
         

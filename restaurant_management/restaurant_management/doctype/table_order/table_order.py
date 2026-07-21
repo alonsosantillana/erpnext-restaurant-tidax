@@ -97,10 +97,47 @@ def get_customer_identity(customer, config):
 class TableOrder(Document):
     def validate(self):
         self.set_default_customer()
+        self.validate_global_discount()
 
     def on_update(self):
-        if self.get_doc_before_save() and self.has_value_changed("guest_count"):
+        previous = self.get_doc_before_save()
+        if previous and (
+            self.has_value_changed("discount")
+            or self.has_value_changed("discount_global_percent")
+        ):
+            self.synchronize(dict(action="Update"))
+        elif previous and self.has_value_changed("guest_count"):
             self._table.synchronize()
+
+    def validate_global_discount(self):
+        discount = flt(self.discount)
+        discount_percent = flt(self.discount_global_percent)
+        order_amount = flt(self.amount)
+
+        if discount < 0 or discount_percent < 0:
+            frappe.throw(_("Global discount cannot be negative"))
+        if discount_percent > 100:
+            frappe.throw(_("Global discount percent cannot exceed 100"))
+        if discount > 0 and discount_percent > 0:
+            frappe.throw(_("Use either a discount amount or a discount percent, not both"))
+        if discount > order_amount:
+            frappe.throw(_("Global discount cannot exceed the order total"))
+
+        discount_changed = self.is_new() or (
+            self.has_value_changed("discount")
+            or self.has_value_changed("discount_global_percent")
+        )
+        if discount_changed and (discount > 0 or discount_percent > 0):
+            allow_discount_change = cint(
+                frappe.db.get_value(
+                    "POS Profile", self.pos_profile, "allow_discount_change"
+                )
+            )
+            if not allow_discount_change:
+                frappe.throw(_("The POS Profile does not allow changing discounts"))
+
+        self.discount = discount
+        self.discount_global_percent = discount_percent
 
     def set_default_customer(self):
         if self.customer:
@@ -682,7 +719,6 @@ class TableOrder(Document):
             item.serial_no = None
 
         self.tax = invoice.base_total_taxes_and_charges
-        self.discount = invoice.base_discount_amount
         self.amount = invoice.grand_total
         self.save()
 
@@ -710,6 +746,8 @@ class TableOrder(Document):
                 products_not_ordered=self.products_not_ordered_count,
                 tax=self.tax,
                 amount=self.amount,
+                discount=self.discount,
+                discount_global_percent=self.discount_global_percent,
                 owner=self.owner,
                 guest_count=self.guest_count
             )

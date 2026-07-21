@@ -97,6 +97,96 @@ class TestTableOrder(unittest.TestCase):
 		self.assertEqual(data["guest_count"], 4)
 		self.assertNotIn("dinners", data)
 
+	def test_short_data_exposes_global_discount(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"table": "TABLE-1",
+			"customer": "CUSTOMER-1",
+			"status": "Attending",
+			"discount": 12,
+			"discount_global_percent": 0,
+			"tax": 18,
+			"amount": 118,
+		})
+
+		with patch.object(
+			TableOrder, "items_count", new_callable=PropertyMock, return_value=1
+		), patch.object(
+			TableOrder, "products_not_ordered_count", new_callable=PropertyMock, return_value=0
+		):
+			data = order.short_data()["data"]
+
+		self.assertEqual(data["discount"], 12)
+		self.assertEqual(data["discount_global_percent"], 0)
+
+	@patch.object(frappe.db, "get_value", return_value=1)
+	def test_global_discount_accepts_one_supported_mode(self, get_value):
+		for values in (
+			{"discount": 20, "discount_global_percent": 0},
+			{"discount": 0, "discount_global_percent": 15},
+		):
+			with self.subTest(values=values):
+				order = TableOrder({
+					"doctype": "Table Order",
+					"pos_profile": "RESTO",
+					"amount": 100,
+					**values,
+				})
+				order.validate_global_discount()
+
+	@patch.object(frappe.db, "get_value", return_value=1)
+	def test_global_discount_rejects_invalid_values(self, get_value):
+		invalid_values = (
+			{"discount": -1, "discount_global_percent": 0},
+			{"discount": 0, "discount_global_percent": -1},
+			{"discount": 0, "discount_global_percent": 101},
+			{"discount": 10, "discount_global_percent": 10},
+			{"discount": 101, "discount_global_percent": 0},
+		)
+		for values in invalid_values:
+			with self.subTest(values=values):
+				order = TableOrder({
+					"doctype": "Table Order",
+					"pos_profile": "RESTO",
+					"amount": 100,
+					**values,
+				})
+				with self.assertRaises(frappe.ValidationError):
+					order.validate_global_discount()
+
+	@patch.object(frappe.db, "get_value", return_value=0)
+	def test_global_discount_respects_pos_profile_permission(self, get_value):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"pos_profile": "RESTO",
+			"amount": 100,
+			"discount": 10,
+		})
+
+		with self.assertRaises(frappe.ValidationError):
+			order.validate_global_discount()
+
+	def test_recalculating_items_preserves_fixed_global_discount(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"discount": 10,
+			"amount": 100,
+		})
+		invoice = MagicMock(
+			items=[],
+			base_total_taxes_and_charges=18,
+			grand_total=118,
+		)
+
+		with patch.object(order, "get_invoice", return_value=invoice), patch.object(
+			order, "save"
+		):
+			order.calculate_order([])
+
+		self.assertEqual(order.discount, 10)
+		self.assertEqual(order.amount, 118)
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.render_template"
 	)

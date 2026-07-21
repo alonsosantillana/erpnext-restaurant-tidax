@@ -49,6 +49,7 @@
 - [x] 2.36 Rename the ambiguous `dinners` field and all related forms, API arguments, counters and reports to `guest_count`, displayed as Numero de comensales.
 - [x] 2.37 Remove residual JavaScript references to the former Dinners indicator and payment initializer so tables and payment forms render after the rename.
 - [x] 2.38 Include the server-calculated item tax amount in order payloads and apply the push-item response directly so the read-only Tax Amount field never depends on realtime delivery to leave zero.
+- [x] 2.39 Restore the global discount action in the order pad with POS Profile permission checks, mutually exclusive amount/percent inputs, immediate total feedback and realtime order reconciliation.
 
 ## 3. Security and Data Isolation
 
