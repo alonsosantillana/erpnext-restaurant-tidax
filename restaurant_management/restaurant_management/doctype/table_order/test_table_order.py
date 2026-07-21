@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import frappe
 import unittest
+from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
 
@@ -17,6 +18,18 @@ from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHO
 
 
 class TestTableOrder(unittest.TestCase):
+	def test_runtime_assets_do_not_reference_legacy_dinners_name(self):
+		assets_path = Path(
+			frappe.get_app_path("restaurant_management", "public", "restaurant", "js")
+		)
+		legacy_references = [
+			str(path.relative_to(assets_path))
+			for path in assets_path.glob("*.js")
+			if "dinners" in path.read_text(encoding="utf-8").lower()
+		]
+
+		self.assertEqual(legacy_references, [])
+
 	def test_short_data_exposes_guest_count(self):
 		order = TableOrder({
 			"doctype": "Table Order",

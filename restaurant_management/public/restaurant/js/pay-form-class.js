@@ -120,7 +120,7 @@ class PayForm extends DeskForm {
 
         this.get_field("payment_methods").$wrapper.empty().append(payment_methods);
 
-        this.set_dinners_input();
+        this.set_guest_count_input();
         this.set_receipt_defaults();
 
         // this.set_discount_global_percent_input();

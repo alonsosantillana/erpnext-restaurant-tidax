@@ -352,7 +352,7 @@ RestaurantObject = class RestaurantObject {
         <div class="resize-handle-container">
             <div class="resize-handle c ne"></div><div class="resize-handle c nw"></div><div class="resize-handle c sw"></div><div class="resize-handle c se"></div>
 		    <div class="resize-handle b v w"></div><div class="resize-handle b v e"></div><div class="resize-handle b h n"></div><div class="resize-handle b h s"></div>
-            ${this.dinners_indicator.html()}
+            ${this.guest_count_indicator.html()}
             ${this.indicator.html()}
             ${this.description.html()}
 		</div>

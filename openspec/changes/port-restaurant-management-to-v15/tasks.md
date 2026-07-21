@@ -47,6 +47,7 @@
 - [x] 2.34 Reload the current Table Order from the server before reopening its Customer editor so cached forms always show the latest assigned customer.
 - [x] 2.35 Make Guest Count the only guest-count source by removing the duplicate Personas field and migrating waiter-summary metrics to Guest Count without retaining legacy data.
 - [x] 2.36 Rename the ambiguous `dinners` field and all related forms, API arguments, counters and reports to `guest_count`, displayed as Numero de comensales.
+- [x] 2.37 Remove residual JavaScript references to the former Dinners indicator and payment initializer so tables and payment forms render after the rename.
 
 ## 3. Security and Data Isolation
 
