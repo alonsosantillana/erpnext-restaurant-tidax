@@ -63,6 +63,7 @@
 - [x] 2.50 Initialize each dish editor before selection and isolate its field metadata so Notes and permitted line discounts remain editable.
 - [x] 2.51 Make dish-editor controls use explicit order editability instead of independent child-DocType permissions.
 - [x] 2.52 Persist the visible Notes and Discount Percentage values directly on native change or blur instead of reading stale Frappe control state.
+- [x] 2.53 Provide an explicit server-backed Save changes action for dish Notes and Discount Percentage with state, permission and range validation.
 
 ## 3. Security and Data Isolation
 

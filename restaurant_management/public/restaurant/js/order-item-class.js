@@ -407,19 +407,67 @@ class OrderItemEditor extends DeskForm {
             update(field);
         });
 
-        const bind_visible_value = fieldname => {
-            const field = this.get_field(fieldname);
-            if (!field || !field.$input) return;
-            field.$input
-                .off(".restaurant-item-save")
-                .on("change.restaurant-item-save blur.restaurant-item-save", () => {
-                    update(field, field.$input.val());
-                });
-        };
-
         this.get_input("notes").css("height", "100px");
-        bind_visible_value("notes");
-        bind_visible_value("discount_percentage");
+        this.save_details_button = $("<button>", {
+            type: "button",
+            class: "btn btn-primary btn-sm"
+        }).append($("<span>", { class: "fa fa-save" }), " ", __("Save changes"));
+        this.body.append(
+            $("<div>", { class: "order-item-editor-actions" }).append(this.save_details_button)
+        );
+        this.save_details_button.on("click", () => this.save_visible_details());
+    }
+
+    save_visible_details() {
+        if (this.saving_details) return;
+
+        const notes_field = this.get_field("notes");
+        const discount_field = this.get_field("discount_percentage");
+        const notes = notes_field && notes_field.$input
+            ? notes_field.$input.val()
+            : notes_field.get_value();
+        const discount_percentage = flt(
+            discount_field && discount_field.$input
+                ? discount_field.$input.val()
+                : discount_field.get_value()
+        );
+
+        if (discount_percentage < 0 || discount_percentage > 100) {
+            frappe.show_alert({
+                message: __("Line discount percent must be between 0 and 100"),
+                indicator: "orange"
+            });
+            return;
+        }
+
+        this.saving_details = true;
+        this.save_details_button.prop("disabled", true);
+        RM.working("Saving dish details", false);
+
+        frappeHelper.api.call({
+            model: "Table Order",
+            name: this.order_item.order.data.name,
+            method: "update_item_details",
+            args: {
+                identifier: this.order_item.data.identifier,
+                notes,
+                discount_percentage,
+                client: RM.client
+            },
+            always: response => {
+                const failed = !response || response.exc || !response.message;
+                if (!failed) {
+                    this.order_item.order.order_manage.check_data(response.message);
+                    frappe.show_alert({
+                        message: __("Dish details saved"),
+                        indicator: "green"
+                    });
+                }
+                this.saving_details = false;
+                this.save_details_button.prop("disabled", false);
+                RM.ready();
+            }
+        });
     }
 
     on_refresh_dependency() {

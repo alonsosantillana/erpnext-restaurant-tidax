@@ -54,6 +54,12 @@
     display: block;
 }
 
+.order-item-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 0;
+}
+
 .panel-order-items .media-body {
     -ms-flex: 1;
     flex: 1;

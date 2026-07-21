@@ -224,6 +224,51 @@ class TestTableOrder(unittest.TestCase):
 			("OR-2026-00001",),
 		)
 
+	@patch(
+		"restaurant_management.restaurant_management.restaurant_manage.check_exceptions"
+	)
+	def test_update_item_details_persists_visible_note_and_discount(self, check_exceptions):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00001",
+			"pos_profile": "Resto",
+			"entry_items": [{
+				"doctype": "Order Entry Item",
+				"identifier": "ITEM-1",
+				"item_code": "PLT-001",
+				"status": "Attending",
+				"qty": 1,
+				"rate": 35,
+				"price_list_rate": 35,
+				"discount_percentage": 0,
+				"notes": "",
+			}],
+		})
+		event = {"action": "Update", "data": {}}
+
+		with (
+			patch.object(frappe.db, "get_value", return_value=1),
+			patch.object(order, "update_item", return_value="db_commit") as update_item,
+			patch.object(order, "reload") as reload_order,
+			patch.object(order, "aggregate") as aggregate,
+			patch.object(order, "synchronize", return_value=event) as synchronize,
+		):
+			result = order.update_item_details(
+				"ITEM-1",
+				notes="Sin cebolla",
+				discount_percentage=10,
+				client="CLIENT-1",
+			)
+
+		entry = update_item.call_args.args[0]
+		self.assertEqual(entry["notes"], "Sin cebolla")
+		self.assertEqual(entry["discount_percentage"], 10)
+		self.assertEqual(entry["rate"], 31.5)
+		self.assertEqual(result, event)
+		reload_order.assert_called_once_with()
+		aggregate.assert_called_once_with()
+		synchronize.assert_called_once_with({"item": "ITEM-1", "client": "CLIENT-1"})
+
 	def test_items_list_includes_server_calculated_tax_amount(self):
 		order = TableOrder({
 			"doctype": "Table Order",

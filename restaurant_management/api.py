@@ -35,6 +35,7 @@ DOCUMENT_METHODS = {
         "push_item",
         "send",
         "transfer",
+        "update_item_details",
     },
 }
 

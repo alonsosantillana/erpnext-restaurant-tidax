@@ -946,6 +946,57 @@ class TableOrder(Document):
         item = self.items_list(item)
         self.synchronize(dict(items=item))
 
+    def update_item_details(
+        self,
+        identifier,
+        notes="",
+        discount_percentage=0,
+        client=None,
+    ):
+        from restaurant_management.restaurant_management.restaurant_manage import check_exceptions
+
+        check_exceptions(
+            dict(name="Table Order", short_name="order", action="write", data=self),
+            "You cannot modify an order from another User",
+        )
+
+        matching_items = [
+            item for item in self.entry_items if item.identifier == identifier
+        ]
+        if len(matching_items) != 1:
+            frappe.throw(_("The selected dish no longer exists"))
+
+        item = matching_items[0]
+        if item.status not in (status_attending, "Sent", "Processing"):
+            frappe.throw(_("The selected dish can no longer be edited"))
+
+        discount_percentage = flt(discount_percentage)
+        if discount_percentage < 0 or discount_percentage > 100:
+            frappe.throw(_("Line discount percent must be between 0 and 100"))
+
+        discount_changed = discount_percentage != flt(item.discount_percentage)
+        if discount_changed:
+            if item.status != status_attending:
+                frappe.throw(_("Only unsent dishes can change their discount"))
+            if not cint(
+                frappe.db.get_value(
+                    "POS Profile", self.pos_profile, "allow_discount_change"
+                )
+            ):
+                frappe.throw(_("The POS Profile does not allow changing discounts"))
+
+        entry = item.as_dict()
+        entry["notes"] = str(notes or "")
+        entry["discount_percentage"] = discount_percentage
+        entry["rate"] = flt(item.price_list_rate) * (1 - discount_percentage / 100)
+
+        action = self.update_item(entry)
+        if action == "db_commit":
+            self.reload()
+        self.aggregate()
+
+        return self.synchronize(dict(item=identifier, client=client))
+
     @property
     def get_items(self):
         return self.data()
