@@ -800,7 +800,7 @@ class TableOrder {
             customer: ["customer", "customer_name", "customer_tax_id"],
             guest_count: ["guest_count"],
             mozo: ["cambio_mozo", "cambio_mozo_nombre"],
-            discount: ["discount", "discount_global_percent"]
+            discount: ["discount", "discount_global_percent", "amount", "tax"]
         };
 
         (fields_by_type[type] || []).forEach(fieldname => {

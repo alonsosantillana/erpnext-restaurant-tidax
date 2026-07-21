@@ -50,6 +50,7 @@
 - [x] 2.37 Remove residual JavaScript references to the former Dinners indicator and payment initializer so tables and payment forms render after the rename.
 - [x] 2.38 Include the server-calculated item tax amount in order payloads and apply the push-item response directly so the read-only Tax Amount field never depends on realtime delivery to leave zero.
 - [x] 2.39 Restore the global discount action in the order pad with POS Profile permission checks, mutually exclusive amount/percent inputs, immediate total feedback and realtime order reconciliation.
+- [x] 2.40 Apply the POS Profile tax-inclusive setting to every loaded invoice tax row so restaurant prices are not taxed twice in order and discount totals.
 
 ## 3. Security and Data Isolation
 

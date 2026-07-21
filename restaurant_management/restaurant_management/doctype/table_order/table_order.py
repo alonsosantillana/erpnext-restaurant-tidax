@@ -94,6 +94,13 @@ def get_customer_identity(customer, config):
     return identity
 
 
+def apply_pos_tax_inclusion(invoice, tax_inclusive):
+    """Make the POS Profile setting authoritative for every loaded tax row."""
+    included_in_print_rate = cint(tax_inclusive)
+    for tax in invoice.get("taxes"):
+        tax.included_in_print_rate = included_in_print_rate
+
+
 class TableOrder(Document):
     def validate(self):
         self.set_default_customer()
@@ -514,8 +521,6 @@ class TableOrder(Document):
                     in_invoice_taxes.append(t)
         
         included_in_print_rate = frappe.db.get_value("POS Profile", self.pos_profile, "posa_tax_inclusive")
-        apply_discount_on = frappe.db.get_value(
-            "POS Profile", self.pos_profile, "apply_discount_on")
         cost_center = frappe.db.get_value(
             "POS Profile", self.pos_profile, "cost_center")
 
@@ -531,6 +536,7 @@ class TableOrder(Document):
             })
             
         invoice.run_method("set_missing_values")
+        apply_pos_tax_inclusion(invoice, included_in_print_rate)
         invoice.run_method("calculate_taxes_and_totals")
 
         ##To validate the invoice
@@ -593,14 +599,18 @@ class TableOrder(Document):
         self.aggregate()
 
     def aggregate(self):
-        tax = 0
-        amount = 0
-        for item in self.entry_items:
-            tax += item.tax_amount
-            amount += item.amount
-
-        self.tax = tax
-        self.amount = amount
+        entry_items = {
+            item.identifier: item.as_dict()
+            for item in self.entry_items
+            if flt(item.qty) > 0
+        }
+        if entry_items:
+            invoice = self.get_invoice(entry_items)
+            self.tax = invoice.base_total_taxes_and_charges
+            self.amount = invoice.grand_total
+        else:
+            self.tax = 0
+            self.amount = 0
         self.save()
 
     def update_item(self, entry, unrestricted=False, synchronize_on_delete=True):

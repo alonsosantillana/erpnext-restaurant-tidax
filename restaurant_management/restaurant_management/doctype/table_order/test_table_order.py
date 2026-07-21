@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 
 from restaurant_management.restaurant_management.doctype.table_order.table_order import (
+	apply_pos_tax_inclusion,
 	get_customer_identity,
 	get_voucher_config,
 	TableOrder,
@@ -18,6 +19,19 @@ from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHO
 
 
 class TestTableOrder(unittest.TestCase):
+	def test_pos_profile_tax_inclusion_overrides_loaded_tax_rows(self):
+		invoice = frappe._dict(taxes=[
+			frappe._dict(included_in_print_rate=0),
+			frappe._dict(included_in_print_rate=0),
+		])
+
+		apply_pos_tax_inclusion(invoice, 1)
+
+		self.assertEqual(
+			[tax.included_in_print_rate for tax in invoice.taxes],
+			[1, 1],
+		)
+
 	@patch(
 		"restaurant_management.restaurant_management.restaurant_manage.check_exceptions"
 	)
@@ -186,6 +200,29 @@ class TestTableOrder(unittest.TestCase):
 
 		self.assertEqual(order.discount, 10)
 		self.assertEqual(order.amount, 118)
+
+	def test_aggregate_uses_full_invoice_totals(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"entry_items": [{
+				"doctype": "Order Entry Item",
+				"identifier": "ITEM-1",
+				"qty": 1,
+			}],
+		})
+		invoice = MagicMock(
+			base_total_taxes_and_charges=22.96,
+			grand_total=150.50,
+		)
+
+		with patch.object(order, "get_invoice", return_value=invoice) as get_invoice, patch.object(
+			order, "save"
+		):
+			order.aggregate()
+
+		self.assertEqual(order.tax, 22.96)
+		self.assertEqual(order.amount, 150.50)
+		self.assertIn("ITEM-1", get_invoice.call_args.args[0])
 
 	@patch(
 		"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.render_template"
