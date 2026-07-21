@@ -336,7 +336,7 @@ class RestaurantObject(Document):
             )
         }
 
-    def _group_production_commands(self, items, orders, status_map):
+    def _group_production_commands(self, items, orders, status_map, newest_first=False):
         waiter_names = self._waiter_names(orders)
         commands = {}
         for item in items:
@@ -401,6 +401,7 @@ class RestaurantObject(Document):
         return sorted(
             commands.values(),
             key=lambda command: frappe.utils.get_datetime(command["ordered_time"]),
+            reverse=newest_first,
         )
 
     @staticmethod
@@ -629,7 +630,12 @@ class RestaurantObject(Document):
         consolidation = self._production_consolidation(daily_items, active_statuses)
 
         commands = self._group_production_commands(command_items, orders, status_map)
-        attended = self._group_production_commands(attended_items, orders, {})
+        attended = self._group_production_commands(
+            attended_items,
+            orders,
+            {},
+            newest_first=True,
+        )
         active_qty = sum(frappe.utils.flt(item.qty) for item in active_items)
         daily_qty = sum(frappe.utils.flt(item.qty) for item in daily_items)
         completed_qty = sum(

@@ -519,6 +519,69 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(row["average_total_minutes"], 11)
 		self.assertEqual(row["timing_status"], "warning")
 
+	def test_attended_commands_are_sorted_newest_first(self):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"type": "Production Center",
+		})
+		items = [
+			frappe._dict(
+				identifier="ITEM-OLD",
+				parent="ORDER-OLD",
+				item_code="PLATE-1",
+				item_name="Plate one",
+				qty=1,
+				notes=None,
+				status="Completed",
+				ordered_time="2026-07-21 08:00:00",
+				ordered_nro=1,
+				table_description="T1",
+			),
+			frappe._dict(
+				identifier="ITEM-NEW",
+				parent="ORDER-NEW",
+				item_code="PLATE-2",
+				item_name="Plate two",
+				qty=1,
+				notes=None,
+				status="Completed",
+				ordered_time="2026-07-21 12:00:00",
+				ordered_nro=1,
+				table_description="T2",
+			),
+		]
+		orders = {
+			"ORDER-OLD": frappe._dict(
+				owner=None,
+				cambio_mozo=None,
+				cambio_mozo_nombre=None,
+				table_description="T1",
+				room_description="Room 1",
+				comentario=None,
+			),
+			"ORDER-NEW": frappe._dict(
+				owner=None,
+				cambio_mozo=None,
+				cambio_mozo_nombre=None,
+				table_description="T2",
+				room_description="Room 1",
+				comentario=None,
+			),
+		}
+
+		attended = center._group_production_commands(
+			items,
+			orders,
+			{},
+			newest_first=True,
+		)
+
+		self.assertEqual(
+			[command["order_name"] for command in attended],
+			["ORDER-NEW", "ORDER-OLD"],
+		)
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
 	)

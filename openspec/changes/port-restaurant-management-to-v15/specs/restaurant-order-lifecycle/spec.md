@@ -91,7 +91,7 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 
 #### Scenario: Daily production control
 - **WHEN** a kitchen user opens Dish Consolidation or Attended Orders
-- **THEN** the views include the complete current calendar day, using an inclusive start and exclusive next-day boundary, and consolidation separates pending, in-preparation and completed quantities
+- **THEN** the views include the complete current calendar day, using an inclusive start and exclusive next-day boundary, consolidation separates pending, in-preparation and completed quantities, and Attended Orders lists the newest command first
 
 #### Scenario: Conflicting command transition
 - **WHEN** another client already changed any selected item or an item is outside the Production Center scope
