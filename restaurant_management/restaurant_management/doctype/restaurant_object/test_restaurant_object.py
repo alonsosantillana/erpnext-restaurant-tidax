@@ -319,6 +319,64 @@ class TestRestaurantObject(FrappeTestCase):
 			production_command_batch_key(next_round),
 		)
 
+	def test_production_command_keeps_mixed_item_states_in_one_batch(self):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"type": "Production Center",
+		})
+		items = [
+			frappe._dict(
+				identifier="ITEM-1",
+				parent="OR-2026-00001",
+				item_code="PLATE-1",
+				item_name="Plate one",
+				qty=1,
+				notes=None,
+				status="Sent",
+				ordered_time="2026-07-21 10:01:02",
+				ordered_nro=1,
+				table_description="T1",
+			),
+			frappe._dict(
+				identifier="ITEM-2",
+				parent="OR-2026-00001",
+				item_code="PLATE-2",
+				item_name="Plate two",
+				qty=1,
+				notes=None,
+				status="Processing",
+				ordered_time="2026-07-21 10:01:55",
+				ordered_nro=1,
+				table_description="T1",
+			),
+		]
+		orders = {
+			"OR-2026-00001": frappe._dict(
+				owner=None,
+				cambio_mozo=None,
+				cambio_mozo_nombre=None,
+				table_description="T1",
+				room_description="Room 1",
+				comentario=None,
+			)
+		}
+
+		commands = center._group_production_commands(
+			items,
+			orders,
+			{"Sent": "Processing", "Processing": "Completed"},
+		)
+
+		self.assertEqual(len(commands), 1)
+		self.assertEqual(commands[0]["status"], "Mixed")
+		self.assertIsNone(commands[0]["next_status"])
+		self.assertEqual(commands[0]["identifiers"], ["ITEM-1", "ITEM-2"])
+		self.assertEqual(
+			[(item["status"], item["next_status"]) for item in commands[0]["items"]],
+			[("Sent", "Processing"), ("Processing", "Completed")],
+		)
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
 	)
@@ -341,7 +399,7 @@ class TestRestaurantObject(FrappeTestCase):
 			ordered_time="2026-07-21 08:00:00",
 			ordered_nro=1,
 		)
-		completed_item = frappe._dict(
+		completed_sibling = frappe._dict(
 			name="ROW-2",
 			identifier="ITEM-2",
 			parent="ORDER-1",
@@ -350,10 +408,25 @@ class TestRestaurantObject(FrappeTestCase):
 			item_group="FOOD",
 			qty=2,
 			status="Completed",
+			ordered_time="2026-07-21 08:00:30",
+			ordered_nro=1,
+		)
+		completed_item = frappe._dict(
+			name="ROW-3",
+			identifier="ITEM-3",
+			parent="ORDER-1",
+			item_code="PLATE-1",
+			item_name="Plate one",
+			item_group="FOOD",
+			qty=3,
+			status="Completed",
 			ordered_time="2026-07-21 09:00:00",
 			ordered_nro=2,
 		)
-		get_all.side_effect = [[active_item], [active_item, completed_item]]
+		get_all.side_effect = [
+			[active_item],
+			[active_item, completed_sibling, completed_item],
+		]
 		orders = {
 			"ORDER-1": frappe._dict(
 				name="ORDER-1",
@@ -401,13 +474,21 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertIn(["ordered_time", "<", "2026-07-22"], daily_call.kwargs["filters"])
 		self.assertEqual(daily_call.kwargs["limit_page_length"], 0)
 		self.assertEqual(dashboard["period"]["date"], "2026-07-21")
-		self.assertEqual(dashboard["counts"]["daily_qty"], 3)
-		self.assertEqual(dashboard["counts"]["attended_qty"], 2)
+		self.assertEqual(dashboard["counts"]["daily_qty"], 6)
+		self.assertEqual(dashboard["counts"]["completed_qty"], 5)
+		self.assertEqual(dashboard["counts"]["attended_qty"], 3)
 		self.assertEqual(dashboard["consolidation"][0]["pending_qty"], 1)
 		self.assertEqual(dashboard["consolidation"][0]["processing_qty"], 0)
-		self.assertEqual(dashboard["consolidation"][0]["completed_qty"], 2)
-		self.assertEqual(dashboard["consolidation"][0]["total_qty"], 3)
+		self.assertEqual(dashboard["consolidation"][0]["completed_qty"], 5)
+		self.assertEqual(dashboard["consolidation"][0]["total_qty"], 6)
+		self.assertEqual(len(dashboard["commands"]), 1)
+		self.assertEqual(dashboard["commands"][0]["status"], "Mixed")
+		self.assertEqual(
+			dashboard["commands"][0]["identifiers"],
+			["ITEM-1", "ITEM-2"],
+		)
 		self.assertEqual(len(dashboard["attended"]), 1)
+		self.assertEqual(dashboard["attended"][0]["identifiers"], ["ITEM-3"])
 
 	@patch(
 		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_doc"

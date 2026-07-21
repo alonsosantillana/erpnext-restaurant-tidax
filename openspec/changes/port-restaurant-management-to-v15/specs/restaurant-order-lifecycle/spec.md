@@ -83,7 +83,7 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 
 #### Scenario: Individual dish transition
 - **WHEN** an authorized kitchen user starts or completes one dish inside a command
-- **THEN** only that dish advances and the remaining dishes retain their current state
+- **THEN** only that dish advances, every dish retains its own visible state, and all dishes remain grouped in the same order round until the entire command is attended
 
 #### Scenario: Daily production control
 - **WHEN** a kitchen user opens Dish Consolidation or Attended Orders

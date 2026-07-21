@@ -154,6 +154,21 @@
     font-size: 16px;
 }
 
+.production-command-item-name {
+    min-width: 0;
+}
+
+.production-command-item-name > span,
+.production-item-status {
+    display: block;
+}
+
+.production-item-status {
+    margin-top: 2px;
+    color: var(--text-muted, #6c7680);
+    font-size: 11px;
+}
+
 .production-command-note {
     grid-column: 2 / -1;
     padding: 3px 6px;

@@ -55,6 +55,7 @@
 - [x] 2.42 Replace legacy kitchen popups with center-scoped Commands, Dish Consolidation and Attended Orders views, atomic command transitions and realtime reconciliation inside Production Center.
 - [x] 2.43 Support independent dish transitions alongside whole-command actions and retain/reconcile production updates received while the P3 tab is hidden.
 - [x] 2.44 Provide full-day Dish Consolidation and Attended Orders control, including completed quantities without hiding unfinished operational commands from previous days.
+- [x] 2.45 Keep mixed-status dishes in their original command card and drive each dish action from its own current status.
 
 ## 3. Security and Data Isolation
 

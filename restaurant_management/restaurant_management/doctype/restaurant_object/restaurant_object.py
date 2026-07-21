@@ -295,7 +295,7 @@ class RestaurantObject(Document):
         for item in items:
             order = orders.get(item.parent, frappe._dict())
             batch_key = production_command_batch_key(item)
-            key = f"{batch_key}:{item.status}"
+            key = batch_key
             waiter = order.cambio_mozo or order.owner
             command = commands.setdefault(
                 key,
@@ -308,8 +308,6 @@ class RestaurantObject(Document):
                     "waiter": order.cambio_mozo_nombre or waiter_names.get(waiter) or waiter,
                     "comment": order.comentario,
                     "ordered_time": item.ordered_time,
-                    "status": item.status,
-                    "next_status": status_map.get(item.status),
                     "identifiers": [],
                     "items": [],
                     "qty": 0,
@@ -322,8 +320,16 @@ class RestaurantObject(Document):
                 "item_name": item.item_name,
                 "qty": frappe.utils.flt(item.qty),
                 "notes": item.notes,
+                "status": item.status,
+                "next_status": status_map.get(item.status),
             })
             command["qty"] += frappe.utils.flt(item.qty)
+
+        for command in commands.values():
+            statuses = list(dict.fromkeys(item["status"] for item in command["items"]))
+            command["statuses"] = statuses
+            command["status"] = statuses[0] if len(statuses) == 1 else "Mixed"
+            command["next_status"] = status_map.get(command["status"])
 
         return sorted(
             commands.values(),
@@ -425,14 +431,45 @@ class RestaurantObject(Document):
 
         active_truncated = len(active_items) > PRODUCTION_CENTER_ITEM_LIMIT
         active_items = active_items[:PRODUCTION_CENTER_ITEM_LIMIT]
+        active_status_set = set(active_statuses)
         attended_status_set = set(attended_statuses)
-        attended_items = [item for item in daily_items if item.status in attended_status_set]
+        active_batch_keys = {
+            production_command_batch_key(item)
+            for item in active_items
+        }
+        active_batch_keys.update(
+            production_command_batch_key(item)
+            for item in daily_items
+            if item.status in active_status_set
+        )
+        command_items_by_identifier = {
+            item.identifier: item
+            for item in active_items
+        }
+        for item in daily_items:
+            if production_command_batch_key(item) in active_batch_keys:
+                command_items_by_identifier.setdefault(item.identifier, item)
+        command_items = sorted(
+            command_items_by_identifier.values(),
+            key=lambda item: frappe.utils.get_datetime(item.ordered_time),
+        )
+        attended_items = [
+            item
+            for item in daily_items
+            if item.status in attended_status_set
+            and production_command_batch_key(item) not in active_batch_keys
+        ]
         consolidation = self._production_consolidation(daily_items, active_statuses)
 
-        commands = self._group_production_commands(active_items, orders, status_map)
+        commands = self._group_production_commands(command_items, orders, status_map)
         attended = self._group_production_commands(attended_items, orders, {})
         active_qty = sum(frappe.utils.flt(item.qty) for item in active_items)
         daily_qty = sum(frappe.utils.flt(item.qty) for item in daily_items)
+        completed_qty = sum(
+            frappe.utils.flt(item.qty)
+            for item in daily_items
+            if item.status in attended_status_set
+        )
         attended_qty = sum(frappe.utils.flt(item.qty) for item in attended_items)
 
         return {
@@ -452,6 +489,7 @@ class RestaurantObject(Document):
                 "active_qty": active_qty,
                 "daily_items": len(daily_items),
                 "daily_qty": daily_qty,
+                "completed_qty": completed_qty,
                 "commands": len(commands),
                 "consolidated_items": len(consolidation),
                 "attended_commands": len(attended),

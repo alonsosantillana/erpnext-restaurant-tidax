@@ -92,7 +92,8 @@ ProcessManage = class ProcessManage {
                 const identifier = $(event.currentTarget).data("item-identifier");
                 const command = (this.dashboard && this.dashboard.commands || [])
                     .find(row => row.key === key);
-                if (command && identifier) this.transition_items(command, [identifier], true);
+                const item = command && (command.items || []).find(row => row.identifier === identifier);
+                if (command && item) this.transition_items(command, [identifier], true, item.status);
             });
 
         refresh_button.on("click", () => this.reload());
@@ -237,7 +238,7 @@ ProcessManage = class ProcessManage {
         summary.append(
             $("<span>").text(__("Dishes today: {0}", [this.format_qty(counts.daily_qty || 0)])),
             $("<span>").text(__("Active dishes: {0}", [this.format_qty(counts.active_qty || 0)])),
-            $("<span>").text(__("Prepared today: {0}", [this.format_qty(counts.attended_qty || 0)])),
+            $("<span>").text(__("Prepared today: {0}", [this.format_qty(counts.completed_qty || 0)])),
             $("<span>").text(__("Commands: {0}", [counts.commands || 0]))
         );
 
@@ -341,11 +342,16 @@ ProcessManage = class ProcessManage {
 
         const item_list = $("<div>", { class: "production-command-items" });
         (command.items || []).forEach(item => {
+            const description = $("<span>", { class: "production-command-item-name" }).append(
+                $("<span>").text(item.item_name || item.item_code),
+                $("<small>", { class: "production-item-status" })
+                    .text(__("Status: {0}", [this.status_label(item.status)]))
+            );
             const row = $("<div>", { class: "production-command-item" }).append(
                 $("<strong>", { class: "production-command-item-qty" }).text(`[${this.format_qty(item.qty)}]`),
-                $("<span>", { class: "production-command-item-name" }).text(item.item_name || item.item_code)
+                description
             );
-            if (!attended && this.dashboard.can_transition && command.next_status) {
+            if (!attended && this.dashboard.can_transition && item.next_status) {
                 row.append(
                     $("<button>", {
                         type: "button",
@@ -353,7 +359,7 @@ ProcessManage = class ProcessManage {
                     })
                         .data("command-key", command.key)
                         .data("item-identifier", item.identifier)
-                        .text(this.action_label(command.next_status, true))
+                        .text(this.action_label(item.next_status, true))
                 );
             }
             if (item.notes) row.append($("<small>", { class: "production-command-note" }).text(item.notes));
@@ -383,7 +389,7 @@ ProcessManage = class ProcessManage {
         return card;
     }
 
-    transition_items(command, identifiers, single_item) {
+    transition_items(command, identifiers, single_item, expected_status = command.status) {
         if (this.transitioning || !identifiers || !identifiers.length) return;
         this.transitioning = true;
         this.root().find(".production-command-action, .production-item-action").prop("disabled", true);
@@ -394,7 +400,7 @@ ProcessManage = class ProcessManage {
             method: "set_commands_status",
             args: {
                 identifiers: identifiers,
-                expected_status: command.status
+                expected_status: expected_status
             },
             always: response => {
                 this.transitioning = false;
@@ -445,7 +451,8 @@ ProcessManage = class ProcessManage {
             Processing: __("In preparation"),
             Completed: __("Attended"),
             Delivering: __("Delivering"),
-            Delivered: __("Delivered")
+            Delivered: __("Delivered"),
+            Mixed: __("Mixed")
         }[status] || status;
     }
 
