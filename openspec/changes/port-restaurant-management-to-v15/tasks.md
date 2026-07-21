@@ -39,6 +39,7 @@
 - [x] 2.26 Rebuild an order whose button or item container was detached when the table modal DOM was recreated, then reload its dishes.
 - [x] 2.27 Display a persistent transfer-mode notice with source order, source table, destination instruction and an explicit cancel action.
 - [x] 2.28 Allow the read-only divide template, validate split quantities before mutation and reconcile both resulting accounts immediately.
+- [x] 2.29 Initialize divide-account row and account totals from quantity times the tax-inclusive item rate, matching subsequent modal recalculation.
 
 ## 3. Security and Data Isolation
 

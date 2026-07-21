@@ -10,7 +10,7 @@
                                 <h5>
                                     {{_("Current")}}
                                     <label class="pull-right {{table}}_{{model.name}}-grand-total-left">
-                                        {{frappe.format_value(model.amount, {"fieldtype": "Currency"})}}
+                                        {{frappe.format_value(divide_total, {"fieldtype": "Currency"})}}
                                     </label>
                                 </h5>
                             </th>
@@ -55,7 +55,7 @@
                                 <td style="text-align: right; display: none;">{{item.discount_percentage}}%</td>
                                 <td style="text-align: right">
                                     <strong class="{{base_name}}-from-total">
-                                        {{frappe.format_value(item.amount, {"fieldtype": "Currency"})}}
+                                        {{frappe.format_value(item.divide_amount, {"fieldtype": "Currency"})}}
                                     </strong>
                                 </td>
 

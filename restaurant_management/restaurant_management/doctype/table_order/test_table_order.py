@@ -17,6 +17,28 @@ from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHO
 
 
 class TestTableOrder(unittest.TestCase):
+	@patch(
+		"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.render_template"
+	)
+	@patch.object(TableOrder, "items_list")
+	def test_divide_template_uses_the_same_tax_inclusive_totals_as_the_modal(
+		self, items_list, render_template
+	):
+		items_list.return_value = [
+			{"qty": 2, "rate": 32, "amount": 75.52},
+			{"qty": 1, "rate": 10, "amount": 11.80},
+		]
+		render_template.return_value = "divide-template"
+		order = TableOrder({"doctype": "Table Order", "name": "ORDER-1", "table": "TABLE-1"})
+
+		self.assertEqual(order.divide_template(), "divide-template")
+		context = render_template.call_args.args[1]
+		self.assertEqual(context["divide_total"], 74)
+		self.assertEqual(
+			[item["divide_amount"] for item in context["items"]],
+			[64, 10],
+		)
+
 	def test_divide_template_is_an_allowed_read_only_operation(self):
 		self.assertIn("divide_template", DOCUMENT_METHODS["Table Order"])
 		self.assertIn(("Table Order", "divide_template"), READ_ONLY_DOCUMENT_METHODS)

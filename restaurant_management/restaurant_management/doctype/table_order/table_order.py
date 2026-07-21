@@ -129,11 +129,18 @@ class TableOrder(Document):
         return frappe.get_doc("Restaurant Object", self.table)
 
     def divide_template(self):
+        items = self.items_list()
+        divide_total = 0
+        for item in items:
+            item["divide_amount"] = flt(item["qty"]) * flt(item["rate"])
+            divide_total += item["divide_amount"]
+
         return frappe.render_template(
             "restaurant_management/restaurant_management/doctype/table_order/divide_template.html", {
                 "model": self,
-                "items": self.items_list(),
-                "table": self.table
+                "items": items,
+                "table": self.table,
+                "divide_total": divide_total,
             })
 
     def get_restaurant(self):
