@@ -138,6 +138,22 @@ class TableOrder {
         return has;
     }
 
+    refresh_local_summary() {
+        const active_items = this.items_data().filter(item => flt(item.qty) > 0);
+        const attending_status = this.data.attending_status || "Attending";
+
+        this.data.items_count = active_items.length;
+        this.data.products_not_ordered = active_items.filter(
+            item => item.status === attending_status
+        ).length;
+
+        if (this.button) this.show_items_count();
+        if (this.order_manage.is_same_order(this)) {
+            this.order_manage.order_status_message();
+            this.order_manage.check_buttons_status();
+        }
+    }
+
     push_item(new_item) {
         if (!this.data.customer) {
             this.order_manage.components.customer.highlight();
@@ -162,7 +178,7 @@ class TableOrder {
             test_item.update();
             // Keep the local cart visible even when the realtime server
             // reconciliation is delayed or temporarily unavailable.
-            this.order_manage.order_status_message();
+            this.refresh_local_summary();
             test_item.select(true);
         }
     }
@@ -492,7 +508,16 @@ class TableOrder {
     }
 
     order() {
-        if (RM.busy_message() || this.data.products_not_ordered <= 0) {
+        if (RM.busy_message()) {
+            return;
+        }
+
+        this.refresh_local_summary();
+        if (this.data.products_not_ordered <= 0) {
+            frappe.show_alert({
+                message: __("There are no pending products to order"),
+                indicator: "orange"
+            });
             return;
         }
 
@@ -504,6 +529,11 @@ class TableOrder {
             method: "send",
             always: (r) => {
                 this.order_manage.components.Order.remove_class("btn-warning");
+                if (!r || r.exc || !r.message) {
+                    RM.ready();
+                    return;
+                }
+
                 RM.ready(false, "success");
                 this.data = r.message.order.data;
                 this.render();

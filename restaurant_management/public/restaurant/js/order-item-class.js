@@ -124,7 +124,12 @@ class OrderItem {
                     this.order.get_items();
                 } else if (deleting) {
                     this.order.delete_item(this.data.identifier);
-                    this.order.order_manage.order_status_message();
+                    this.order.refresh_local_summary();
+                } else {
+                    if (this.data.status === "Pending") {
+                        this.data.status = this.order.data.attending_status || "Attending";
+                    }
+                    this.order.refresh_local_summary();
                 }
                 this.order.aggregate(true);
 

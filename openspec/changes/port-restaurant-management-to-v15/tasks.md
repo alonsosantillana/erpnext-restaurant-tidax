@@ -27,6 +27,7 @@
 - [x] 2.14 Restore item selection by requiring a customer before adding a line and using the v15 POS selector rate while server-side POS Invoice calculation remains authoritative.
 - [x] 2.15 Show locally added order lines immediately without depending on realtime reconciliation to release the hidden cart state.
 - [x] 2.16 Make quantity, rate, discount, numeric-pad and delete controls update the selected line at the correct time with bounded values and server reconciliation.
+- [x] 2.17 Reconcile the locally persisted item state and pending count so the Order action is enabled without depending on realtime delivery.
 
 ## 3. Security and Data Isolation
 
