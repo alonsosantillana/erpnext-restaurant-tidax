@@ -489,6 +489,7 @@ class TestRestaurantObject(FrappeTestCase):
 				status="Sent",
 				production_timing={
 					"target_minutes": 100,
+					"target_source": "Item",
 					"waiting_minutes": 2,
 					"preparation_minutes": None,
 					"total_minutes": 2,
@@ -501,6 +502,7 @@ class TestRestaurantObject(FrappeTestCase):
 				status="Completed",
 				production_timing={
 					"target_minutes": 10,
+					"target_source": "Item Group",
 					"waiting_minutes": 3,
 					"preparation_minutes": 8,
 					"total_minutes": 11,
@@ -517,7 +519,34 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(row["average_waiting_minutes"], 3)
 		self.assertEqual(row["average_preparation_minutes"], 8)
 		self.assertEqual(row["average_total_minutes"], 11)
+		self.assertEqual(row["target_source"], "Item Group")
 		self.assertEqual(row["timing_status"], "warning")
+
+	def test_production_average_marks_mixed_target_sources(self):
+		items = [
+			frappe._dict(
+				item_code="PLATE-1",
+				item_name="Plate one",
+				qty=1,
+				status="Completed",
+				production_timing={"target_minutes": 10, "target_source": "Item"},
+			),
+			frappe._dict(
+				item_code="PLATE-1",
+				item_name="Plate one",
+				qty=1,
+				status="Completed",
+				production_timing={"target_minutes": 12, "target_source": "Item Group"},
+			),
+		]
+
+		row = RestaurantObject._production_consolidation(
+			items,
+			["Sent", "Processing"],
+		)["PLATE-1"]
+
+		self.assertEqual(row["average_target_minutes"], 11)
+		self.assertEqual(row["target_source"], "Mixed")
 
 	def test_attended_commands_are_sorted_newest_first(self):
 		center = RestaurantObject({

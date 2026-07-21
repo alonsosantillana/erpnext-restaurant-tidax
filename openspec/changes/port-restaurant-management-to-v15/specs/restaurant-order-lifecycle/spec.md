@@ -77,6 +77,10 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 - **WHEN** an authorized kitchen user selects another production view
 - **THEN** the selected view replaces the current content inside the same Production Center and displays its current count
 
+#### Scenario: Full-screen production view
+- **WHEN** a kitchen user activates Full screen from a Production Center
+- **THEN** the complete Production Center occupies the browser screen and the user can leave full screen with Escape or the same control
+
 #### Scenario: Realtime production update
 - **WHEN** an order is sent or a kitchen command changes state and the transaction commits
 - **THEN** every open instance of the affected Production Center reconciles its active view and all view counters against persisted server data
@@ -126,4 +130,4 @@ The system SHALL snapshot an optional preparation target when a dish is sent, re
 
 #### Scenario: Comparable daily preparation averages
 - **WHEN** Dish Consolidation calculates the current-day average preparation time and target for a dish
-- **THEN** both averages are quantity-weighted and use only completed dishes, excluding pending and in-preparation dishes from the comparison
+- **THEN** both averages are quantity-weighted and use only completed dishes, excluding pending and in-preparation dishes from the comparison, and the detail identifies the contributing target source or Mixed when completed dishes use both sources

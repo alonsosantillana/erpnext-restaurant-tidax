@@ -2,6 +2,32 @@
     position: absolute;
 }
 
+.production-center-fullscreen {
+    white-space: nowrap;
+}
+
+.production-center-modal:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden;
+    background: var(--card-bg, #fff);
+    border: 0 !important;
+}
+
+.production-center-modal:fullscreen .modal-dialog,
+.production-center-modal:fullscreen .modal-content {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+}
+
+.production-center-modal:fullscreen .modal-content {
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
 .production-center-shell {
     min-height: 100%;
     background: var(--bg-light-gray, #f7f8fa);

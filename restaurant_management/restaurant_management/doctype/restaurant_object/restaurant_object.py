@@ -428,6 +428,7 @@ class RestaurantObject(Document):
                     "preparation_weight": 0,
                     "total_weighted_total": 0,
                     "total_weight": 0,
+                    "target_sources": [],
                 },
             )
             quantity = frappe.utils.flt(item.qty)
@@ -445,6 +446,9 @@ class RestaurantObject(Document):
                 if target > 0:
                     row["target_weighted_total"] += target * quantity
                     row["target_weight"] += quantity
+                    target_source = timing.get("target_source")
+                    if target_source and target_source not in row["target_sources"]:
+                        row["target_sources"].append(target_source)
                 for metric in ("waiting", "preparation", "total"):
                     value = timing.get(f"{metric}_minutes")
                     if value is not None:
@@ -452,6 +456,12 @@ class RestaurantObject(Document):
                         row[f"{metric}_weight"] += quantity
 
         for row in consolidation.values():
+            target_sources = row.pop("target_sources")
+            row["target_source"] = (
+                target_sources[0]
+                if len(target_sources) == 1
+                else "Mixed" if target_sources else None
+            )
             for metric in ("target", "waiting", "preparation", "total"):
                 weight = row.pop(f"{metric}_weight")
                 weighted_total = row.pop(f"{metric}_weighted_total")

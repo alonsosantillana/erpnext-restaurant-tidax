@@ -12,6 +12,7 @@ ProcessManage = class ProcessManage {
         this.reload_timeout = null;
         this.reconciliation_interval = null;
         this.request_serial = 0;
+        this.fullscreen_change_handler = () => this.update_fullscreen_button();
 
         this.initialize();
         this.init_realtime();
@@ -20,13 +21,19 @@ ProcessManage = class ProcessManage {
     initialize() {
         this.title = this.table.room.data.description + " (" + this.table.data.description + ")";
         this.modal = RMHelper.default_full_modal(this.title, () => this.make());
+        this.modal.modal.$wrapper.addClass("production-center-modal");
+        document.addEventListener("fullscreenchange", this.fullscreen_change_handler);
         this.modal.modal.$wrapper
             .on("hidden.bs.modal.production-center", () => {
                 this.status = "close";
                 this.stop_reconciliation();
+                this.exit_fullscreen();
+                document.removeEventListener("fullscreenchange", this.fullscreen_change_handler);
             })
             .on("shown.bs.modal.production-center", () => {
                 this.status = "open";
+                document.addEventListener("fullscreenchange", this.fullscreen_change_handler);
+                this.update_fullscreen_button();
                 this.start_reconciliation();
                 if (this.stale) this.schedule_reload();
             });
@@ -58,7 +65,59 @@ ProcessManage = class ProcessManage {
     close() {
         this.status = "close";
         this.stop_reconciliation();
+        this.exit_fullscreen();
         this.modal.hide();
+    }
+
+    fullscreen_element() {
+        return this.modal && this.modal.modal.$wrapper.get(0);
+    }
+
+    is_fullscreen() {
+        return document.fullscreenElement === this.fullscreen_element();
+    }
+
+    toggle_fullscreen() {
+        if (this.is_fullscreen()) {
+            this.exit_fullscreen();
+            return;
+        }
+
+        const element = this.fullscreen_element();
+        if (!element || !element.requestFullscreen) {
+            frappe.show_alert({
+                message: __("Full screen is not supported by this browser"),
+                indicator: "orange"
+            });
+            return;
+        }
+
+        element.requestFullscreen().catch(() => {
+            frappe.show_alert({
+                message: __("Could not enter full screen"),
+                indicator: "red"
+            });
+        });
+    }
+
+    exit_fullscreen() {
+        if (this.is_fullscreen() && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+    }
+
+    update_fullscreen_button() {
+        if (!this.modal) return;
+        const active = this.is_fullscreen();
+        this.modal.modal.$wrapper.find(".production-center-fullscreen")
+            .toggleClass("active", active)
+            .attr("aria-pressed", active ? "true" : "false")
+            .empty()
+            .append(
+                $("<span>", { class: `fa ${active ? "fa-compress" : "fa-expand"}` }),
+                " ",
+                active ? __("Exit full screen") : __("Full screen")
+            );
     }
 
     is_open() {
@@ -71,8 +130,16 @@ ProcessManage = class ProcessManage {
             type: "button",
             class: "btn btn-default btn-flat production-center-refresh"
         }).append($("<span>", { class: "fa fa-refresh" }), " ", __("Refresh"));
+        const fullscreen_button = $("<button>", {
+            type: "button",
+            class: "btn btn-default btn-flat production-center-fullscreen",
+            title: __("Full screen"),
+            "aria-pressed": "false"
+        }).append($("<span>", { class: "fa fa-expand" }), " ", __("Full screen"));
 
         this.modal.title_container.empty().append(back_button.html(), refresh_button);
+        this.modal.buttons_container.find(".production-center-fullscreen").remove();
+        this.modal.buttons_container.prepend(fullscreen_button);
         this.modal.container.empty().append(this.template());
 
         this.modal.container
@@ -122,6 +189,7 @@ ProcessManage = class ProcessManage {
             });
 
         refresh_button.on("click", () => this.reload());
+        fullscreen_button.on("click", () => this.toggle_fullscreen());
         this.update_active_tab();
     }
 
@@ -580,7 +648,7 @@ ProcessManage = class ProcessManage {
                 ),
                 status: row.timing_status
             },
-            null
+            row.target_source
         );
     }
 
@@ -602,7 +670,7 @@ ProcessManage = class ProcessManage {
             [__("Total time"), this.minutes_or_dash(timing.total_minutes)],
             [__("Preparation target"), this.minutes_or_dash(timing.target_minutes)],
             [__("Difference from target"), this.variance_or_dash(timing.variance_minutes)],
-            [__("Target source"), target_source ? __(target_source) : __("No target")],
+            [__("Target source"), this.target_source_label(target_source)],
             [__("Performance"), this.performance_label(timing.status)]
         );
         rows.forEach(([label, value]) => {
@@ -618,6 +686,12 @@ ProcessManage = class ProcessManage {
             message: detail.prop("outerHTML"),
             indicator: this.performance_indicator(timing.status)
         });
+    }
+
+    target_source_label(target_source) {
+        if (target_source === "Item") return __("Product");
+        if (target_source === "Item Group") return __("Product Group");
+        return target_source ? __(target_source) : __("No target");
     }
 
     minutes_or_dash(value) {
