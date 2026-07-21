@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint
+from frappe.utils import cint, flt
 import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
@@ -140,31 +140,67 @@ class TableOrder(Document):
         table = frappe.get_doc("Restaurant Object", self.table)
         return frappe.db.get_value('Restaurant', table._restaurant)
 
+    def validate_divide_items(self, items):
+        if not isinstance(items, dict) or not items:
+            frappe.throw(_("Select at least one dish to divide"))
+
+        entries = {
+            item.identifier: item
+            for item in self.entry_items
+            if item.identifier and flt(item.qty) > 0
+        }
+        total_qty = sum(flt(item.qty) for item in entries.values())
+        selected_qty = 0
+        quantities = {}
+
+        for identifier, selection in items.items():
+            if identifier not in entries or not isinstance(selection, dict):
+                frappe.throw(_("Invalid dish selected for division"))
+
+            qty = flt(selection.get("qty"))
+            available_qty = flt(entries[identifier].qty)
+            if qty <= 0 or qty > available_qty:
+                frappe.throw(
+                    _("The quantity selected for {0} must be between 1 and {1}").format(
+                        entries[identifier].item_name or entries[identifier].item_code,
+                        available_qty,
+                    )
+                )
+
+            quantities[identifier] = qty
+            selected_qty += qty
+
+        if selected_qty >= total_qty:
+            frappe.throw(_("At least one dish must remain in the current account"))
+
+        return quantities
+
     def divide(self, items, client):
+        quantities = self.validate_divide_items(items)
         new_order = frappe.new_doc("Table Order")
         self.transfer_order_values(new_order)
         new_order.save()
         status = []
 
         for item in self.entry_items:
-            divide_item = items[item.identifier] if item.identifier in items else None
+            divide_qty = quantities.get(item.identifier)
 
-            if divide_item is not None:
-                rest = (int(item.qty) - int(divide_item["qty"]))
+            if divide_qty is not None:
+                rest = flt(item.qty) - divide_qty
                 current_item = self.items_list(item.identifier)[0]
                 current_item["qty"] = rest
                 self.update_item(current_item, True, False)
 
                 new_order.update_item(dict(
                     item_code=item.item_code,
-                    qty=divide_item["qty"],
+                    qty=divide_qty,
                     rate=item.rate,
                     price_list_rate=item.price_list_rate,
                     item_tax_template=item.item_tax_template,
                     item_tax_rate=item.item_tax_rate,
                     discount_percentage=item.discount_percentage,
                     status=item.status,
-                    identifier=item.identifier if rest == 0 else divide_item["identifier"],
+                    identifier=item.identifier if rest == 0 else f"entry_{frappe.generate_hash(length=12)}",
                     notes=item.notes,
                     ordered_time=item.ordered_time,
                     table_description=f'{self.room_description} ({self.table_description})',
@@ -184,7 +220,10 @@ class TableOrder(Document):
         new_order.synchronize(dict(action="Add", client=client))
         self.synchronize(dict(action="Split", client=client, status=status))
 
-        return True
+        return dict(
+            current_order=self.data(),
+            new_order=new_order.data(),
+        )
 
     @staticmethod
     def debug_data(data):

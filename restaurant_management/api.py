@@ -22,6 +22,7 @@ DOCUMENT_METHODS = {
         "_delete",
         "delete_item",
         "divide",
+        "divide_template",
         "get_items",
         "make_invoice",
         "push_item",
@@ -34,6 +35,7 @@ READ_ONLY_DOCUMENT_METHODS = {
     ("Restaurant Object", "commands_food"),
     ("Restaurant Object", "get_objects"),
     ("Restaurant Object", "orders_list"),
+    ("Table Order", "divide_template"),
     ("Table Order", "get_items"),
 }
 

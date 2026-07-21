@@ -512,8 +512,10 @@ class TableOrder {
                 args: { "items": update_data, client: RM.client },
                 always: (r) => {
                     RM.ready();
-                    if (typeof r.message != "undefined") {
+                    if (r && !r.exc && r.message) {
                         this.divide_account_modal.hide();
+                        this.order_manage.reload_orders_silently();
+                        this.get_items();
                     }
                 }
             });

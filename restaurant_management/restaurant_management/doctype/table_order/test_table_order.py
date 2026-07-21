@@ -13,9 +13,49 @@ from restaurant_management.restaurant_management.doctype.table_order.table_order
 	get_voucher_config,
 	TableOrder,
 )
+from restaurant_management.api import DOCUMENT_METHODS, READ_ONLY_DOCUMENT_METHODS
 
 
 class TestTableOrder(unittest.TestCase):
+	def test_divide_template_is_an_allowed_read_only_operation(self):
+		self.assertIn("divide_template", DOCUMENT_METHODS["Table Order"])
+		self.assertIn(("Table Order", "divide_template"), READ_ONLY_DOCUMENT_METHODS)
+
+	def test_divide_quantities_are_validated_before_mutation(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"entry_items": [
+				{
+					"doctype": "Order Entry Item",
+					"identifier": "ITEM-1",
+					"item_code": "DISH-1",
+					"item_name": "Dish 1",
+					"status": "Completed",
+					"qty": 2,
+				},
+				{
+					"doctype": "Order Entry Item",
+					"identifier": "ITEM-2",
+					"item_code": "DISH-2",
+					"item_name": "Dish 2",
+					"status": "Completed",
+					"qty": 1,
+				},
+			],
+		})
+
+		self.assertEqual(
+			order.validate_divide_items({"ITEM-1": {"qty": 1}}),
+			{"ITEM-1": 1},
+		)
+		with self.assertRaises(frappe.ValidationError):
+			order.validate_divide_items({"ITEM-1": {"qty": 3}})
+		with self.assertRaises(frappe.ValidationError):
+			order.validate_divide_items({
+				"ITEM-1": {"qty": 2},
+				"ITEM-2": {"qty": 1},
+			})
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.publish_realtime"
 	)
