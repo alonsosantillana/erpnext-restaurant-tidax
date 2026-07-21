@@ -29,6 +29,7 @@
 - [x] 2.16 Make quantity, rate, discount, numeric-pad and delete controls update the selected line at the correct time with bounded values and server reconciliation.
 - [x] 2.17 Reconcile the locally persisted item state and pending count so the Order action is enabled without depending on realtime delivery.
 - [x] 2.18 Publish production-center notifications after commit and reconcile open kitchen views against persisted commands.
+- [x] 2.19 Reload persisted production commands whenever a previously opened kitchen view is entered again.
 
 ## 3. Security and Data Isolation
 

@@ -26,6 +26,7 @@ ProcessManage = class ProcessManage {
 
     show() {
         this.modal.show();
+        this.reload();
     }
 
     is_open() {
