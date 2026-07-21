@@ -41,6 +41,7 @@
 - [x] 2.28 Allow the read-only divide template, validate split quantities before mutation and reconcile both resulting accounts immediately.
 - [x] 2.29 Initialize divide-account row and account totals from quantity times the tax-inclusive item rate, matching subsequent modal recalculation.
 - [x] 2.30 Search the table-order customer Link by customer ID, customer name or tax ID while preserving Customer read permissions.
+- [x] 2.31 Preserve complete single-field Link fetch values for waiter names and initialize the Dinners form from the order's current occupancy on every open.
 
 ## 3. Security and Data Isolation
 

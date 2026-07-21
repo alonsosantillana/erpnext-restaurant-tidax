@@ -7,7 +7,7 @@ from unittest.mock import PropertyMock, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from restaurant_management.api import call as restaurant_call
+from restaurant_management.api import call as restaurant_call, validate_link
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import (
 	add_room,
 	get_items,
@@ -21,6 +21,23 @@ from restaurant_management.restaurant_management.doctype.desk_form.desk_form imp
 
 
 class TestRestaurantObject(FrappeTestCase):
+	@patch("restaurant_management.api.frappe.db.get_value", return_value="Ana Perez")
+	@patch(
+		"restaurant_management.api.frappe.get_list",
+		return_value=[frappe._dict(name="waiter@example.com")],
+	)
+	@patch("restaurant_management.api.frappe.has_permission", return_value=True)
+	def test_single_link_fetch_returns_the_full_value(
+		self, has_permission, get_list, get_value
+	):
+		self.assertEqual(
+			validate_link("waiter@example.com", "User", "full_name"),
+			"Ok",
+		)
+		self.assertEqual(frappe.response["fetch_values"], ["Ana Perez"])
+		has_permission.assert_called_once_with("User", "read")
+		get_value.assert_called_once_with("User", "waiter@example.com", ["full_name"])
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.desk_form.desk_form.frappe.get_list"
 	)

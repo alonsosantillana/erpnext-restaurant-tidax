@@ -782,10 +782,29 @@ class TableOrder {
 
     edit(type) {
         const form = type + "_form";
+        const fieldname = type === "mozo" ? "cambio_mozo" : type;
         if (this[form]) {
             this[form].reload();
             this[form].show();
         } else {
+            const configure_form = self => {
+                const input = self.get_field(fieldname);
+                if (type === "customer") {
+                    input.get_query = () => ({
+                        query: "restaurant_management.restaurant_management.doctype.desk_form.desk_form.search_customers"
+                    });
+                }
+                if (type === "dinners") {
+                    const current_dinners = Number.parseInt(this.data.dinners, 10);
+                    input.set_value(
+                        Number.isFinite(current_dinners) && current_dinners > 0
+                            ? current_dinners
+                            : 1
+                    );
+                }
+                input.set_focus();
+            };
+
             this[form] = new DeskForm({
                 form_name: `restaurant-order-${type}`,
                 doc_name: this.data.name,
@@ -793,23 +812,16 @@ class TableOrder {
                     self.hide();
 
                     RM.sound_submit();
-                    this.data[type] = self.get_value(type);
+                    this.data[fieldname] = self.get_value(fieldname);
                     if (type === "dinners" && this.order_manage.table) {
-                        this.order_manage.table.data.dinners_count = flt(this.data[type]);
+                        this.order_manage.table.data.dinners_count = flt(this.data[fieldname]);
                         this.order_manage.table.set_orders_count();
                     }
                     this.make_invoice();
                 },
                 title: __(`Set ${type}`),
-                after_load: self => {
-                    const input = self.get_field(type);
-                    if (type === "customer") {
-                        input.get_query = () => ({
-                            query: "restaurant_management.restaurant_management.doctype.desk_form.desk_form.search_customers"
-                        });
-                    }
-                    input.set_focus();
-                }
+                after_load: configure_form,
+                on_reload: configure_form
             });
         }
     }

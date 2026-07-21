@@ -103,9 +103,12 @@ def validate_link(value=None, options=None, fetch=None):
         return None
 
     if fetch_fields:
-        frappe.response["fetch_values"] = list(
-            frappe.db.get_value(options, value, fetch_fields) or []
-        )
+        fetch_values = frappe.db.get_value(options, value, fetch_fields)
+        if len(fetch_fields) == 1 and not isinstance(fetch_values, (list, tuple)):
+            fetch_values = [fetch_values]
+        else:
+            fetch_values = list(fetch_values or [])
+        frappe.response["fetch_values"] = fetch_values
 
     frappe.response["valid_value"] = value
     return "Ok"
