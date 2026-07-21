@@ -373,6 +373,15 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertIsNone(commands[0]["next_status"])
 		self.assertEqual(commands[0]["identifiers"], ["ITEM-1", "ITEM-2"])
 		self.assertEqual(
+			commands[0]["bulk_action"],
+			{
+				"expected_status": "Sent",
+				"next_status": "Processing",
+				"identifiers": ["ITEM-1"],
+				"partial": True,
+			},
+		)
+		self.assertEqual(
 			[(item["status"], item["next_status"]) for item in commands[0]["items"]],
 			[("Sent", "Processing"), ("Processing", "Completed")],
 		)
@@ -483,6 +492,10 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(dashboard["consolidation"][0]["total_qty"], 6)
 		self.assertEqual(len(dashboard["commands"]), 1)
 		self.assertEqual(dashboard["commands"][0]["status"], "Mixed")
+		self.assertEqual(
+			dashboard["commands"][0]["bulk_action"]["identifiers"],
+			["ITEM-1"],
+		)
 		self.assertEqual(
 			dashboard["commands"][0]["identifiers"],
 			["ITEM-1", "ITEM-2"],

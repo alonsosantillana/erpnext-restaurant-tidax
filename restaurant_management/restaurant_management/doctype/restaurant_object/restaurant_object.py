@@ -330,6 +330,25 @@ class RestaurantObject(Document):
             command["statuses"] = statuses
             command["status"] = statuses[0] if len(statuses) == 1 else "Mixed"
             command["next_status"] = status_map.get(command["status"])
+            transitionable_statuses = [
+                status
+                for status in status_map
+                if status in statuses
+            ]
+            if transitionable_statuses:
+                expected_status = transitionable_statuses[0]
+                command["bulk_action"] = {
+                    "expected_status": expected_status,
+                    "next_status": status_map[expected_status],
+                    "identifiers": [
+                        item["identifier"]
+                        for item in command["items"]
+                        if item["status"] == expected_status
+                    ],
+                    "partial": len(statuses) > 1,
+                }
+            else:
+                command["bulk_action"] = None
 
         return sorted(
             commands.values(),

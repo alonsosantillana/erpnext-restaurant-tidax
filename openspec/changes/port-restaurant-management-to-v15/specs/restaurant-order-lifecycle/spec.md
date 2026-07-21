@@ -85,6 +85,10 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 - **WHEN** an authorized kitchen user starts or completes one dish inside a command
 - **THEN** only that dish advances, every dish retains its own visible state, and all dishes remain grouped in the same order round until the entire command is attended
 
+#### Scenario: Advance lagging dishes in a mixed command
+- **WHEN** a kitchen user applies the command-level action while its dishes have mixed states
+- **THEN** only the dishes in the earliest transitionable state advance one step so already advanced dishes are not changed again
+
 #### Scenario: Daily production control
 - **WHEN** a kitchen user opens Dish Consolidation or Attended Orders
 - **THEN** the views include the complete current calendar day, using an inclusive start and exclusive next-day boundary, and consolidation separates pending, in-preparation and completed quantities

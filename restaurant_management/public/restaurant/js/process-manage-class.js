@@ -85,7 +85,16 @@ ProcessManage = class ProcessManage {
                 const key = $(event.currentTarget).data("command-key");
                 const command = (this.dashboard && this.dashboard.commands || [])
                     .find(row => row.key === key);
-                if (command) this.transition_items(command, command.identifiers, false);
+                const action = command && command.bulk_action;
+                if (command && action) {
+                    this.transition_items(
+                        command,
+                        action.identifiers,
+                        false,
+                        action.expected_status,
+                        action.partial
+                    );
+                }
             })
             .on("click.production-center", ".production-item-action", event => {
                 const key = $(event.currentTarget).data("command-key");
@@ -370,11 +379,12 @@ ProcessManage = class ProcessManage {
         const footer = $("<footer>", { class: "production-command-footer" }).append(
             $("<span>").text(__("Dishes: {0}", [this.format_qty(command.qty || 0)]))
         );
+        const bulk_action = command.bulk_action;
         if (
             !attended &&
             this.dashboard.can_transition &&
-            command.next_status &&
-            command.identifiers.length > 1
+            bulk_action &&
+            (bulk_action.partial || bulk_action.identifiers.length > 1)
         ) {
             footer.append(
                 $("<button>", {
@@ -382,18 +392,33 @@ ProcessManage = class ProcessManage {
                     class: "btn btn-primary production-command-action"
                 })
                     .data("command-key", command.key)
-                    .text(this.action_label(command.next_status, false))
+                    .text(
+                        bulk_action.partial
+                            ? this.pending_action_label(bulk_action.next_status)
+                            : this.action_label(bulk_action.next_status, false)
+                    )
             );
         }
         card.append(footer);
         return card;
     }
 
-    transition_items(command, identifiers, single_item, expected_status = command.status) {
+    transition_items(
+        command,
+        identifiers,
+        single_item,
+        expected_status = command.status,
+        partial = false
+    ) {
         if (this.transitioning || !identifiers || !identifiers.length) return;
         this.transitioning = true;
         this.root().find(".production-command-action, .production-item-action").prop("disabled", true);
-        RM.working(single_item ? __("Updating dish") : __("Updating command"), false);
+        RM.working(
+            single_item
+                ? __("Updating dish")
+                : partial ? __("Updating pending dishes") : __("Updating command"),
+            false
+        );
         frappeHelper.api.call({
             model: "Restaurant Object",
             name: this.table.data.name,
@@ -409,7 +434,9 @@ ProcessManage = class ProcessManage {
                     frappe.show_alert({
                         message: single_item
                             ? __("Dish updated to {0}", [this.status_label(response.message.status)])
-                            : __("Command updated to {0}", [this.status_label(response.message.status)]),
+                            : partial
+                                ? __("Pending dishes updated to {0}", [this.status_label(response.message.status)])
+                                : __("Command updated to {0}", [this.status_label(response.message.status)]),
                         indicator: "green"
                     });
                 }
@@ -443,6 +470,15 @@ ProcessManage = class ProcessManage {
             Delivered: __("Mark dish as delivered")
         };
         return (single_item ? item_labels : command_labels)[next_status] || __("Advance");
+    }
+
+    pending_action_label(next_status) {
+        return {
+            Processing: __("Start pending dishes"),
+            Completed: __("Complete pending dishes"),
+            Delivering: __("Deliver pending dishes"),
+            Delivered: __("Mark pending dishes as delivered")
+        }[next_status] || __("Advance pending dishes");
     }
 
     status_label(status) {
