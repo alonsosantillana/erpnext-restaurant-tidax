@@ -19,6 +19,53 @@ def production_command_batch_key(item):
     return f"{item.parent}:{frappe.utils.cint(item.ordered_nro) or 1}:{ordered_minute}"
 
 
+def elapsed_minutes(start, end):
+    if not start or not end:
+        return None
+    seconds = max(
+        0,
+        frappe.utils.time_diff_in_seconds(
+            frappe.utils.get_datetime(end),
+            frappe.utils.get_datetime(start),
+        ),
+    )
+    return round(seconds / 60, 2)
+
+
+def preparation_performance(actual_minutes, target_minutes):
+    target_minutes = frappe.utils.flt(target_minutes)
+    if actual_minutes is None or target_minutes <= 0:
+        return "no_target"
+    ratio = frappe.utils.flt(actual_minutes) / target_minutes
+    if ratio > 1:
+        return "late"
+    if ratio >= 0.8:
+        return "warning"
+    return "on_time"
+
+
+def production_transition_values(entry, next_status, now, user):
+    values = {"status": next_status}
+    if next_status == "Processing" and not entry.processing_started_at:
+        waiting_minutes = elapsed_minutes(entry.ordered_time, now)
+        values.update({
+            "processing_started_at": now,
+            "processing_started_by": user,
+            "waiting_time_minutes": waiting_minutes or 0,
+        })
+    if next_status == "Completed" and not entry.completed_at:
+        total_minutes = elapsed_minutes(entry.ordered_time, now)
+        preparation_minutes = elapsed_minutes(entry.processing_started_at, now)
+        values.update({
+            "completed_at": now,
+            "completed_by": user,
+            "preparation_time_minutes": preparation_minutes or 0,
+            "total_time_minutes": total_minutes or 0,
+            "ordered_finish": max(1, int(total_minutes or 0)),
+        })
+    return values
+
+
 class RestaurantObject(Document):
     @property
     def _room(self):
@@ -322,6 +369,7 @@ class RestaurantObject(Document):
                 "notes": item.notes,
                 "status": item.status,
                 "next_status": status_map.get(item.status),
+                "timing": item.get("production_timing"),
             })
             command["qty"] += frappe.utils.flt(item.qty)
 
@@ -371,6 +419,14 @@ class RestaurantObject(Document):
                     "processing_qty": 0,
                     "completed_qty": 0,
                     "total_qty": 0,
+                    "target_weighted_total": 0,
+                    "target_weight": 0,
+                    "waiting_weighted_total": 0,
+                    "waiting_weight": 0,
+                    "preparation_weighted_total": 0,
+                    "preparation_weight": 0,
+                    "total_weighted_total": 0,
+                    "total_weight": 0,
                 },
             )
             quantity = frappe.utils.flt(item.qty)
@@ -381,7 +437,82 @@ class RestaurantObject(Document):
             else:
                 row["completed_qty"] += quantity
             row["total_qty"] += quantity
+
+            timing = item.get("production_timing") or {}
+            target = frappe.utils.flt(timing.get("target_minutes"))
+            if target > 0:
+                row["target_weighted_total"] += target * quantity
+                row["target_weight"] += quantity
+            if item.status not in active_statuses:
+                for metric in ("waiting", "preparation", "total"):
+                    value = timing.get(f"{metric}_minutes")
+                    if value is not None:
+                        row[f"{metric}_weighted_total"] += frappe.utils.flt(value) * quantity
+                        row[f"{metric}_weight"] += quantity
+
+        for row in consolidation.values():
+            for metric in ("target", "waiting", "preparation", "total"):
+                weight = row.pop(f"{metric}_weight")
+                weighted_total = row.pop(f"{metric}_weighted_total")
+                row[f"average_{metric}_minutes"] = (
+                    round(weighted_total / weight, 2) if weight else None
+                )
+            row["timing_status"] = preparation_performance(
+                row["average_preparation_minutes"],
+                row["average_target_minutes"],
+            )
         return consolidation
+
+    @staticmethod
+    def _production_item_timing(item, now=None):
+        now = now or frappe.utils.now_datetime()
+        ordered_time = item.get("ordered_time")
+        processing_started_at = item.get("processing_started_at")
+        completed_at = item.get("completed_at")
+
+        waiting_minutes = None
+        if processing_started_at:
+            waiting_minutes = elapsed_minutes(ordered_time, processing_started_at)
+        elif item.status == "Sent":
+            waiting_minutes = elapsed_minutes(ordered_time, now)
+
+        preparation_minutes = None
+        if processing_started_at:
+            preparation_minutes = elapsed_minutes(
+                processing_started_at,
+                completed_at or now,
+            )
+
+        total_minutes = None
+        if ordered_time:
+            if completed_at:
+                total_minutes = elapsed_minutes(ordered_time, completed_at)
+            elif item.status in ("Sent", "Processing"):
+                total_minutes = elapsed_minutes(ordered_time, now)
+            elif frappe.utils.flt(item.get("total_time_minutes")) > 0:
+                total_minutes = frappe.utils.flt(item.get("total_time_minutes"))
+            elif frappe.utils.flt(item.get("ordered_finish")) > 0:
+                total_minutes = frappe.utils.flt(item.get("ordered_finish"))
+
+        target_minutes = frappe.utils.flt(item.get("preparation_time_target"))
+        return {
+            "ordered_at": ordered_time,
+            "processing_started_at": processing_started_at,
+            "processing_started_by": item.get("processing_started_by"),
+            "completed_at": completed_at,
+            "completed_by": item.get("completed_by"),
+            "waiting_minutes": waiting_minutes,
+            "preparation_minutes": preparation_minutes,
+            "total_minutes": total_minutes,
+            "target_minutes": target_minutes,
+            "target_source": item.get("preparation_time_source"),
+            "variance_minutes": (
+                round(preparation_minutes - target_minutes, 2)
+                if preparation_minutes is not None and target_minutes > 0
+                else None
+            ),
+            "status": preparation_performance(preparation_minutes, target_minutes),
+        }
 
     def production_center_dashboard(self):
         self._validate_production_center()
@@ -414,6 +545,15 @@ class RestaurantObject(Document):
             "ordered_time",
             "ordered_nro",
             "ordered_finish",
+            "processing_started_at",
+            "processing_started_by",
+            "completed_at",
+            "completed_by",
+            "waiting_time_minutes",
+            "preparation_time_minutes",
+            "total_time_minutes",
+            "preparation_time_target",
+            "preparation_time_source",
             "table_description",
             "modified",
         ]
@@ -450,6 +590,14 @@ class RestaurantObject(Document):
 
         active_truncated = len(active_items) > PRODUCTION_CENTER_ITEM_LIMIT
         active_items = active_items[:PRODUCTION_CENTER_ITEM_LIMIT]
+        timing_now = frappe.utils.now_datetime()
+        timed_items = {}
+        for item in [*active_items, *daily_items]:
+            if item.identifier not in timed_items:
+                item.production_timing = self._production_item_timing(item, timing_now)
+                timed_items[item.identifier] = item
+            else:
+                item.production_timing = timed_items[item.identifier].production_timing
         active_status_set = set(active_statuses)
         attended_status_set = set(attended_statuses)
         active_batch_keys = {
@@ -657,6 +805,15 @@ class RestaurantObject(Document):
                 "status",
                 "ordered_time",
                 "ordered_finish",
+                "processing_started_at",
+                "processing_started_by",
+                "completed_at",
+                "completed_by",
+                "waiting_time_minutes",
+                "preparation_time_minutes",
+                "total_time_minutes",
+                "preparation_time_target",
+                "preparation_time_source",
             ],
             limit_page_length=len(identifiers),
         )
@@ -689,13 +846,12 @@ class RestaurantObject(Document):
 
         now = frappe.utils.now_datetime()
         for entry in entries:
-            values = {"status": next_status}
-            if next_status == "Completed" and not frappe.utils.cint(entry.ordered_finish):
-                elapsed_seconds = max(
-                    0,
-                    frappe.utils.time_diff_in_seconds(now, entry.ordered_time or now),
-                )
-                values["ordered_finish"] = max(1, int(elapsed_seconds / 60))
+            values = production_transition_values(
+                entry,
+                next_status,
+                now,
+                frappe.session.user,
+            )
             frappe.db.set_value("Order Entry Item", entry.name, values)
 
         for order_name in order_names:

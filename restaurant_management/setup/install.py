@@ -22,6 +22,24 @@ docs = {
     ),
     "Sales Invoice Item": dict(
         identifier=dict(label="Identifier", fieldtype="Data"),
+    ),
+    "Item": dict(
+        custom_restaurant_preparation_time=dict(
+            label="Restaurant Preparation Time (min)",
+            fieldtype="Float",
+            insert_after="item_group",
+            non_negative=1,
+            precision="2",
+        ),
+    ),
+    "Item Group": dict(
+        custom_restaurant_preparation_time=dict(
+            label="Restaurant Preparation Time (min)",
+            fieldtype="Float",
+            insert_after="parent_item_group",
+            non_negative=1,
+            precision="2",
+        ),
     )
 }
 

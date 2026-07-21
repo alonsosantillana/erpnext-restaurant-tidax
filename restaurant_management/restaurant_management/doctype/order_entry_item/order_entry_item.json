@@ -31,7 +31,16 @@
   "serial_no",
   "item_pt",
   "unit_value",
-  "ordered_finish"
+  "ordered_finish",
+  "preparation_time_target",
+  "preparation_time_source",
+  "processing_started_at",
+  "processing_started_by",
+  "completed_at",
+  "completed_by",
+  "waiting_time_minutes",
+  "preparation_time_minutes",
+  "total_time_minutes"
  ],
  "fields": [
   {
@@ -197,6 +206,66 @@
    "fieldname": "ordered_nro",
    "fieldtype": "Int",
    "label": "Ordered Nro"
+  },
+  {
+   "fieldname": "preparation_time_target",
+   "fieldtype": "Float",
+   "label": "Preparation Target (min)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "preparation_time_source",
+   "fieldtype": "Data",
+   "label": "Preparation Target Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "processing_started_at",
+   "fieldtype": "Datetime",
+   "label": "Processing Started At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "processing_started_by",
+   "fieldtype": "Link",
+   "label": "Processing Started By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "Completed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_by",
+   "fieldtype": "Link",
+   "label": "Completed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "waiting_time_minutes",
+   "fieldtype": "Float",
+   "label": "Waiting Time (min)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "preparation_time_minutes",
+   "fieldtype": "Float",
+   "label": "Preparation Time (min)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_time_minutes",
+   "fieldtype": "Float",
+   "label": "Total Time (min)",
+   "precision": "2",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

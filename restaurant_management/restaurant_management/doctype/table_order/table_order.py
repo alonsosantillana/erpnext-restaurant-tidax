@@ -10,6 +10,9 @@ from frappe.utils import cint, flt
 import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
+from restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item import (
+    preparation_targets,
+)
 status_attending = "Attending"
 
 VOUCHER_CONFIG = {
@@ -254,6 +257,17 @@ class TableOrder(Document):
                     identifier=item.identifier if rest == 0 else f"entry_{frappe.generate_hash(length=12)}",
                     notes=item.notes,
                     ordered_time=item.ordered_time,
+                    ordered_nro=item.ordered_nro,
+                    ordered_finish=item.ordered_finish,
+                    processing_started_at=item.processing_started_at,
+                    processing_started_by=item.processing_started_by,
+                    completed_at=item.completed_at,
+                    completed_by=item.completed_by,
+                    waiting_time_minutes=item.waiting_time_minutes,
+                    preparation_time_minutes=item.preparation_time_minutes,
+                    total_time_minutes=item.total_time_minutes,
+                    preparation_time_target=item.preparation_time_target,
+                    preparation_time_source=item.preparation_time_source,
                     table_description=f'{self.room_description} ({self.table_description})',
                     has_batch_no=item.has_batch_no,
                     batch_no=item.batch_no,
@@ -671,8 +685,17 @@ class TableOrder(Document):
                 notes=entry["notes"],
                 table_description=f'{self.room_description} ({self.table_description})',
                 ordered_time=entry["ordered_time"] or frappe.utils.now_datetime(),
-                # ordered_nro=nro_orden_result[0]["max_parent"] + 1 if (entry["status"] in ["Attending"]) else nro_orden_result[0]["max_parent"],
-                ordered_nro=1,
+                ordered_nro=entry.get("ordered_nro") or 1,
+                ordered_finish=entry.get("ordered_finish") or 0,
+                processing_started_at=entry.get("processing_started_at"),
+                processing_started_by=entry.get("processing_started_by"),
+                completed_at=entry.get("completed_at"),
+                completed_by=entry.get("completed_by"),
+                waiting_time_minutes=entry.get("waiting_time_minutes"),
+                preparation_time_minutes=entry.get("preparation_time_minutes"),
+                total_time_minutes=entry.get("total_time_minutes"),
+                preparation_time_target=entry.get("preparation_time_target"),
+                preparation_time_source=entry.get("preparation_time_source"),
                 has_batch_no=entry["has_batch_no"],
                 batch_no=entry["batch_no"],
                 has_serial_no=entry["has_serial_no"],
@@ -716,6 +739,15 @@ class TableOrder(Document):
                 identifier=entry_item["identifier"],
                 notes=entry_item["notes"],
                 ordered_time=entry_item["ordered_time"],
+                processing_started_at=entry_item.get("processing_started_at"),
+                processing_started_by=entry_item.get("processing_started_by"),
+                completed_at=entry_item.get("completed_at"),
+                completed_by=entry_item.get("completed_by"),
+                waiting_time_minutes=entry_item.get("waiting_time_minutes"),
+                preparation_time_minutes=entry_item.get("preparation_time_minutes"),
+                total_time_minutes=entry_item.get("total_time_minutes"),
+                preparation_time_target=entry_item.get("preparation_time_target"),
+                preparation_time_source=entry_item.get("preparation_time_source"),
                 table_description=f'{self.room_description} ({self.table_description})',
                 has_batch_no=entry_item["has_batch_no"],
                 batch_no=entry_item["batch_no"],
@@ -789,6 +821,15 @@ class TableOrder(Document):
                     "notes",
                     "ordered_time",
                     "ordered_nro",
+                    "processing_started_at",
+                    "processing_started_by",
+                    "completed_at",
+                    "completed_by",
+                    "waiting_time_minutes",
+                    "preparation_time_minutes",
+                    "total_time_minutes",
+                    "preparation_time_target",
+                    "preparation_time_source",
                     "has_batch_no",
                     "batch_no",
                     "has_serial_no",
@@ -819,14 +860,30 @@ class TableOrder(Document):
             default=0,
         ) + 1
         ordered_time = frappe.utils.now_datetime()
+        targets = preparation_targets(
+            item.item_code
+            for item in self.entry_items
+            if item.status == status_attending
+        )
         for i in self.entry_items:
             item = frappe.get_doc("Order Entry Item", {"identifier": i.identifier})
             if item.status == status_attending:
                 items_to_return.append(i.identifier)
+                target = targets.get(item.item_code, {"minutes": 0, "source": None})
 
                 item.status = "Sent"
                 item.ordered_time = ordered_time
                 item.ordered_nro = ordered_nro
+                item.preparation_time_target = target["minutes"]
+                item.preparation_time_source = target["source"]
+                item.processing_started_at = None
+                item.processing_started_by = None
+                item.completed_at = None
+                item.completed_by = None
+                item.waiting_time_minutes = 0
+                item.preparation_time_minutes = 0
+                item.total_time_minutes = 0
+                item.ordered_finish = 0
                 item.save()
 
                 data_to_send.append(table.get_command_data(item))
@@ -872,6 +929,15 @@ class TableOrder(Document):
                     notes=item.notes,
                     ordered_time=item.ordered_time,
                     ordered_nro=item.ordered_nro,
+                    processing_started_at=item.processing_started_at,
+                    processing_started_by=item.processing_started_by,
+                    completed_at=item.completed_at,
+                    completed_by=item.completed_by,
+                    waiting_time_minutes=item.waiting_time_minutes,
+                    preparation_time_minutes=item.preparation_time_minutes,
+                    total_time_minutes=item.total_time_minutes,
+                    preparation_time_target=item.preparation_time_target,
+                    preparation_time_source=item.preparation_time_source,
                     has_batch_no=item.has_batch_no,
                     batch_no=item.batch_no,
                     has_serial_no=item.has_serial_no,

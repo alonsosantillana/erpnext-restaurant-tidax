@@ -21,15 +21,109 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 	get_items,
 )
 from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import (
-	RestaurantObject,
-	production_command_batch_key,
+    RestaurantObject,
+    elapsed_minutes,
+    preparation_performance,
+    production_command_batch_key,
+    production_transition_values,
 )
+from restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item import (
+	PREPARATION_TIME_FIELD,
+	preparation_targets,
+)
+from restaurant_management.setup.install import docs as custom_field_docs
 from restaurant_management.restaurant_management.doctype.desk_form.desk_form import (
 	search_customers,
 )
 
 
 class TestRestaurantObject(FrappeTestCase):
+	@patch(
+		"restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item.frappe.get_all"
+	)
+	def test_preparation_target_prefers_item_then_direct_item_group(self, get_all):
+		get_all.side_effect = [
+			[
+				frappe._dict(name="ITEM-1", item_group="FOOD", **{PREPARATION_TIME_FIELD: 12}),
+				frappe._dict(name="ITEM-2", item_group="FOOD", **{PREPARATION_TIME_FIELD: 0}),
+				frappe._dict(name="ITEM-3", item_group="DRINKS", **{PREPARATION_TIME_FIELD: 0}),
+			],
+			[
+				frappe._dict(name="FOOD", **{PREPARATION_TIME_FIELD: 18}),
+				frappe._dict(name="DRINKS", **{PREPARATION_TIME_FIELD: 0}),
+			],
+		]
+
+		targets = preparation_targets(["ITEM-1", "ITEM-2", "ITEM-3"])
+
+		self.assertEqual(targets["ITEM-1"], {"minutes": 12, "source": "Item"})
+		self.assertEqual(targets["ITEM-2"], {"minutes": 18, "source": "Item Group"})
+		self.assertEqual(targets["ITEM-3"], {"minutes": 0, "source": None})
+
+	def test_preparation_custom_fields_are_declared_for_item_and_group(self):
+		for doctype in ("Item", "Item Group"):
+			field = custom_field_docs[doctype][PREPARATION_TIME_FIELD]
+			self.assertEqual(field["fieldtype"], "Float")
+			self.assertEqual(field["non_negative"], 1)
+			self.assertTrue(frappe.get_meta(doctype).has_field(PREPARATION_TIME_FIELD))
+
+		order_item_meta = frappe.get_meta("Order Entry Item")
+		for fieldname in (
+			"processing_started_at",
+			"processing_started_by",
+			"completed_at",
+			"completed_by",
+			"waiting_time_minutes",
+			"preparation_time_minutes",
+			"total_time_minutes",
+			"preparation_time_target",
+			"preparation_time_source",
+		):
+			self.assertTrue(order_item_meta.has_field(fieldname))
+
+	def test_production_timing_rules_calculate_durations_and_thresholds(self):
+		self.assertEqual(
+			elapsed_minutes("2026-07-21 10:00:00", "2026-07-21 10:14:30"),
+			14.5,
+		)
+		self.assertEqual(preparation_performance(7.9, 10), "on_time")
+		self.assertEqual(preparation_performance(8, 10), "warning")
+		self.assertEqual(preparation_performance(10, 10), "warning")
+		self.assertEqual(preparation_performance(10.1, 10), "late")
+		self.assertEqual(preparation_performance(10, 0), "no_target")
+
+		entry = frappe._dict(
+			ordered_time="2026-07-21 10:00:00",
+			processing_started_at="2026-07-21 10:04:00",
+			completed_at=None,
+		)
+		now = frappe.utils.get_datetime("2026-07-21 10:14:00")
+		values = production_transition_values(entry, "Completed", now, "cook@example.com")
+		self.assertEqual(values, {
+			"status": "Completed",
+			"completed_at": now,
+			"completed_by": "cook@example.com",
+			"preparation_time_minutes": 10,
+			"total_time_minutes": 14,
+			"ordered_finish": 14,
+		})
+
+		timing = RestaurantObject._production_item_timing(
+			frappe._dict(
+				status="Completed",
+				ordered_time="2026-07-21 10:00:00",
+				processing_started_at="2026-07-21 10:04:00",
+				completed_at="2026-07-21 10:14:00",
+				preparation_time_target=12,
+				preparation_time_source="Item",
+			)
+		)
+		self.assertEqual(timing["waiting_minutes"], 4)
+		self.assertEqual(timing["preparation_minutes"], 10)
+		self.assertEqual(timing["total_minutes"], 14)
+		self.assertEqual(timing["variance_minutes"], -2)
+		self.assertEqual(timing["status"], "warning")
+
 	@patch("restaurant_management.api.frappe.get_all")
 	@patch("restaurant_management.api.frappe.db.get_value")
 	@patch("restaurant_management.api.frappe.db.get_default")
@@ -568,13 +662,23 @@ class TestRestaurantObject(FrappeTestCase):
 				"_production_status_map",
 				return_value={"Sent": "Processing", "Processing": "Completed"},
 			),
+			patch(
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.utils.now_datetime",
+				return_value=frappe.utils.get_datetime("2026-07-21 10:05:00"),
+			),
 		):
 			result = center.set_commands_status(["ITEM-1", "ITEM-2"], "Sent")
 
 		self.assertEqual(result["status"], "Processing")
 		self.assertEqual(set_value.call_count, 2)
-		set_value.assert_any_call("Order Entry Item", "ROW-1", {"status": "Processing"})
-		set_value.assert_any_call("Order Entry Item", "ROW-2", {"status": "Processing"})
+		expected_values = {
+			"status": "Processing",
+			"processing_started_at": frappe.utils.get_datetime("2026-07-21 10:05:00"),
+			"processing_started_by": frappe.session.user,
+			"waiting_time_minutes": 5,
+		}
+		set_value.assert_any_call("Order Entry Item", "ROW-1", expected_values)
+		set_value.assert_any_call("Order Entry Item", "ROW-2", expected_values)
 		order.synchronize.assert_called_once_with(
 			{"status": ["Sent", "Processing"]}
 		)

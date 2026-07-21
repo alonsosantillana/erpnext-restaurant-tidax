@@ -57,6 +57,7 @@
 - [x] 2.44 Provide full-day Dish Consolidation and Attended Orders control, including completed quantities without hiding unfinished operational commands from previous days.
 - [x] 2.45 Keep mixed-status dishes in their original command card and drive each dish action from its own current status.
 - [x] 2.46 Add a progressive mixed-command action that advances only dishes in the earliest pending state.
+- [x] 2.47 Add auditable kitchen timestamps, Item-to-Item-Group target fallback, calculated durations and compact timing indicators across all Production Center views.
 
 ## 3. Security and Data Isolation
 

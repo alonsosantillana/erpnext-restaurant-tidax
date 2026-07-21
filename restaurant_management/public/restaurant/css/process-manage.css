@@ -169,6 +169,53 @@
     font-size: 11px;
 }
 
+.production-timing-button,
+.production-consolidation-timing {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 7px;
+    color: var(--text-color, #36414c);
+    background: var(--subtle-fg, #eef1f4);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.production-consolidation-timing {
+    min-width: 125px;
+    margin: 0;
+    white-space: normal;
+}
+
+.production-timing-on_time {
+    color: var(--green-700, #1f7a4d);
+    background: var(--green-100, #d9f2e6);
+}
+
+.production-timing-warning {
+    color: var(--orange-700, #b35309);
+    background: var(--yellow-100, #fff1c2);
+}
+
+.production-timing-late {
+    color: var(--red-700, #b52a2a);
+    background: var(--red-100, #ffe0e0);
+}
+
+.production-timing-detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-color, #dfe2e5);
+}
+
+.production-timing-detail-row:last-child {
+    border-bottom: 0;
+}
+
 .production-command-note {
     grid-column: 2 / -1;
     padding: 3px 6px;

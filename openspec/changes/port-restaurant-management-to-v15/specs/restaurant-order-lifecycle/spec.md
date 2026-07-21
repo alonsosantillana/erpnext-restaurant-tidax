@@ -96,3 +96,22 @@ Each Production Center SHALL provide inline Commands, Dish Consolidation and Att
 #### Scenario: Conflicting command transition
 - **WHEN** another client already changed any selected item or an item is outside the Production Center scope
 - **THEN** the server rejects the entire command transition and the client reloads authoritative state
+
+### Requirement: Auditable production timing
+The system SHALL snapshot an optional preparation target when a dish is sent, record immutable first-transition timestamps and actors for preparation and completion, and calculate waiting, preparation and total durations without relying on the mutable document modification timestamp.
+
+#### Scenario: Resolve preparation target
+- **WHEN** a dish is sent to production
+- **THEN** its target uses the positive Item value first, otherwise the positive direct Item Group value, otherwise remains without a target, and the resolved value and source are stored on the order item
+
+#### Scenario: Record timing transitions
+- **WHEN** a dish first enters Processing and later Completed
+- **THEN** the system records the corresponding timestamps and users once and stores waiting, preparation and total durations in minutes
+
+#### Scenario: Compact production timing indicators
+- **WHEN** a user views Commands, Dish Consolidation or Attended Orders
+- **THEN** the primary view shows one compact timing indicator and exposes exact timestamps, durations, target, variance and source on demand
+
+#### Scenario: Timing performance thresholds
+- **WHEN** an actual preparation time is compared with a positive target
+- **THEN** below 80 percent is on time, 80 through 100 percent is near the limit, and above 100 percent is over target

@@ -103,6 +103,22 @@ ProcessManage = class ProcessManage {
                     .find(row => row.key === key);
                 const item = command && (command.items || []).find(row => row.identifier === identifier);
                 if (command && item) this.transition_items(command, [identifier], true, item.status);
+            })
+            .on("click.production-center", ".production-timing-button", event => {
+                const key = $(event.currentTarget).data("command-key");
+                const identifier = $(event.currentTarget).data("item-identifier");
+                const command = [
+                    ...((this.dashboard && this.dashboard.commands) || []),
+                    ...((this.dashboard && this.dashboard.attended) || [])
+                ].find(row => row.key === key);
+                const item = command && (command.items || []).find(row => row.identifier === identifier);
+                if (item) this.show_item_timing(item);
+            })
+            .on("click.production-center", ".production-consolidation-timing", event => {
+                const item_code = $(event.currentTarget).data("item-code");
+                const row = ((this.dashboard && this.dashboard.consolidation) || [])
+                    .find(item => item.item_code === item_code);
+                if (row) this.show_consolidation_timing(row);
             });
 
         refresh_button.on("click", () => this.reload());
@@ -291,7 +307,8 @@ ProcessManage = class ProcessManage {
             .append($("<th>", { class: "text-center" }).text(__("Pending")))
             .append($("<th>", { class: "text-center" }).text(__("In preparation")))
             .append($("<th>", { class: "text-center" }).text(__("Prepared")))
-            .append($("<th>", { class: "text-center" }).text(__("Total today")));
+            .append($("<th>", { class: "text-center" }).text(__("Total today")))
+            .append($("<th>", { class: "text-center" }).text(__("Average time")));
         table.append($("<thead>").append(header));
 
         const body = $("<tbody>");
@@ -308,6 +325,7 @@ ProcessManage = class ProcessManage {
                     .append($("<td>", { class: "text-center production-qty processing" }).text(this.format_qty(row.processing_qty)))
                     .append($("<td>", { class: "text-center production-qty completed" }).text(this.format_qty(row.completed_qty)))
                     .append($("<td>", { class: "text-center production-qty total" }).text(this.format_qty(row.total_qty)))
+                    .append($("<td>", { class: "text-center" }).append(this.consolidation_timing_button(row)))
             );
         });
         table.append(body);
@@ -354,7 +372,8 @@ ProcessManage = class ProcessManage {
             const description = $("<span>", { class: "production-command-item-name" }).append(
                 $("<span>").text(item.item_name || item.item_code),
                 $("<small>", { class: "production-item-status" })
-                    .text(__("Status: {0}", [this.status_label(item.status)]))
+                    .text(__("Status: {0}", [this.status_label(item.status)])),
+                this.item_timing_button(command, item)
             );
             const row = $("<div>", { class: "production-command-item" }).append(
                 $("<strong>", { class: "production-command-item-qty" }).text(`[${this.format_qty(item.qty)}]`),
@@ -481,6 +500,160 @@ ProcessManage = class ProcessManage {
         }[next_status] || __("Advance pending dishes");
     }
 
+    item_timing_button(command, item) {
+        const timing = item.timing || {};
+        return $("<button>", {
+            type: "button",
+            class: `production-timing-button production-timing-${timing.status || "no_target"}`,
+            title: __("View time details")
+        })
+            .data("command-key", command.key)
+            .data("item-identifier", item.identifier)
+            .text(this.item_timing_label(item.status, timing));
+    }
+
+    item_timing_label(status, timing) {
+        if (
+            status === "Sent" &&
+            timing.waiting_minutes !== null &&
+            typeof timing.waiting_minutes !== "undefined"
+        ) {
+            return __("Wait {0} min", [this.format_minutes(timing.waiting_minutes)]);
+        }
+        if (timing.preparation_minutes !== null && typeof timing.preparation_minutes !== "undefined") {
+            if (Number(timing.target_minutes || 0) > 0) {
+                return __("Prep. {0}/{1} min", [
+                    this.format_minutes(timing.preparation_minutes),
+                    this.format_minutes(timing.target_minutes)
+                ]);
+            }
+            return __("Prep. {0} min", [this.format_minutes(timing.preparation_minutes)]);
+        }
+        if (Number(timing.target_minutes || 0) > 0) {
+            return __("Target {0} min", [this.format_minutes(timing.target_minutes)]);
+        }
+        return __("No target");
+    }
+
+    consolidation_timing_button(row) {
+        const actual = row.average_preparation_minutes;
+        const target = row.average_target_minutes;
+        let label = __("No timing data");
+        if (actual !== null && typeof actual !== "undefined" && Number(target || 0) > 0) {
+            label = __("Prep. {0} / Target {1} min", [
+                this.format_minutes(actual),
+                this.format_minutes(target)
+            ]);
+        } else if (actual !== null && typeof actual !== "undefined") {
+            label = __("Prep. {0} min", [this.format_minutes(actual)]);
+        } else if (Number(target || 0) > 0) {
+            label = __("Target {0} min", [this.format_minutes(target)]);
+        }
+        return $("<button>", {
+            type: "button",
+            class: `production-consolidation-timing production-timing-${row.timing_status || "no_target"}`,
+            title: __("View time details")
+        }).data("item-code", row.item_code).text(label);
+    }
+
+    show_item_timing(item) {
+        const timing = item.timing || {};
+        this.show_timing_detail(
+            item.item_name || item.item_code,
+            timing,
+            timing.target_source
+        );
+    }
+
+    show_consolidation_timing(row) {
+        this.show_timing_detail(
+            __("Daily average: {0}", [row.item_name || row.item_code]),
+            {
+                waiting_minutes: row.average_waiting_minutes,
+                preparation_minutes: row.average_preparation_minutes,
+                total_minutes: row.average_total_minutes,
+                target_minutes: row.average_target_minutes,
+                variance_minutes: (
+                    row.average_preparation_minutes !== null && Number(row.average_target_minutes || 0) > 0
+                        ? Number(row.average_preparation_minutes) - Number(row.average_target_minutes)
+                        : null
+                ),
+                status: row.timing_status
+            },
+            null
+        );
+    }
+
+    show_timing_detail(title, timing, target_source) {
+        const detail = $("<div>", { class: "production-timing-detail" });
+        const rows = [];
+        if (timing.ordered_at || timing.processing_started_at || timing.completed_at) {
+            rows.push(
+                [__("Ordered at"), this.datetime_or_dash(timing.ordered_at)],
+                [__("Processing started at"), this.datetime_or_dash(timing.processing_started_at)],
+                [__("Processing started by"), timing.processing_started_by || "—"],
+                [__("Completed at"), this.datetime_or_dash(timing.completed_at)],
+                [__("Completed by"), timing.completed_by || "—"]
+            );
+        }
+        rows.push(
+            [__("Waiting time"), this.minutes_or_dash(timing.waiting_minutes)],
+            [__("Preparation time"), this.minutes_or_dash(timing.preparation_minutes)],
+            [__("Total time"), this.minutes_or_dash(timing.total_minutes)],
+            [__("Preparation target"), this.minutes_or_dash(timing.target_minutes)],
+            [__("Difference from target"), this.variance_or_dash(timing.variance_minutes)],
+            [__("Target source"), target_source ? __(target_source) : __("No target")],
+            [__("Performance"), this.performance_label(timing.status)]
+        );
+        rows.forEach(([label, value]) => {
+            detail.append(
+                $("<div>", { class: "production-timing-detail-row" }).append(
+                    $("<span>").text(label),
+                    $("<strong>").text(value)
+                )
+            );
+        });
+        frappe.msgprint({
+            title: title,
+            message: detail.prop("outerHTML"),
+            indicator: this.performance_indicator(timing.status)
+        });
+    }
+
+    minutes_or_dash(value) {
+        return value === null || typeof value === "undefined"
+            ? "—"
+            : __("{0} min", [this.format_minutes(value)]);
+    }
+
+    datetime_or_dash(value) {
+        return value ? frappe.datetime.str_to_user(value) : "—";
+    }
+
+    variance_or_dash(value) {
+        if (value === null || typeof value === "undefined") return "—";
+        const number = Number(value || 0);
+        const prefix = number > 0 ? "+" : "";
+        return `${prefix}${this.format_minutes(number)} min`;
+    }
+
+    performance_label(status) {
+        return {
+            on_time: __("On time"),
+            warning: __("Near target"),
+            late: __("Over target"),
+            no_target: __("No target")
+        }[status] || __("No target");
+    }
+
+    performance_indicator(status) {
+        return {
+            on_time: "green",
+            warning: "orange",
+            late: "red"
+        }[status] || "blue";
+    }
+
     status_label(status) {
         return {
             Sent: __("Pending"),
@@ -495,6 +668,11 @@ ProcessManage = class ProcessManage {
     format_qty(value) {
         const number = Number(value || 0);
         return Number.isInteger(number) ? number : number.toFixed(2);
+    }
+
+    format_minutes(value) {
+        const number = Number(value || 0);
+        return Number.isInteger(number) ? number : number.toFixed(1);
     }
 
     // Realtime compatibility: every relevant item event reconciles the active view
