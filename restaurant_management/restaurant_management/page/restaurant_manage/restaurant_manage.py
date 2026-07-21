@@ -7,13 +7,13 @@ from erpnext.stock.get_item_details import get_pos_profile
 class RestaurantManage:
     @staticmethod
     def production_center_notify(status):
-        object_in_status = frappe.get_all("Status Managed Production Center", "parent", filters={
-            "parentType": "Restaurant Object",
+        object_in_status = frappe.get_all("Status Managed Production Center", pluck="parent", filters={
+            "parenttype": "Restaurant Object",
             "status_managed": ("in", status)
         })
 
-        for item in object_in_status:
-            obj = frappe.get_doc("Restaurant Object", item.parent)
+        for center_name in set(object_in_status):
+            obj = frappe.get_doc("Restaurant Object", center_name)
             obj.synchronize()
 
     @staticmethod

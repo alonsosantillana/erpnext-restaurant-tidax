@@ -16,11 +16,13 @@ from restaurant_management.api import (
 	validate_link,
 )
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import (
+	RestaurantManage,
 	add_room,
 	get_items,
 )
 from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import (
 	RestaurantObject,
+	production_command_batch_key,
 )
 from restaurant_management.restaurant_management.doctype.desk_form.desk_form import (
 	search_customers,
@@ -244,6 +246,184 @@ class TestRestaurantObject(FrappeTestCase):
 			},
 			after_commit=True,
 		)
+
+	@patch(
+		"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.frappe.get_doc"
+	)
+	@patch(
+		"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.frappe.get_all",
+		return_value=["PC-TEST", "PC-TEST"],
+	)
+	def test_status_notification_reloads_each_production_center_once(self, get_all, get_doc):
+		center = get_doc.return_value
+
+		RestaurantManage.production_center_notify(["Sent", "Processing"])
+
+		get_all.assert_called_once_with(
+			"Status Managed Production Center",
+			pluck="parent",
+			filters={
+				"parenttype": "Restaurant Object",
+				"status_managed": ("in", ["Sent", "Processing"]),
+			},
+		)
+		get_doc.assert_called_once_with("Restaurant Object", "PC-TEST")
+		center.synchronize.assert_called_once_with()
+
+	def test_production_command_batch_key_separates_legacy_rounds(self):
+		first = frappe._dict(
+			parent="ORDER-1",
+			ordered_nro=1,
+			ordered_time="2026-07-21 10:01:02",
+		)
+		same_round = frappe._dict(
+			parent="ORDER-1",
+			ordered_nro=1,
+			ordered_time="2026-07-21 10:01:55",
+		)
+		next_round = frappe._dict(
+			parent="ORDER-1",
+			ordered_nro=1,
+			ordered_time="2026-07-21 10:02:01",
+		)
+
+		self.assertEqual(
+			production_command_batch_key(first),
+			production_command_batch_key(same_round),
+		)
+		self.assertNotEqual(
+			production_command_batch_key(first),
+			production_command_batch_key(next_round),
+		)
+
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_doc"
+	)
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.db.set_value"
+	)
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
+	)
+	def test_production_command_transition_updates_one_batch_atomically(
+		self, get_all, set_value, get_doc
+	):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"description": "Kitchen",
+			"type": "Production Center",
+		})
+		entries = [
+			frappe._dict(
+				name="ROW-1",
+				identifier="ITEM-1",
+				parent="ORDER-1",
+				item_group="FOOD",
+				status="Sent",
+				ordered_time="2026-07-21 10:00:00",
+				ordered_finish=0,
+			),
+			frappe._dict(
+				name="ROW-2",
+				identifier="ITEM-2",
+				parent="ORDER-1",
+				item_group="FOOD",
+				status="Sent",
+				ordered_time="2026-07-21 10:00:00",
+				ordered_finish=0,
+			),
+		]
+		get_all.side_effect = [entries, ["ORDER-1"]]
+		order = get_doc.return_value
+
+		with (
+			patch.object(center, "_validate_production_center"),
+			patch.object(
+				center,
+				"_production_company_and_profile",
+				return_value=("Test Company", "Test POS Profile"),
+			),
+			patch.object(
+				RestaurantObject,
+				"_status_managed",
+				new_callable=PropertyMock,
+				return_value=["Sent", "Processing"],
+			),
+			patch.object(
+				RestaurantObject,
+				"_items_group",
+				new_callable=PropertyMock,
+				return_value=["FOOD"],
+			),
+			patch.object(
+				RestaurantObject,
+				"_production_status_map",
+				return_value={"Sent": "Processing", "Processing": "Completed"},
+			),
+		):
+			result = center.set_commands_status(["ITEM-1", "ITEM-2"], "Sent")
+
+		self.assertEqual(result["status"], "Processing")
+		self.assertEqual(set_value.call_count, 2)
+		set_value.assert_any_call("Order Entry Item", "ROW-1", {"status": "Processing"})
+		set_value.assert_any_call("Order Entry Item", "ROW-2", {"status": "Processing"})
+		order.synchronize.assert_called_once_with(
+			{"status": ["Sent", "Processing"]}
+		)
+
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.db.set_value"
+	)
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
+	)
+	def test_production_command_transition_rejects_stale_state(self, get_all, set_value):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"description": "Kitchen",
+			"type": "Production Center",
+		})
+		get_all.return_value = [frappe._dict(
+			name="ROW-1",
+			identifier="ITEM-1",
+			parent="ORDER-1",
+			item_group="FOOD",
+			status="Processing",
+			ordered_time="2026-07-21 10:00:00",
+			ordered_finish=0,
+		)]
+
+		with (
+			patch.object(center, "_validate_production_center"),
+			patch.object(
+				center,
+				"_production_company_and_profile",
+				return_value=("Test Company", "Test POS Profile"),
+			),
+			patch.object(
+				RestaurantObject,
+				"_status_managed",
+				new_callable=PropertyMock,
+				return_value=["Sent", "Processing"],
+			),
+			patch.object(
+				RestaurantObject,
+				"_items_group",
+				new_callable=PropertyMock,
+				return_value=["FOOD"],
+			),
+			patch.object(
+				RestaurantObject,
+				"_production_status_map",
+				return_value={"Sent": "Processing", "Processing": "Completed"},
+			),
+			self.assertRaises(frappe.ValidationError),
+		):
+			center.set_commands_status(["ITEM-1"], "Sent")
+
+		set_value.assert_not_called()
 
 	def test_restaurant_order_requires_customer_selection(self):
 		desk_form = frappe.get_doc("Desk Form", "restaurant-order-customer")

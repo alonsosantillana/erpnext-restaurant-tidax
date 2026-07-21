@@ -810,13 +810,23 @@ class TableOrder(Document):
         table = self._table
         items_to_return = []
         data_to_send = []
+        ordered_items = [
+            item for item in self.entry_items
+            if item.status != status_attending and item.ordered_time
+        ]
+        ordered_nro = max(
+            (frappe.utils.cint(item.ordered_nro) for item in ordered_items),
+            default=0,
+        ) + 1
+        ordered_time = frappe.utils.now_datetime()
         for i in self.entry_items:
             item = frappe.get_doc("Order Entry Item", {"identifier": i.identifier})
             if item.status == status_attending:
                 items_to_return.append(i.identifier)
 
                 item.status = "Sent"
-                item.ordered_time = frappe.utils.now_datetime()
+                item.ordered_time = ordered_time
+                item.ordered_nro = ordered_nro
                 item.save()
 
                 data_to_send.append(table.get_command_data(item))

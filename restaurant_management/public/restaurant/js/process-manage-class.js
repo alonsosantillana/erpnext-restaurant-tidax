@@ -3,756 +3,417 @@ ProcessManage = class ProcessManage {
         Object.assign(this, options);
         this.status = "close";
         this.modal = null;
-        this.items = {};
-        this.command_container_name = this.table.data.name + "-command_container";
-        this.new_items_keys = [];
-        this.time_elapsed_interval = null;
+        this.active_view = "commands";
+        this.dashboard = null;
+        this.loading = false;
+        this.pending_reload = false;
+        this.reload_timeout = null;
+        this.reconciliation_interval = null;
+        this.request_serial = 0;
 
         this.initialize();
     }
 
-    reload() {
-        this.get_commands_food();
-    }
-
     initialize() {
         this.title = this.table.room.data.description + " (" + this.table.data.description + ")";
-        if (this.modal == null) {
-            this.modal = RMHelper.default_full_modal(this.title, () => this.make());
-        } else {
-            this.show();
-        }
-    }
-
-    show() {
-        this.modal.show();
-        this.reload();
-    }
-
-    is_open() {
-        return this.modal.modal.display;
-    }
-
-    close() {
-        this.modal.hide();
-        this.status = "close";
+        this.modal = RMHelper.default_full_modal(this.title, () => this.make());
     }
 
     make() {
         this.make_dom();
-        this.get_commands_food();
+        this.start_reconciliation();
+        this.reload();
+    }
+
+    show() {
+        this.status = "open";
+        this.modal.show();
+        this.start_reconciliation();
+        this.reload();
+    }
+
+    close() {
+        this.status = "close";
+        this.stop_reconciliation();
+        this.modal.hide();
+    }
+
+    is_open() {
+        return Boolean(
+            this.modal &&
+            this.modal.modal &&
+            this.modal.modal.$wrapper &&
+            this.modal.modal.$wrapper.is(":visible")
+        );
     }
 
     make_dom() {
+        const back_button = RMHelper.return_main_button(this.title, () => this.close());
+        const refresh_button = $("<button>", {
+            type: "button",
+            class: "btn btn-default btn-flat production-center-refresh"
+        }).append($("<span>", { class: "fa fa-refresh" }), " ", __("Refresh"));
 
+        this.modal.title_container.empty().append(back_button.html(), refresh_button);
         this.modal.container.empty().append(this.template());
-        this.modal.title_container.empty().append(
-            RMHelper.return_main_button(this.title, () => this.modal.hide()).html(),
-            `<button id="openPopupButton" class="btn btn-default btn-flat">Consolidacion de Platos</button>`,
-            `<button id="openPopupButtonCom" class="btn btn-default btn-flat">Comandas</button>`,
-            `<button id="openPopupButtonAte" class="btn btn-default btn-flat">Pedidos Atendidos</button>`
-        );
-        if (frappe.session.user.includes("cocin") || frappe.session.user.includes("bar")) {
-            this.agrupacion_platos();
-            this.agrupacion_comandas();
-            this.agrupacion_platos_atendidos();
-        }
-    }
-    // TIDAX: Agrupa los platos pendientes y los muestra en una nueva ventana
-    agrupacion_platos() {
-        // Agrega un evento al botón "Abrir Nueva Ventana"
-        document.getElementById('openPopupButton').addEventListener('click', () => {
-            const popupWindow = window.open("", "Consolidacion de Platos", "width=850,height=500,top=100,left=100");
-            //console.log(frappe.session.user);
-            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
-            frappe.call({
-                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
-                args: {
-                    usuario: frappe.session.user
-                },
-                callback: (r) => {
-                    const orderItems = r.message[0];
-                    const orderItemsDelivery = r.message[1];
-                    if (popupWindow && !popupWindow.closed) {
-                        let cant = 0;
-                        let cantDel = 0;
-                        // Abre un documento HTML en la nueva ventana y muestra los datos
-                        const popupDocument = popupWindow.document;
-                        popupDocument.open();
-                        popupDocument.write(`<html><head><title>Platos Consolidados</title></head><body>
-                        <style>
-                            * {
-                            box-sizing: border-box;
-                            }
 
-                            /* Create three equal columns that floats next to each other */
-                            .column {
-                            float: left;
-                            width: 50%;
-                            padding: 10px;
-                            /* height: 300px; Should be removed. Only for demonstration */
-                            }
-
-                            /* Clear floats after the columns */
-                            .row:after {
-                            content: "";
-                            display: table;
-                            clear: both;
-                            }
-                            </style>
-                        `);
-                        popupDocument.write("<h2>Consolidacion de Platos:</h2>");
-                        popupDocument.write("<button type='button' style='border-radius: 8px; padding: 8px 20px;' id='refreshButton'>Actualizar</button>");
-                        popupDocument.write("<div class= 'row'> <div class= 'column'>");
-                        popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
-                        popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
-                        // popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
-                        orderItems.forEach((item) => {
-                                cant = cant + item.qty;
-                                popupDocument.write("<tr>");
-                                popupDocument.write("<td>[" + item.qty + "]</td>");
-                                // popupDocument.write("<td>" + item.item_code + "</td>");
-                                popupDocument.write("<td>" + item.item_name + "</td>");
-                                popupDocument.write("</tr>");
-                        });
-
-                        popupDocument.write(`</table></center>`);
-                        popupDocument.write(`<div id='totalqty'><center><b>Platos Totales: [${cant}]</b></center></div>`);
-
-                        popupDocument.write(`</div><div class= 'column'>`);
-
-                        popupDocument.write(`<center><table id='tableData1' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px; background: #e9e9e9;">`);
-                        popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
-                        // popupDocument.write("<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>");
-                        orderItemsDelivery.forEach((item) => {
-                            cantDel = cantDel + item.qty;
-                            popupDocument.write("<tr>");
-                            popupDocument.write("<td>[" + item.qty + "]</td>");
-                            // popupDocument.write("<td>" + item.item_code + "</td>");
-                            popupDocument.write("<td>" + item.item_name + "</td>");
-                            popupDocument.write("</tr>");
-                        });
-
-                        popupDocument.write(`</table></center>`);
-                        popupDocument.write(`<div id='totalqty1'><center><b>Deliveries Totales: [${cantDel}]</b></center></div>`);
-                        popupDocument.write("</div></div>");
-                        // Agrega un evento al botón de actualización
-                        const refreshButton = popupDocument.getElementById('refreshButton');
-                        refreshButton.addEventListener('click', () => {
-                            // Llama a la función para cargar y mostrar nuevamente los datos
-                            refreshData();
-                        });
-                        // Función para cargar y mostrar los datos
-                        function refreshData() {
-                            cant = 0;
-                            cantDel = 0;
-                            // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
-                            frappe.call({
-                                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_resumen",
-                                args: {
-                                    usuario: frappe.session.user
-                                },
-                                callback: (r) => {
-                                    const orderItems = r.message[0];
-                                    const orderItemsDelivery = r.message[1];
-
-                                    // Encuentra la tabla y actualiza su contenido
-                                    const tableData = popupDocument.getElementById('tableData');
-                                    const totalqty = popupDocument.getElementById('totalqty');
-                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Nombre</th></tr>";
-                                    // tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
-
-                                    orderItems.forEach((item) => {
-                                        cant = cant + item.qty;
-                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
-                                        // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
-                                    });
-                                    totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
-
-                                    // Encuentra la tabla y actualiza su contenido
-                                    const tableData1 = popupDocument.getElementById('tableData1');
-                                    const totalqty1 = popupDocument.getElementById('totalqty1');
-                                    tableData1.innerHTML = "<tr><th>[Qty]</th><th>Nombre</th></tr>";
-                                    // tableData.innerHTML = "<tr><th>[Qty]</th><th>Codigo</th><th>Nombre</th></tr>";
-
-                                    orderItemsDelivery.forEach((item) => {
-                                        cantDel = cantDel + item.qty;
-                                        tableData1.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
-                                        // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
-                                    });
-                                    totalqty1.innerHTML = `<center><b>Deliveries Totales: [${cantDel}]</b></center>`;
-
-                                }
-                            });
-                        }
-                        // Llama a la función de actualización automáticamente cada minuto
-                        setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
-
-
-                        popupDocument.write("</body></html>");
-                        popupDocument.close();
-                    } else {
-                        // Maneja el caso en el que la ventana emergente fue bloqueada
-                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
-                    }
-                }
+        this.modal.container
+            .off("click.production-center")
+            .on("click.production-center", "[data-production-view]", event => {
+                this.set_active_view($(event.currentTarget).data("production-view"));
+            })
+            .on("click.production-center", ".production-center-refresh", () => this.reload())
+            .on("click.production-center", ".production-command-action", event => {
+                const key = $(event.currentTarget).data("command-key");
+                const command = (this.dashboard && this.dashboard.commands || [])
+                    .find(row => row.key === key);
+                if (command) this.transition_command(command);
             });
-            // Cierra la ventana emergente después de 5 minutos
-            // setTimeout(() => {
-            //     popupWindow.close();
-            // }, 5 * 60 * 1000); // 5 minutos en milisegundos
-        });
+
+        refresh_button.on("click", () => this.reload());
+        this.update_active_tab();
     }
-
-    // TIDAX: MUESTRA EN UNA NUEVA VENTANA LOS PLATOS ATENDIDOS DEL DIA
-    agrupacion_platos_atendidos() {
-        // Agrega un evento al botón "Abrir Nueva Ventana"
-        document.getElementById('openPopupButtonAte').addEventListener('click', () => {
-            const popupWindow = window.open("", "Platos Atendidos", "width=600,height=400,top=100,left=100");
-
-            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
-            frappe.call({
-                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
-                args: {
-                    usuario: frappe.session.user
-                },
-                callback: (r) => {
-                    const orderItems = r.message;
-                    const fecha = new Date();
-                    if (popupWindow && !popupWindow.closed) {
-                        let cant = 0;
-                        // Abre un documento HTML en la nueva ventana y muestra los datos
-                        const popupDocument = popupWindow.document;
-                        popupDocument.open();
-                        popupDocument.write("<html><head><title>Platos Atendidos</title></head><body>");
-                        popupDocument.write(`<h2>Platos Atendidos(${fecha.toLocaleDateString()}):</h2>`);
-                        popupDocument.write(`<center><table id='tableData' style="border-radius: 40px; border: 1px solid #9c9c9c; padding: 15px;">`);
-                        popupDocument.write("<tr><th>[Qty]</th><th>Nombre</th></tr>");
-                        orderItems.forEach((item) => {
-                            cant = cant + item.qty;
-                            popupDocument.write("<tr>");
-                            popupDocument.write("<td>[" + item.qty + "]</td>");
-                            // popupDocument.write("<td>" + item.item_code + "</td>");
-                            popupDocument.write("<td>" + item.item_name + "</td>");
-                            popupDocument.write("</tr>");
-                        });
-                        popupDocument.write(`</table></center>`);
-                        popupDocument.write(`<div id='totalqty'><center><b>Platos Totales: [${cant}]</b></center></div>`);
-                        popupDocument.write("<button type='button' style='border-radius: 8px; padding: 8px 20px;' id='refreshButtonAte'>Actualizar</button>");
-                        // Agrega un evento al botón de actualización
-                        const refreshButton = popupDocument.getElementById('refreshButtonAte');
-                        refreshButton.addEventListener('click', () => {
-                            // Llama a la función para cargar y mostrar nuevamente los datos
-                            refreshData();
-                        });
-                        // Función para cargar y mostrar los datos
-                        function refreshData() {
-                            cant = 0;
-                            // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
-                            frappe.call({
-                                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_atendidos",
-                                args: {
-                                    usuario: frappe.session.user
-                                },
-                                callback: (r) => {
-                                    const orderItems = r.message;
-
-                                    // Encuentra la tabla y actualiza su contenido
-                                    const tableData = popupDocument.getElementById('tableData');
-                                    const totalqty = popupDocument.getElementById('totalqty');
-                                    tableData.innerHTML = "<tr><th>[Qty]</th><th>Nombre</th></tr>";
-
-                                    orderItems.forEach((item) => {
-                                        cant = cant + item.qty;
-                                        tableData.innerHTML += "<tr><td>[" + item.qty + "]</td>" + "<td>" + item.item_name + "</td></tr>";
-                                        // tableData.innerHTML += "<tr><td>[" + item.qty + "]</td><td>" + item.item_code + "</td><td>" + item.item_name + "</td></tr>";
-                                    });
-                                    totalqty.innerHTML = `<center><b>Platos Totales: [${cant}]</b></center>`;
-                                }
-                            });
-                        }
-                        // Llama a la función de actualización automáticamente cada minuto
-                        //setInterval(refreshData, 60000); // 60000 milisegundos = 1 minuto
-
-                        popupDocument.write("</body></html>");
-                        popupDocument.close();
-                    } else {
-                        // Maneja el caso en el que la ventana emergente fue bloqueada
-                        alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
-                    }
-                }
-            });
-        });
-    }
-
-    // TIDAX: MUESTRA EN UNA NUEVA VENTANA LAS COMANDAS POR ATENDER
-    agrupacion_comandas() {
-        // Agrega un evento al botón "Abrir Nueva Ventana"
-        document.getElementById('openPopupButtonCom').addEventListener('click', () => {
-            const popupWindow = window.open("", "Informacion Comandas", "width=900,height=600,top=100,left=100");
-            // Realiza una solicitud a la API de Frappe para obtener los elementos de la tabla hija
-            frappe.call({
-                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
-                args: {
-                    usuario: frappe.session.user
-                },
-                callback: (r) => {
-                    const ordenes = r.message;
-                    //console.log(ordenes);
-                    if (popupWindow && !popupWindow.closed) {
-                        const popupDocument = popupWindow.document;
-                        popupDocument.open();
-                        // Mantener esta parte inalterada
-                        popupDocument.write(`<html><head><title>Comandas</title>
-                        <link rel="stylesheet" type="text/css" href="restaurant_management/restaurant_management/public/restaurant/css/cocina.css"></head>
-                        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-                        
-                        <body>`);
-                        popupDocument.write('<button id="refreshButtonCom" class="btn btn-outline-secondary">Sincronizar Comandas</button>');
-                        popupDocument.write('<span id="syncMessage" style="margin-left: 10px; color: green;"></span>'); // Nuevo elemento para mostrar el mensaje
-                        popupDocument.write("<h3>Información de Comandas</h3>");
-                        // Crea botones por cada grupo
-                        const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
-                        const numeroDeGrupos = Math.ceil(subNamesUnicos.length / 4);
-                        popupDocument.write('<div id="pagination" align = "center">');
-                        for (let i = 0; i < numeroDeGrupos; i++) {
-                            const buttonText = `Grupo ${i + 1}`;
-                            popupDocument.write(`<button id="botonAgrupacion${i}" class="btn btn-outline-success">${buttonText}</button>`);
-                        }
-                        popupDocument.write(`<button id="refreshButtonCom1" class="btn btn-outline-success">Todo</button>`);
-                        popupDocument.write('</div>');
-                        // Agrega evento a los botones de agrupación
-                        for (let i = 0; i < numeroDeGrupos; i++) {
-                            const botonAgrupacion = popupDocument.getElementById(`botonAgrupacion${i}`);
-                            botonAgrupacion.addEventListener('click', () => {
-                                mostrarPedidos2(i + 1, subNamesUnicos.length, ordenes);
-                            });
-                        }
-    
-                        let compara = "";
-                        let compara_ant = "";
-    
-                        // Itera sobre las órdenes y muestra la cabecera una vez y los detalles debajo de la misma en divs
-                        popupDocument.write(`<div id="divData" style="justify-content: space-around; display: flex; flex-wrap: wrap;">`);
-                        ordenes.forEach((orden, index) => {
-                            if(!orden.table_description.includes("D")){
-                            if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
-                                compara_ant = compara;
-                                if (compara === compara_ant && compara_ant !== "") {
-                                    popupDocument.write("</div>");
-                                }
-                                popupDocument.write(`<div id="tableData" style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
-                                box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`);
-                                popupDocument.write(`<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${orden.sub_name}</button>`);
-                                popupDocument.write("<p>Sala: " + orden.room_description + " - Mesa: " + orden.table_description + " - Mozo: " + orden.owner);
-                                popupDocument.write("<br>" + orden.comentario + "</p>");
-                                compara = orden.room_description + orden.table_description + orden.sub_name;
-                            }
-                            if ((orden.room_description + orden.table_description + orden.sub_name) === compara) {
-                                // popupDocument.write("<p><strong>[" + orden.qty + "]</strong>" +" "+orden.item_code+" "+ orden.item_name +"</p>");
-                                popupDocument.write("<strong>[" + orden.qty + "]</strong>" + " " + orden.item_name + "<br>");
-                                if (orden.notes) {
-                                    popupDocument.write("<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>");
-                                }
-                            }}
-                        });
-
-
-                        const mostrarPedidos2 = (numeroDeGrupo, subNamesUnicos, ordenes) => {
-                            // Obtén el elemento que contiene la información
-                            const tableData = popupDocument.getElementById('divData');
-                        
-                            // Limpiar el contenido actual
-                            tableData.innerHTML = '';
-
-                            const syncMessage = popupDocument.getElementById('syncMessage');
-                            syncMessage.innerText = `Grupo ${numeroDeGrupo}`;
-                        
-                            // Agrupa las órdenes por sub_name
-                            const ordenesAgrupadas = agruparPorSubName(ordenes);
-                        
-                            // Calcula el rango de pedidos a mostrar en función del grupo
-                            let inicio = (numeroDeGrupo - 1) * 4;
-                            let fin = Math.min(numeroDeGrupo * 4, subNamesUnicos);
-                        
-                            for (let i = inicio; i < fin && i < ordenesAgrupadas.length; i++) {
-                                const grupo = ordenesAgrupadas[i];
-
-                                if(!grupo[0].table_description.includes("D")){
-                        
-                                // Muestra la cabecera solo si es diferente de la anterior
-                                const cuadro = `<div  style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
-                                    box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>`;
-                                //const boton = `<button style='border-radius: 8px; padding: 8px 20px; width: 100%' id='comandaAtendido'>${grupo[0].sub_name}</button>`;
-                                const boton = `<button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
-                                            data-order-name='${grupo[0].name}' data-ordered-time='${grupo[0].ordered_time}'>${grupo[0].sub_name}</button>`
-
-
-                                const cabecera = "<p>Sala: " + grupo[0].room_description + " - Mesa: " + grupo[0].table_description +" - Mozo: " + grupo[0].owner + "<br>" + grupo[0].comentario +"</p>";
-                        
-                                // Muestra los detalles de la orden
-                                const detalles = grupo.map(orden => "<strong>[" + orden.qty + "]</strong>" + " " + orden.item_name + "<br>").join('');
-                        
-                                const pie = grupo.map(orden => orden.notes ? "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>" : '').join('');
-                        
-                                // Concatena las partes y agrega al contenedor
-                                tableData.innerHTML += cuadro + boton + cabecera + detalles + pie + "</div>";
-                                }
-                            }
-
-                            // Agrega eventos a los botones "Atendido"
-                            const atendidoButtons = popupDocument.getElementsByClassName('comandaAtendido');
-                            for (let i = 0; i < atendidoButtons.length; i++) {
-                                atendidoButtons[i].addEventListener('click', (event) => {
-                                    // Obtiene los valores de los atributos de datos del botón clickeado
-                                    const orderName = event.target.dataset.orderName;
-                                    const orderedTime = event.target.dataset.orderedTime;
-                                    saveComanda(orderName, orderedTime);
-                                });
-                            }
-                            // Función para guardar la comanda
-                            const saveComanda = (orderName, orderedTime) => {
-                                // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
-                                frappe.call({
-                                    method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
-                                    args: {
-                                        order_name: orderName, // Nombre de la orden
-                                        ordered_time: orderedTime, // Hora de la orden
-                                        usuario: frappe.session.user
-                                    },
-                                    callback: (r) => {
-                                        // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
-                                        //alert("La orden ha sido marcada como 'Atendida'.");
-                                        refreshData();
-                                        this.reload();
-                                    }
-                                });
-                            }
-                        }
-
-                        // Función para agrupar las órdenes por sub_name
-                        const agruparPorSubName = (ordenes) => {
-                            const ordenesAgrupadas = [];
-                            const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
-                            subNamesUnicos.forEach(subName => {
-                                const grupo = ordenes.filter(orden => orden.sub_name === subName);
-                                ordenesAgrupadas.push(grupo);
-                            });
-                            return ordenesAgrupadas;
-                        };                        
-                        
-                        // Agrega un evento al botón de actualización
-                        const refreshButton = popupDocument.getElementById('refreshButtonCom');
-                        refreshButton.addEventListener('click', () => {
-                            // Llama a la función para cargar y mostrar nuevamente los datos
-                            refreshData();
-
-                            // Muestra el mensaje "Comandas sincronizadas"
-                            const syncMessage = popupDocument.getElementById('syncMessage');
-                            syncMessage.innerText = 'Comandas sincronizadas';
-
-                            // Oculta el mensaje después de 3 segundos (ajusta el tiempo según tus necesidades)
-                            setTimeout(() => {
-                                syncMessage.innerText = '';
-                            }, 3000);
-                        });
-
-                        // Agrega un evento al botón de actualización - Todo
-                        const refreshButton1 = popupDocument.getElementById('refreshButtonCom1');
-                        refreshButton1.addEventListener('click', () => {
-                            // Llama a la función para cargar y mostrar nuevamente los datos
-                            refreshData();
-
-                            // Muestra el mensaje "Comandas sincronizadas"
-                            const syncMessage = popupDocument.getElementById('syncMessage');
-                            syncMessage.innerText = 'Comandas sincronizadas';
-
-                            // Oculta el mensaje después de 3 segundos (ajusta el tiempo según tus necesidades)
-                            setTimeout(() => {
-                                syncMessage.innerText = '';
-                            }, 3000);
-                        });
-
-                        // Función para cargar y mostrar los datos
-                        const refreshData = () => {
-                            // Realiza nuevamente la solicitud a la API de Frappe para obtener los elementos de la tabla hija
-                            frappe.call({
-                                method: "restaurant_management.restaurant_management.doctype.utils.get_ordenes_cocina_comandas",
-                                args: {
-                                    usuario: frappe.session.user
-                                },
-                                callback: (r) => {
-                                    const ordenes = r.message;
-                                    //if (popupWindow && !popupWindow.closed) {
-                                    //const popupDocument = popupWindow.document;
-                                    let compara = "";
-                                    let cabecera = ""; // Almacena la cabecera actual
-                                    let detalles = ""; // Almacena los detalles actuales
-                                    let pie = "";
-
-                                    let botones = "";
-
-                                    // Obtén el elemento que contiene la información
-                                    const tableData = popupDocument.getElementById('divData');
-                                    const tableData1 = popupDocument.getElementById('pagination');
-
-                                    // Limpiar el contenido actual
-                                    tableData.innerHTML = '';
-                                    tableData1.innerHTML = '';
-
-
-
-                                    // Crea botones por cada grupo
-                                    const subNamesUnicos = [...new Set(ordenes.map(orden => orden.sub_name))];
-                                    const numeroDeGrupos = Math.ceil(subNamesUnicos.length / 4);
-
-                                    for (let i = 0; i < numeroDeGrupos; i++) {
-                                        const buttonText = `Grupo ${i + 1}`;
-                                        botones += `<button id="botonAgrupacion${i}" class="btn btn-outline-success" >${buttonText}</button>`;
-                                    }
-                                    botones += `<button id="refreshButtonCom1" class="btn btn-outline-success">Todo</button>`;
-                                    tableData1.innerHTML += botones;
-                                    // Agrega evento a los botones de agrupación
-                                    for (let i = 0; i < numeroDeGrupos; i++) {
-                                        const botonAgrupacionxxx = popupDocument.getElementById(`botonAgrupacion${i}`);
-                                        botonAgrupacionxxx.addEventListener('click', () => {
-                                            mostrarPedidos2(i + 1, subNamesUnicos.length, ordenes);
-                                        });
-                                    }
-
-                                    // Agrega un evento al botón de actualización - Todo
-                                    const refreshButton1 = popupDocument.getElementById('refreshButtonCom1');
-                                    refreshButton1.addEventListener('click', () => {
-                                        // Llama a la función para cargar y mostrar nuevamente los datos
-                                        refreshData();
-
-                                        // Muestra el mensaje "Comandas sincronizadas"
-                                        const syncMessage = popupDocument.getElementById('syncMessage');
-                                        syncMessage.innerText = 'Comandas sincronizadas';
-
-                                        // Oculta el mensaje después de 3 segundos (ajusta el tiempo según tus necesidades)
-                                        setTimeout(() => {
-                                            syncMessage.innerText = '';
-                                        }, 3000);
-                                    });
-
-                                    // Itera sobre las órdenes y muestra la información formateada
-                                    ordenes.forEach((orden) => {
-                                        if(!orden.table_description.includes("D")){
-                                        if ((orden.room_description + orden.table_description + orden.sub_name) !== compara) {
-                                            if (compara) {
-                                                // Si hay una cabecera previa, agrega el contenido
-                                                tableData.innerHTML += cabecera + detalles + pie;
-                                            }
-
-                                            // Inicia una nueva cabecera
-                                            cabecera = `<div style='line-height: 95%; float: left; position: relative;font-size: 0.8em; width: 20%; margin: 1% 0.5em;padding: 1% 0.5em; 
-    box-shadow: 0.1em 0.1em 0.2em #888888; box-sizing: border-box;border: 1px solid #9c9c9c; min-width: 20%; max-width: 20%;'>
-    <button style='border-radius: 8px; padding: 8px 20px; width: 100%; background-color: #008CBA;' class='comandaAtendido' 
-    data-order-name='${orden.name}' data-ordered-time='${orden.ordered_time}'>${orden.sub_name}</button>
-    <p>Sala: ${orden.room_description} - Mesa: ${orden.table_description} - Mozo: ${orden.owner} <br> ${orden.comentario}</p>`;
-                                            detalles = ""; // Inicia una nueva sección de detalles
-                                            compara = orden.room_description + orden.table_description + orden.sub_name;
-                                        }
-
-                                        // detalles += `<p><strong>[${orden.qty}]</strong> ${orden.item_code} ${orden.item_name}</p>`;
-                                        detalles += `<strong>[${orden.qty}]</strong> ${orden.item_name}</br>`;
-                                        if (orden.notes) {
-                                            detalles += "<strong style='font-size: 0.8em; color: red'>N:" + orden.notes + "</strong><br>";
-                                        }
-                                    }});
-
-                                    // Agrega el último conjunto de cabecera, detalles y pie
-                                    if (compara) {
-                                        tableData.innerHTML += cabecera + detalles + pie;
-                                    }
-
-                                    // Agrega eventos a los botones "Atendido"
-                                    const atendidoButtons = popupDocument.getElementsByClassName('comandaAtendido');
-                                    for (let i = 0; i < atendidoButtons.length; i++) {
-                                        atendidoButtons[i].addEventListener('click', (event) => {
-                                            // Obtiene los valores de los atributos de datos del botón clickeado
-                                            const orderName = event.target.dataset.orderName;
-                                            //console.log(orderName);
-                                            const orderedTime = event.target.dataset.orderedTime;
-                                            //console.log(orderedTime);
-                                            saveComanda(orderName, orderedTime);
-                                        });
-                                    }
-                                    // Función para guardar la comanda
-                                    const saveComanda = (orderName, orderedTime) => {
-                                        // Realiza una solicitud a la API de Frappe para actualizar la columna "status" de la tabla hija "Order Entry Item"
-                                        frappe.call({
-                                            method: "restaurant_management.restaurant_management.doctype.utils.update_comanda_atendida",
-                                            args: {
-                                                order_name: orderName, // Nombre de la orden
-                                                ordered_time: orderedTime, // Hora de la orden
-                                                usuario: frappe.session.user
-                                            },
-                                            callback: (r) => {
-                                                // Maneja la respuesta de la actualización (puedes mostrar un mensaje de éxito o realizar otras acciones necesarias)
-                                                //alert("La orden ha sido marcada como 'Atendida'.");
-                                                refreshData();
-                                                this.reload();
-                                            }
-                                        });
-                                    }
-                                    //} else {
-                                    //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
-                                    //}
-
-                                }
-                            });
-                        }
-                        // Llama a la función de actualización automáticamente cada minuto
-                        // setInterval(refreshData, 18000); // 60000 milisegundos = 1 minuto
-
-                        //popupDocument.write("</div></body></html>");
-                        popupDocument.write("</body></html>");
-                        popupDocument.close();
-                    } else {
-                        // Maneja el caso en el que la ventana emergente fue bloqueada
-                        //alert("La ventana emergente fue bloqueada. Por favor, habilita las ventanas emergentes en tu navegador.");
-                    }
-                }
-            });
-            // Cierra la ventana emergente después de 5 minutos
-            setTimeout(() => {
-                popupWindow.close();
-            }, 5 * 60 * 1000); // 5 minutos en milisegundos
-        });
-    }
-
-
-
-
 
     template() {
         return `
-		<div class=" process-manage">
-			<div id="${this.command_container_name}"></div>
-		</div>`;
+            <div class="production-center-shell">
+                <div class="production-center-tabs" role="tablist">
+                    <button type="button" class="btn btn-default" data-production-view="consolidation">
+                        <span class="fa fa-list"></span>
+                        <span>${__("Dish consolidation")}</span>
+                        <span class="production-center-count" data-count="consolidation">0</span>
+                    </button>
+                    <button type="button" class="btn btn-default" data-production-view="commands">
+                        <span class="fa fa-ticket"></span>
+                        <span>${__("Commands")}</span>
+                        <span class="production-center-count" data-count="commands">0</span>
+                    </button>
+                    <button type="button" class="btn btn-default" data-production-view="attended">
+                        <span class="fa fa-check-circle"></span>
+                        <span>${__("Attended orders")}</span>
+                        <span class="production-center-count" data-count="attended">0</span>
+                    </button>
+                </div>
+                <div class="production-center-summary"></div>
+                <div class="production-center-content" aria-live="polite"></div>
+            </div>`;
     }
 
-    get_commands_food() {
-        RM.working("Load commands food");
+    root() {
+        return this.modal.container.find(".production-center-shell");
+    }
+
+    set_active_view(view) {
+        if (!["commands", "consolidation", "attended"].includes(view)) return;
+        this.active_view = view;
+        this.update_active_tab();
+        this.render_active_view();
+    }
+
+    update_active_tab() {
+        const root = this.root();
+        root.find("[data-production-view]").each((index, element) => {
+            const active = $(element).data("production-view") === this.active_view;
+            $(element)
+                .toggleClass("active", active)
+                .attr("aria-selected", active ? "true" : "false");
+        });
+    }
+
+    reload() {
+        if (!this.is_open() || document.hidden) return;
+        if (this.loading) {
+            this.pending_reload = true;
+            return;
+        }
+
+        this.loading = true;
+        this.pending_reload = false;
+        const serial = ++this.request_serial;
+        this.show_loading();
+
         frappeHelper.api.call({
             model: "Restaurant Object",
             name: this.table.data.name,
-            method: "commands_food",
+            method: "production_center_dashboard",
             args: {},
-            always: (r) => {
-                RM.ready();
-                if (!r || r.exc || !Array.isArray(r.message)) return;
-                this.make_food_commands(r.message);
-            },
-        });
-    }
+            always: response => {
+                if (serial !== this.request_serial) return;
+                this.loading = false;
 
-    make_food_commands(items = []) {
-        const _items = Object.keys(this.items);
-        this.new_items_keys = [];
+                if (response && !response.exc && response.message) {
+                    this.dashboard = response.message;
+                    this.render_dashboard();
+                } else if (!this.dashboard) {
+                    this.show_error();
+                }
 
-        items.forEach((item) => {
-            this.new_items_keys.push(item.identifier);
-
-            if (_items.includes(item.identifier)) {
-                this.items[item.identifier].data = item;
-                this.items[item.identifier].refresh_html();
-            } else {
-                this.add_item(item);
+                if (this.pending_reload) {
+                    this.pending_reload = false;
+                    this.reload();
+                }
             }
-
-            this.items[item.identifier].process_manage = this;
         });
-
-        setTimeout(() => {
-            this.debug_items();
-        }, 100);
-
-        this.time_elapsed();
     }
 
-    time_elapsed() {
-        if (this.time_elapsed_interval != null) return;
-
-        this.time_elapsed_interval = setInterval(() => {
-            this.in_items(item => {
-                item.time_elapsed
-            });
-        }, 1000);
+    schedule_reload() {
+        clearTimeout(this.reload_timeout);
+        this.reload_timeout = setTimeout(() => {
+            if (this.is_open() && !document.hidden) this.reload();
+        }, 150);
     }
 
-    in_items(f) {
-        Object.keys(this.items).forEach(k => {
-            f(this.items[k]);
-        })
+    start_reconciliation() {
+        if (this.reconciliation_interval) return;
+        this.reconciliation_interval = setInterval(() => {
+            if (this.is_open() && !document.hidden) this.reload();
+        }, 5000);
     }
 
-    check_items(items) {
-        items.forEach((item) => {
-            this.check_item(item);
-        });
-        this.sync_orders_count();
+    stop_reconciliation() {
+        if (this.reconciliation_interval) {
+            clearInterval(this.reconciliation_interval);
+            this.reconciliation_interval = null;
+        }
     }
 
-    check_item(item) {
-        if (Object.keys(this.items).includes(item.identifier)) {
-            const _item = this.items[item.identifier];
-            if (this.include_status(item.status) && this.include_item_group(item.item_group)) {
-                _item.data = item;
-                _item.refresh_html();
-            } else {
-                _item.remove();
-            }
+    show_loading() {
+        if (this.dashboard) return;
+        this.root().find(".production-center-content").empty().append(
+            $("<div>", { class: "production-center-state" })
+                .append($("<span>", { class: "fa fa-spinner fa-spin" }), " ", __("Loading production center"))
+        );
+    }
+
+    show_error() {
+        this.root().find(".production-center-content").empty().append(
+            $("<div>", { class: "production-center-state text-danger" })
+                .text(__("Production center data could not be loaded"))
+        );
+    }
+
+    render_dashboard() {
+        const counts = this.dashboard.counts || {};
+        const root = this.root();
+        root.find('[data-count="consolidation"]').text(this.format_qty(counts.active_qty || 0));
+        root.find('[data-count="commands"]').text(counts.commands || 0);
+        root.find('[data-count="attended"]').text(this.format_qty(counts.attended_qty || 0));
+
+        this.table.data.orders_count = counts.active_items || 0;
+        this.table.set_orders_count();
+
+        const summary = root.find(".production-center-summary").empty();
+        summary.append(
+            $("<span>").text(__("Active dishes: {0}", [this.format_qty(counts.active_qty || 0)])),
+            $("<span>").text(__("Commands: {0}", [counts.commands || 0]))
+        );
+
+        this.render_active_view();
+    }
+
+    render_active_view() {
+        if (!this.dashboard) return;
+        const content = this.root().find(".production-center-content").empty();
+
+        if (this.active_view === "consolidation") {
+            this.render_consolidation(content);
+        } else if (this.active_view === "attended") {
+            this.render_commands(content, this.dashboard.attended || [], true);
         } else {
-            if (this.include_status(item.status) && this.include_item_group(item.item_group)) {
-                this.new_items_keys.push(item.identifier);
-                this.add_item(item);
+            this.render_commands(content, this.dashboard.commands || [], false);
+        }
+
+        const truncated = this.dashboard.truncated || {};
+        if (
+            (this.active_view === "attended" && truncated.attended) ||
+            (this.active_view !== "attended" && truncated.active)
+        ) {
+            content.prepend(
+                $("div", { class: "alert alert-warning production-center-limit" })
+                    .text(__("Only the most recent production records are shown"))
+            );
+        }
+    }
+
+    render_consolidation(content) {
+        const rows = this.dashboard.consolidation || [];
+        if (!rows.length) {
+            this.render_empty(content, __("There are no active dishes"));
+            return;
+        }
+
+        const table = $("<table>", { class: "table table-bordered production-consolidation-table" });
+        const header = $("<tr>")
+            .append($("<th>").text(__("Dish")))
+            .append($("<th>", { class: "text-center" }).text(__("Pending")))
+            .append($("<th>", { class: "text-center" }).text(__("In preparation")))
+            .append($("<th>", { class: "text-center" }).text(__("Total")));
+        table.append($("<thead>").append(header));
+
+        const body = $("<tbody>");
+        rows.forEach(row => {
+            body.append(
+                $("<tr>")
+                    .append($("<td>").append(
+                        $("<strong>").text(row.item_name || row.item_code),
+                        row.item_name && row.item_name !== row.item_code
+                            ? $("<small>").text(row.item_code)
+                            : null
+                    ))
+                    .append($("<td>", { class: "text-center production-qty pending" }).text(this.format_qty(row.pending_qty)))
+                    .append($("<td>", { class: "text-center production-qty processing" }).text(this.format_qty(row.processing_qty)))
+                    .append($("<td>", { class: "text-center production-qty total" }).text(this.format_qty(row.total_qty)))
+            );
+        });
+        table.append(body);
+        content.append($("<div>", { class: "table-responsive" }).append(table));
+    }
+
+    render_commands(content, commands, attended) {
+        if (!commands.length) {
+            this.render_empty(
+                content,
+                attended ? __("There are no attended orders today") : __("There are no active commands")
+            );
+            return;
+        }
+
+        const grid = $("<div>", { class: "production-command-grid" });
+        commands.forEach(command => grid.append(this.command_card(command, attended)));
+        content.append(grid);
+    }
+
+    command_card(command, attended) {
+        const card = $("<article>", { class: "production-command-card" });
+        const header = $("<header>", { class: "production-command-header" });
+        const title = $("<div>").append(
+            $("<strong>").text(command.short_name || command.order_name),
+            $("<span>").text(command.table_description || __("No table"))
+        );
+        const elapsed = $("<span>", { class: "production-command-time" })
+            .text(RMHelper.prettyDate(command.ordered_time, true));
+        header.append(title, elapsed);
+        card.append(header);
+
+        const meta = $("<div>", { class: "production-command-meta" });
+        if (command.waiter) meta.append($("<span>").text(__("Waiter: {0}", [command.waiter])));
+        meta.append($("<span>").text(__("Status: {0}", [this.status_label(command.status)])));
+        card.append(meta);
+
+        if (command.comment) {
+            card.append($("<div>", { class: "production-command-comment" }).text(command.comment));
+        }
+
+        const item_list = $("<div>", { class: "production-command-items" });
+        (command.items || []).forEach(item => {
+            const row = $("<div>", { class: "production-command-item" }).append(
+                $("<strong>", { class: "production-command-item-qty" }).text(`[${this.format_qty(item.qty)}]`),
+                $("<span>", { class: "production-command-item-name" }).text(item.item_name || item.item_code)
+            );
+            if (item.notes) row.append($("<small>", { class: "production-command-note" }).text(item.notes));
+            item_list.append(row);
+        });
+        card.append(item_list);
+
+        const footer = $("<footer>", { class: "production-command-footer" }).append(
+            $("<span>").text(__("Dishes: {0}", [this.format_qty(command.qty || 0)]))
+        );
+        if (!attended && this.dashboard.can_transition && command.next_status) {
+            footer.append(
+                $("<button>", {
+                    type: "button",
+                    class: "btn btn-primary production-command-action"
+                })
+                    .data("command-key", command.key)
+                    .text(this.action_label(command.next_status))
+            );
+        }
+        card.append(footer);
+        return card;
+    }
+
+    transition_command(command) {
+        if (this.loading || !command.identifiers || !command.identifiers.length) return;
+        RM.working(__("Updating command"), false);
+        frappeHelper.api.call({
+            model: "Restaurant Object",
+            name: this.table.data.name,
+            method: "set_commands_status",
+            args: {
+                identifiers: command.identifiers,
+                expected_status: command.status
+            },
+            always: response => {
+                RM.ready();
+                if (response && !response.exc && response.message) {
+                    frappe.show_alert({
+                        message: __("Command updated to {0}", [this.status_label(response.message.status)]),
+                        indicator: "green"
+                    });
+                }
+                this.reload();
             }
-        }
-    }
-
-    debug_items() {
-        Object.keys(this.items).filter(x => !this.new_items_keys.includes(x)).forEach((r) => {
-            this.items[r].remove();
         });
-        this.sync_orders_count();
     }
 
-    remove_item(item) {
-        if (this.items[item]) {
-            this.items[item].remove();
-        }
-        this.sync_orders_count();
+    render_empty(content, message) {
+        content.append(
+            $("<div>", { class: "production-center-state" }).append(
+                $("<span>", { class: "fa fa-cutlery" }),
+                $("<p>").text(message)
+            )
+        );
     }
 
-    add_item(item) {
-        this.items[item.identifier] = new FoodCommand({
-            identifier: item.identifier,
-            process_manage: this,
-            data: item
-        });
+    action_label(next_status) {
+        return {
+            Processing: __("Start command"),
+            Completed: __("Complete command"),
+            Delivering: __("Deliver command"),
+            Delivered: __("Mark as delivered")
+        }[next_status] || __("Advance command");
+    }
+
+    status_label(status) {
+        return {
+            Sent: __("Pending"),
+            Processing: __("In preparation"),
+            Completed: __("Attended"),
+            Delivering: __("Delivering"),
+            Delivered: __("Delivered")
+        }[status] || status;
+    }
+
+    format_qty(value) {
+        const number = Number(value || 0);
+        return Number.isInteger(number) ? number : number.toFixed(2);
+    }
+
+    // Realtime compatibility: every relevant item event reconciles the active view
+    // against persisted center-scoped data instead of mutating one popup in memory.
+    get_commands_food() {
+        this.reload();
+    }
+
+    make_food_commands() {
+        this.schedule_reload();
+    }
+
+    check_items() {
+        this.schedule_reload();
+    }
+
+    remove_item() {
+        this.schedule_reload();
     }
 
     sync_orders_count() {
-        this.table.data.orders_count = Object.keys(this.items).length;
+        if (!this.dashboard) return;
+        this.table.data.orders_count = this.dashboard.counts.active_items || 0;
         this.table.set_orders_count();
     }
 
-    include_status(status) {
-        return this.table.data.status_managed.includes(status);
-    }
-
-    include_item_group(item_group) {
-        return this.table.data.items_group.includes(item_group);
-    }
-
-    container() {
-        return $(`#orders-${this.table.data.name}`);
-    }
-
     command_container() {
-        return document.getElementById(this.command_container_name);
+        return this.root().find(".production-center-content").get(0);
     }
 }

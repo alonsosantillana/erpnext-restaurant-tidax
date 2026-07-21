@@ -1,3 +1,227 @@
 .process-manage {
     position: absolute;
 }
+
+.production-center-shell {
+    min-height: 100%;
+    background: var(--bg-light-gray, #f7f8fa);
+}
+
+.production-center-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: var(--card-bg, #fff);
+    border-bottom: 1px solid var(--border-color, #dfe2e5);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.production-center-tabs .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 42px;
+    flex: 1;
+    border-radius: 7px;
+}
+
+.production-center-tabs .btn.active {
+    color: #fff;
+    background: var(--primary, #2490ef);
+    border-color: var(--primary, #2490ef);
+}
+
+.production-center-count {
+    min-width: 24px;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.09);
+    font-weight: 700;
+}
+
+.production-center-tabs .active .production-center-count {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.production-center-summary {
+    display: flex;
+    gap: 20px;
+    padding: 9px 14px;
+    color: var(--text-muted, #6c7680);
+    background: var(--card-bg, #fff);
+    border-bottom: 1px solid var(--border-color, #dfe2e5);
+}
+
+.production-center-content {
+    padding: 14px;
+}
+
+.production-center-state {
+    padding: 70px 20px;
+    color: var(--text-muted, #6c7680);
+    font-size: 18px;
+    text-align: center;
+}
+
+.production-center-state > .fa {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 42px;
+}
+
+.production-command-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    align-items: start;
+    gap: 12px;
+}
+
+.production-command-card {
+    overflow: hidden;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #dfe2e5);
+    border-radius: 8px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06);
+}
+
+.production-command-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--subtle-fg, #eef1f4);
+}
+
+.production-command-header strong,
+.production-command-header span {
+    display: block;
+}
+
+.production-command-header strong {
+    font-size: 16px;
+}
+
+.production-command-time {
+    flex: none;
+    font-weight: 700;
+    color: var(--orange-600, #e87511);
+}
+
+.production-command-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 12px;
+    color: var(--text-muted, #6c7680);
+    font-size: 12px;
+    border-bottom: 1px solid var(--border-color, #dfe2e5);
+}
+
+.production-command-comment,
+.production-command-note {
+    display: block;
+    color: var(--red-600, #c92a2a);
+    background: var(--yellow-50, #fff8db);
+}
+
+.production-command-comment {
+    padding: 7px 12px;
+}
+
+.production-command-items {
+    padding: 6px 12px;
+}
+
+.production-command-item {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    gap: 3px 8px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border-color, #dfe2e5);
+}
+
+.production-command-item:last-child {
+    border-bottom: 0;
+}
+
+.production-command-item-qty {
+    grid-row: 1 / span 2;
+    font-size: 16px;
+}
+
+.production-command-note {
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.production-command-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 48px;
+    padding: 7px 12px;
+    background: var(--subtle-fg, #eef1f4);
+}
+
+.production-consolidation-table {
+    margin: 0;
+    background: var(--card-bg, #fff);
+}
+
+.production-consolidation-table td,
+.production-consolidation-table th {
+    vertical-align: middle !important;
+}
+
+.production-consolidation-table td small {
+    display: block;
+    color: var(--text-muted, #6c7680);
+}
+
+.production-consolidation-table .production-qty {
+    min-width: 90px;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.production-consolidation-table .pending {
+    color: var(--orange-600, #e87511);
+}
+
+.production-consolidation-table .processing {
+    color: var(--blue-600, #1678c2);
+}
+
+.production-consolidation-table .total {
+    color: var(--green-600, #278f5b);
+}
+
+.production-center-limit {
+    margin-bottom: 12px;
+}
+
+@media (max-width: 700px) {
+    .production-center-tabs {
+        flex-direction: column;
+        position: static;
+    }
+
+    .production-center-summary,
+    .production-command-meta {
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .production-command-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .production-center-content {
+        padding: 8px;
+    }
+}

@@ -10,6 +10,16 @@ from frappe.model.document import Document
 import re
 
 
+PRODUCTION_CENTER_ITEM_LIMIT = 500
+ATTENDED_ITEM_LIMIT = 300
+
+
+def production_command_batch_key(item):
+    ordered_time = frappe.utils.get_datetime(item.ordered_time) if item.ordered_time else None
+    ordered_minute = ordered_time.strftime("%Y-%m-%d %H:%M") if ordered_time else "unknown"
+    return f"{item.parent}:{frappe.utils.cint(item.ordered_nro) or 1}:{ordered_minute}"
+
+
 class RestaurantObject(Document):
     @property
     def _room(self):
@@ -175,6 +185,262 @@ class RestaurantObject(Document):
 
         return 0
 
+    def _validate_production_center(self):
+        if self.type != "Production Center":
+            frappe.throw(_("This operation requires a Production Center"))
+        if not self._status_managed or not self._items_group:
+            frappe.throw(_("Configure statuses and item groups for Production Center {0}").format(self.description))
+
+        permissions = frappe.permissions.get_doc_permissions(self)
+        can_manage_all_rooms = (
+            frappe.session.user == "Administrator"
+            or permissions.get("write")
+            or permissions.get("create")
+        )
+        if not can_manage_all_rooms:
+            allowed_rooms = set(frappe.get_single("Restaurant Settings").rooms_access())
+            if self.room not in allowed_rooms:
+                frappe.throw(_("Not permitted to use Production Center {0}").format(self.description), frappe.PermissionError)
+
+    @staticmethod
+    def _production_company_and_profile():
+        from erpnext.stock.get_item_details import get_pos_profile
+
+        company = frappe.defaults.get_user_default("company")
+        if not company:
+            frappe.throw(_("Set a default Company before opening Production Center"))
+        if not frappe.has_permission("Company", "read", company):
+            frappe.throw(_("Not permitted to use Company {0}").format(company), frappe.PermissionError)
+
+        pos_profile = get_pos_profile(company, user=frappe.session.user)
+        if not pos_profile or pos_profile.get("disabled"):
+            frappe.throw(_("No enabled POS Profile is available for {0}").format(company))
+        return company, pos_profile.name
+
+    def _production_status_map(self):
+        return {
+            row.status_managed: row.next_status
+            for row in self.status_managed
+            if row.status_managed and row.next_status
+        }
+
+    @staticmethod
+    def _production_order_data(company, pos_profile):
+        fields = [
+            "name",
+            "owner",
+            "cambio_mozo",
+            "cambio_mozo_nombre",
+            "comentario",
+            "room_description",
+            "table_description",
+        ]
+        today = frappe.utils.nowdate()
+        tomorrow = frappe.utils.add_days(today, 1)
+        active_orders = frappe.get_all(
+            "Table Order",
+            filters={
+                "company": company,
+                "pos_profile": pos_profile,
+                "status": ("!=", "Invoiced"),
+            },
+            fields=fields,
+            order_by="modified desc",
+            limit_page_length=PRODUCTION_CENTER_ITEM_LIMIT,
+        )
+        recent_orders = frappe.get_all(
+            "Table Order",
+            filters={
+                "company": company,
+                "pos_profile": pos_profile,
+                "modified": ("between", [today, tomorrow]),
+            },
+            fields=fields,
+            order_by="modified desc",
+            limit_page_length=PRODUCTION_CENTER_ITEM_LIMIT,
+        )
+        return {row.name: row for row in [*active_orders, *recent_orders]}
+
+    @staticmethod
+    def _waiter_names(orders):
+        users = {
+            (order.cambio_mozo or order.owner)
+            for order in orders.values()
+            if order.cambio_mozo or order.owner
+        }
+        if not users:
+            return {}
+        return {
+            row.name: row.full_name
+            for row in frappe.get_all(
+                "User",
+                filters={"name": ("in", list(users))},
+                fields=["name", "full_name"],
+                limit_page_length=len(users),
+            )
+        }
+
+    def _group_production_commands(self, items, orders, status_map):
+        waiter_names = self._waiter_names(orders)
+        commands = {}
+        for item in items:
+            order = orders.get(item.parent, frappe._dict())
+            batch_key = production_command_batch_key(item)
+            key = f"{batch_key}:{item.status}"
+            waiter = order.cambio_mozo or order.owner
+            command = commands.setdefault(
+                key,
+                {
+                    "key": key,
+                    "order_name": item.parent,
+                    "short_name": self.order_short_name(item.parent),
+                    "table_description": order.table_description or item.table_description,
+                    "room_description": order.room_description,
+                    "waiter": order.cambio_mozo_nombre or waiter_names.get(waiter) or waiter,
+                    "comment": order.comentario,
+                    "ordered_time": item.ordered_time,
+                    "status": item.status,
+                    "next_status": status_map.get(item.status),
+                    "identifiers": [],
+                    "items": [],
+                    "qty": 0,
+                },
+            )
+            command["identifiers"].append(item.identifier)
+            command["items"].append({
+                "identifier": item.identifier,
+                "item_code": item.item_code,
+                "item_name": item.item_name,
+                "qty": frappe.utils.flt(item.qty),
+                "notes": item.notes,
+            })
+            command["qty"] += frappe.utils.flt(item.qty)
+
+        return sorted(
+            commands.values(),
+            key=lambda command: frappe.utils.get_datetime(command["ordered_time"]),
+        )
+
+    def production_center_dashboard(self):
+        self._validate_production_center()
+        company, pos_profile = self._production_company_and_profile()
+
+        status_map = self._production_status_map()
+        active_statuses = list(status_map)
+        attended_statuses = list(dict.fromkeys(
+            next_status
+            for next_status in status_map.values()
+            if next_status not in active_statuses
+        ))
+        item_groups = list(dict.fromkeys(self._items_group))
+        orders = self._production_order_data(company, pos_profile)
+        order_names = list(orders)
+
+        item_fields = [
+            "name",
+            "identifier",
+            "parent",
+            "item_code",
+            "item_name",
+            "item_group",
+            "qty",
+            "notes",
+            "status",
+            "ordered_time",
+            "ordered_nro",
+            "ordered_finish",
+            "table_description",
+            "modified",
+        ]
+        active_items = []
+        attended_items = []
+        if order_names:
+            active_items = frappe.get_all(
+                "Order Entry Item",
+                filters={
+                    "parent": ("in", order_names),
+                    "status": ("in", active_statuses),
+                    "item_group": ("in", item_groups),
+                    "qty": (">", 0),
+                },
+                fields=item_fields,
+                order_by="ordered_time asc",
+                limit_page_length=PRODUCTION_CENTER_ITEM_LIMIT + 1,
+            )
+            if attended_statuses:
+                today = frappe.utils.nowdate()
+                attended_items = frappe.get_all(
+                    "Order Entry Item",
+                    filters={
+                        "parent": ("in", order_names),
+                        "status": ("in", attended_statuses),
+                        "item_group": ("in", item_groups),
+                        "qty": (">", 0),
+                        "modified": ("between", [today, frappe.utils.add_days(today, 1)]),
+                    },
+                    fields=item_fields,
+                    order_by="modified desc",
+                    limit_page_length=ATTENDED_ITEM_LIMIT + 1,
+                )
+
+        active_truncated = len(active_items) > PRODUCTION_CENTER_ITEM_LIMIT
+        attended_truncated = len(attended_items) > ATTENDED_ITEM_LIMIT
+        active_items = active_items[:PRODUCTION_CENTER_ITEM_LIMIT]
+        attended_items = attended_items[:ATTENDED_ITEM_LIMIT]
+
+        consolidation = {}
+        pending_status = active_statuses[0]
+        for item in active_items:
+            row = consolidation.setdefault(
+                item.item_code,
+                {
+                    "item_code": item.item_code,
+                    "item_name": item.item_name,
+                    "pending_qty": 0,
+                    "processing_qty": 0,
+                    "total_qty": 0,
+                },
+            )
+            quantity = frappe.utils.flt(item.qty)
+            if item.status == pending_status:
+                row["pending_qty"] += quantity
+            else:
+                row["processing_qty"] += quantity
+            row["total_qty"] += quantity
+
+        commands = self._group_production_commands(active_items, orders, status_map)
+        attended = self._group_production_commands(attended_items, orders, {})
+        active_qty = sum(frappe.utils.flt(item.qty) for item in active_items)
+        attended_qty = sum(frappe.utils.flt(item.qty) for item in attended_items)
+
+        return {
+            "center": {
+                "name": self.name,
+                "description": self.description,
+                "statuses": active_statuses,
+                "item_groups": item_groups,
+            },
+            "counts": {
+                "active_items": len(active_items),
+                "active_qty": active_qty,
+                "commands": len(commands),
+                "consolidated_items": len(consolidation),
+                "attended_commands": len(attended),
+                "attended_qty": attended_qty,
+            },
+            "commands": commands,
+            "consolidation": sorted(
+                consolidation.values(),
+                key=lambda row: (row["item_name"] or row["item_code"]),
+            ),
+            "attended": attended,
+            "can_transition": frappe.has_permission("Restaurant Object", "write", doc=self),
+            "truncated": {
+                "active": active_truncated,
+                "attended": attended_truncated,
+            },
+        }
+
     def orders_list(self, name=None):
         orders = frappe.get_all("Table Order", fields="name", filters={
             "table" if name is None else "name": name if name is not None else self.name,
@@ -269,20 +535,92 @@ class RestaurantObject(Document):
             "room": self.name, "type": t
         })
 
-    def set_status_command(self, identifier, tiempo):
-        last_status = frappe.db.get_value("Order Entry Item", {"identifier": identifier}, "status")
-        status = self.next_status(last_status)
+    def set_status_command(self, identifier, tiempo=None, expected_status=None):
+        current_status = frappe.db.get_value(
+            "Order Entry Item", {"identifier": identifier}, "status"
+        )
+        return self.set_commands_status(
+            identifiers=[identifier],
+            expected_status=expected_status or current_status,
+        )
 
-        frappe.db.set_value("Order Entry Item", {"identifier": identifier}, "status", status)
-        # TIDAX: GUARDA TIEMPO DE DEMORA DEL PLATO
-        numero =self.tiempo_demora(tiempo)
-        frappe.db.set_value("Order Entry Item", {"identifier": identifier}, "ordered_finish", int(numero))
+    def set_commands_status(self, identifiers, expected_status):
+        self._validate_production_center()
+        company, pos_profile = self._production_company_and_profile()
+        identifiers = frappe.parse_json(identifiers) if isinstance(identifiers, str) else identifiers
+        if not isinstance(identifiers, list) or not identifiers:
+            frappe.throw(_("Select at least one kitchen item"))
 
-        self.reload()
-        item = self.commands_food(identifier, last_status)
-        order = frappe.get_doc("Table Order", item[0]["order_name"])
+        identifiers = list(dict.fromkeys(identifiers))
+        if len(identifiers) > 100:
+            frappe.throw(_("A maximum of 100 kitchen items can be changed at once"))
 
-        order.synchronize(dict(items=item, status=[last_status, status]))
+        status_map = self._production_status_map()
+        if expected_status not in status_map:
+            frappe.throw(_("Status {0} is not managed by this Production Center").format(expected_status))
+        next_status = status_map[expected_status]
+
+        entries = frappe.get_all(
+            "Order Entry Item",
+            filters={"identifier": ("in", identifiers)},
+            fields=[
+                "name",
+                "identifier",
+                "parent",
+                "item_group",
+                "status",
+                "ordered_time",
+                "ordered_finish",
+            ],
+            limit_page_length=len(identifiers),
+        )
+        if len(entries) != len(identifiers):
+            frappe.throw(_("One or more kitchen items no longer exist"))
+
+        allowed_groups = set(self._items_group)
+        for entry in entries:
+            if entry.item_group not in allowed_groups:
+                frappe.throw(_("A kitchen item is outside this Production Center"), frappe.PermissionError)
+            if entry.status != expected_status:
+                frappe.throw(
+                    _("The command changed in another screen. Reloading current data."),
+                    frappe.ValidationError,
+                )
+
+        order_names = {entry.parent for entry in entries}
+        permitted_orders = set(frappe.get_all(
+            "Table Order",
+            filters={
+                "name": ("in", list(order_names)),
+                "company": company,
+                "pos_profile": pos_profile,
+            },
+            pluck="name",
+            limit_page_length=len(order_names),
+        ))
+        if permitted_orders != order_names:
+            frappe.throw(_("A kitchen item is outside the active company or POS Profile"), frappe.PermissionError)
+
+        now = frappe.utils.now_datetime()
+        for entry in entries:
+            values = {"status": next_status}
+            if next_status == "Completed" and not frappe.utils.cint(entry.ordered_finish):
+                elapsed_seconds = max(
+                    0,
+                    frappe.utils.time_diff_in_seconds(now, entry.ordered_time or now),
+                )
+                values["ordered_finish"] = max(1, int(elapsed_seconds / 60))
+            frappe.db.set_value("Order Entry Item", entry.name, values)
+
+        for order_name in order_names:
+            order = frappe.get_doc("Table Order", order_name)
+            order.synchronize(dict(status=[expected_status, next_status]))
+
+        return {
+            "updated": identifiers,
+            "previous_status": expected_status,
+            "status": next_status,
+        }
     
     # TIDAX: GUARDA TIEMPO DE DEMORA DEL PLATO
     def tiempo_demora(self, tiempo):

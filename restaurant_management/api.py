@@ -19,6 +19,8 @@ DOCUMENT_METHODS = {
         "commands_food",
         "get_objects",
         "orders_list",
+        "production_center_dashboard",
+        "set_commands_status",
         "set_status_command",
         "set_style",
     },
@@ -39,6 +41,7 @@ READ_ONLY_DOCUMENT_METHODS = {
     ("Restaurant Object", "commands_food"),
     ("Restaurant Object", "get_objects"),
     ("Restaurant Object", "orders_list"),
+    ("Restaurant Object", "production_center_dashboard"),
     ("Table Order", "divide_template"),
     ("Table Order", "get_items"),
 }

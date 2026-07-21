@@ -61,3 +61,22 @@ Scheduled jobs SHALL operate only on explicitly eligible non-terminal records an
 #### Scenario: Daily maintenance runs
 - **WHEN** the scheduler evaluates orders from a previous day
 - **THEN** it updates only records meeting the documented expiry rule and records the action without rewriting unrelated states
+
+### Requirement: Integrated production-center views
+Each Production Center SHALL provide inline Commands, Dish Consolidation and Attended Orders views scoped to the center's configured item groups and status transitions, without opening secondary browser windows.
+
+#### Scenario: Switch production view
+- **WHEN** an authorized kitchen user selects another production view
+- **THEN** the selected view replaces the current content inside the same Production Center and displays its current count
+
+#### Scenario: Realtime production update
+- **WHEN** an order is sent or a kitchen command changes state and the transaction commits
+- **THEN** every open instance of the affected Production Center reconciles its active view and all view counters against persisted server data
+
+#### Scenario: Atomic command transition
+- **WHEN** an authorized kitchen user starts or completes a command whose items still share the expected state
+- **THEN** all selected items advance through the configured server-side transition in one transaction and timing is recorded once
+
+#### Scenario: Conflicting command transition
+- **WHEN** another client already changed any selected item or an item is outside the Production Center scope
+- **THEN** the server rejects the entire command transition and the client reloads authoritative state
