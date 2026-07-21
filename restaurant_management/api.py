@@ -7,6 +7,10 @@ import requests
 
 SUCCESS = 200
 NOT_FOUND = 400
+PARTY_LOOKUP_PROVIDER = (
+    "ovenube_peru.nubefact_integration.doctype.api_consultas.party_lookup."
+    "lookup_party_identity"
+)
 DOCUMENT_METHODS = {
     "Restaurant Object": {
         "_delete",
@@ -112,6 +116,183 @@ def validate_link(value=None, options=None, fetch=None):
 
     frappe.response["valid_value"] = value
     return "Ok"
+
+
+def _clean_customer_tax_id(tax_id):
+    tax_id = str(tax_id or "").strip()
+    if not tax_id.isdigit() or len(tax_id) not in {8, 11}:
+        frappe.throw(_("DNI must contain 8 digits and RUC must contain 11 digits"))
+    return tax_id
+
+
+def _find_customer_by_tax_id(tax_id):
+    rows = frappe.get_list(
+        "Customer",
+        filters={"tax_id": tax_id},
+        fields=["name", "customer_name", "tax_id", "disabled"],
+        limit_page_length=1,
+    )
+    return dict(rows[0]) if rows else None
+
+
+def _lookup_party_identity(tax_id):
+    cache_key = f"restaurant_customer_lookup:{frappe.session.user}:{tax_id}"
+    identity = frappe.cache.get_value(cache_key)
+    if identity is None:
+        try:
+            identity = frappe.get_attr(PARTY_LOOKUP_PROVIDER)(tax_id)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Restaurant customer lookup error")
+            frappe.throw(_("The DNI/RUC lookup service is unavailable. Please try again."))
+
+    if not isinstance(identity, dict):
+        frappe.throw(_("The DNI/RUC lookup service returned an invalid response"))
+    if not identity.get("found"):
+        frappe.cache.set_value(cache_key, identity, expires_in_sec=300)
+        return identity
+    if str(identity.get("tax_id") or "") != tax_id:
+        frappe.throw(_("The DNI/RUC lookup service returned a different document"))
+
+    expected_kind = "DNI" if len(tax_id) == 8 else "RUC"
+    expected_party_type = "Individual" if len(tax_id) == 8 else "Company"
+    party_name = " ".join(str(identity.get("party_name") or "").split())
+    if identity.get("document_kind") != expected_kind or not party_name:
+        frappe.throw(_("The DNI/RUC lookup service returned incomplete identity data"))
+
+    identity = dict(identity)
+    identity["party_name"] = party_name
+    identity["party_type"] = expected_party_type
+    frappe.cache.set_value(cache_key, identity, expires_in_sec=300)
+    return identity
+
+
+def _customer_preview(customer):
+    return {
+        "name": customer["name"],
+        "customer_name": customer["customer_name"],
+        "tax_id": customer["tax_id"],
+        "disabled": bool(customer.get("disabled")),
+    }
+
+
+@frappe.whitelist()
+def lookup_customer_identity(tax_id):
+    """Find an existing customer or return a side-effect-free DNI/RUC preview."""
+    _require_authenticated_user()
+    if not frappe.has_permission("Customer", "read"):
+        frappe.throw(_("Not permitted to read customers"), frappe.PermissionError)
+
+    tax_id = _clean_customer_tax_id(tax_id)
+    customer = _find_customer_by_tax_id(tax_id)
+    if customer:
+        return {
+            "status": "disabled" if customer.get("disabled") else "existing",
+            "customer": _customer_preview(customer),
+        }
+
+    identity = _lookup_party_identity(tax_id)
+    return {
+        "status": "available" if identity.get("found") else "not_found",
+        "identity": identity,
+        "can_create": bool(frappe.has_permission("Customer", "create")),
+    }
+
+
+def _create_customer_from_identity(identity):
+    if not frappe.has_permission("Customer", "create"):
+        frappe.throw(_("Not permitted to create customers"), frappe.PermissionError)
+
+    registered_address = identity.get("registered_address") or {}
+    if registered_address and not frappe.has_permission("Address", "create"):
+        frappe.throw(_("Not permitted to create the customer's registered address"), frappe.PermissionError)
+
+    customer = frappe.new_doc("Customer")
+    customer.customer_name = identity["party_name"]
+    customer.customer_type = identity["party_type"]
+    customer.tax_id = identity["tax_id"]
+    customer.customer_group = frappe.db.get_default("Customer Group")
+    customer.territory = frappe.db.get_default("Territory")
+
+    customer_meta = frappe.get_meta("Customer")
+    if customer_meta.has_field("tipo_documento_identidad"):
+        customer.tipo_documento_identidad = identity.get("document_type_label")
+    if customer_meta.has_field("codigo_tipo_documento"):
+        customer.codigo_tipo_documento = identity.get("document_type_code")
+    customer.insert()
+
+    address_name = None
+    if registered_address:
+        address = frappe.new_doc("Address")
+        address.address_title = identity["party_name"]
+        address.address_type = "Billing"
+        address.address_line1 = registered_address["address_line1"]
+        address.country = registered_address.get("country") or "Peru"
+        address.is_primary_address = 1
+        address.append("links", {
+            "link_doctype": "Customer",
+            "link_name": customer.name,
+        })
+
+        address_meta = frappe.get_meta("Address")
+        for source, target in {
+            "department": "departamento",
+            "province": "provincia",
+            "district": "distrito",
+            "location_code": "ubigeo",
+        }.items():
+            if registered_address.get(source) and address_meta.has_field(target):
+                address.set(target, registered_address[source])
+        address.insert()
+        address_name = address.name
+
+    return customer, address_name
+
+
+def _assign_customer_to_order(order, customer, client=None):
+    order.customer = customer.name
+    order.save()
+    order.reload()
+    order.synchronize({"action": "Update", "client": client})
+    return order.data()
+
+
+@frappe.whitelist(methods=["POST"])
+def create_and_assign_customer(order_name, tax_id, client=None):
+    """Create a verified customer when needed and assign it to the current order."""
+    _require_authenticated_user()
+    tax_id = _clean_customer_tax_id(tax_id)
+
+    order = frappe.get_doc("Table Order", order_name)
+    order.check_permission("write")
+
+    customer_data = _find_customer_by_tax_id(tax_id)
+    created = False
+    address_name = None
+    if customer_data:
+        if customer_data.get("disabled"):
+            frappe.throw(_("The customer registered with this document is disabled"))
+        customer = frappe.get_doc("Customer", customer_data["name"])
+        customer.check_permission("read")
+    else:
+        if frappe.db.exists("Customer", {"tax_id": tax_id}):
+            frappe.throw(_("A customer with this document already exists"))
+        identity = _lookup_party_identity(tax_id)
+        if not identity.get("found"):
+            frappe.throw(_("No information was found for this DNI/RUC"))
+        customer, address_name = _create_customer_from_identity(identity)
+        created = True
+
+    order_data = _assign_customer_to_order(order, customer, client)
+    return {
+        "created": created,
+        "customer": {
+            "name": customer.name,
+            "customer_name": customer.customer_name,
+            "tax_id": customer.tax_id,
+        },
+        "address": address_name,
+        "order": order_data,
+    }
 
 
 @frappe.whitelist()

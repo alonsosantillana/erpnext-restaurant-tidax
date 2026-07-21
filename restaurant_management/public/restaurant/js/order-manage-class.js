@@ -127,7 +127,7 @@ class OrderManage extends ObjectManage {
         
         this.#components.change_mozo = RMHelper.default_button("Mozo", 'edit', () => this.update_current_order('mozo')); //TIDAX
         this.#components.customer = RMHelper.default_button("Customer", 'people', () => this.update_current_order('customer'));
-        this.#components.new_customer = RMHelper.default_button("", 'addpeople', () => this.consultar_cliente()); //TIDAX
+        this.#components.new_customer = RMHelper.default_button("New Customer", 'addpeople', () => this.consultar_cliente()); //TIDAX
         this.#components.dinners = RMHelper.default_button("Dinners", 'peoples', () => this.update_current_order('dinners'));
         this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
         this.#components.discount_global = RMHelper.default_button("Discount", 'discount', () => this.update_current_order('discount')); //TIDAX
@@ -649,10 +649,11 @@ class OrderManage extends ObjectManage {
                 }
 
                 this.#components.Divide.prop("disabled", this.current_order.items_count === 0);
-                //this.#components.new_customer.enable().show(); //TIDAX
                 this.#components.change_mozo.enable().show(); //TIDAX
-                if (frappe.session.user.includes("cajero")) {
+                if (frappe.model.can_create("Customer")) {
                     this.#components.new_customer.enable().show(); //TIDAX
+                } else {
+                    this.#components.new_customer.disable().hide(); //TIDAX
                 }
                 this.#components.customer.enable().show();
                 this.#components.dinners.enable().show();
@@ -719,12 +720,13 @@ class OrderManage extends ObjectManage {
             || frappe.session.user.includes("admin");
         const can_delete = item.is_enabled_to_delete && (is_cashier_or_admin || item.data.status === "Attending");
         objects.Trash.prop("disabled", !can_delete);
-        if (frappe.session.user.includes("cajero")) {
+        if (frappe.model.can_create("Customer")) {
             this.#components.new_customer.enable().show();
-            // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
-            if ((item.data.status == "Completed" || item.data.status == "Sent" || item.data.status == "Processing")) {
-                this.#components.discount_global.enable().show();
-            }
+        }
+        // TIDAX: FILTRO PARA QUE APAREZCA EL BOTON DE DESCUENTO
+        if (frappe.session.user.includes("cajero")
+            && (item.data.status == "Completed" || item.data.status == "Sent" || item.data.status == "Processing")) {
+            this.#components.discount_global.enable().show();
         }
         this.#components.change_mozo.enable().show();
         
@@ -961,36 +963,164 @@ class OrderManage extends ObjectManage {
     }
     // TIDAX
     consultar_cliente(){
-        frappe.prompt(
-            [{'fieldname': 'tax_id', 'fieldtype': 'Data', 'label': 'RUC del cliente', 'reqd': 0}],
-            function (values) {
-                //frappe.msgprint("RUC " + values.tax_id);
-                if (values.tax_id && values.tax_id.length) {
-                    frappe.call({
-                        method: "ovenube_peru.nubefact_integration.doctype.api_consultas.api_consultas.get_party",
-                        args: {
-                            company: "TIDAX",
-                            tax_id: values.tax_id,
-                            party_type: "Customer"
-                        },
-                        callback: function(r) {
-                            if (r.message) {
-                                frappe.msgprint("El cliente esta disponible " + r.message);
-                            }
-                            else {
-                                frappe.msgprint("El cliente no pudo ser encontrado, revise el número de documento");
-                            }
-                        },
-                        async: false
+        const order = this.current_order;
+        if (!order) {
+            frappe.show_alert({
+                message: __("Select an order before creating a customer"),
+                indicator: "orange"
+            });
+            return;
+        }
+
+        const escape_html = value => $("<div>").text(value || "").html();
+        const dialog = new frappe.ui.Dialog({
+            title: __("New Customer from DNI/RUC"),
+            fields: [
+                {
+                    fieldname: "tax_id",
+                    fieldtype: "Data",
+                    label: __("DNI or RUC"),
+                    description: __("Enter 8 digits for DNI or 11 digits for RUC"),
+                    reqd: 1
+                },
+                {
+                    fieldname: "customer_preview",
+                    fieldtype: "HTML"
+                }
+            ]
+        });
+        const preview = dialog.fields_dict.customer_preview.$wrapper;
+
+        const details_table = rows => `
+            <table class="table table-bordered" style="margin: 10px 0 0;">
+                <tbody>
+                    ${rows.filter(row => row[1]).map(row => `
+                        <tr>
+                            <th style="width: 32%;">${escape_html(row[0])}</th>
+                            <td>${escape_html(row[1])}</td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>`;
+
+        const assign_customer = tax_id => {
+            dialog.disable_primary_action();
+            frappe.call({
+                method: "restaurant_management.api.create_and_assign_customer",
+                type: "POST",
+                args: {
+                    order_name: order.data.name,
+                    tax_id: tax_id,
+                    client: RM.client
+                },
+                freeze: true,
+                freeze_message: __("Creating and assigning customer"),
+                callback: r => {
+                    if (!r.message) return;
+
+                    order.reset_data(r.message.order, "Update");
+                    dialog.hide();
+                    frappe.show_alert({
+                        message: r.message.created
+                            ? __("Customer {0} created and assigned", [r.message.customer.customer_name])
+                            : __("Customer {0} assigned", [r.message.customer.customer_name]),
+                        indicator: "green"
                     });
-                }
-                else {
-                    frappe.msgprint("Debe ingresar un número de documento");
-                }
-            },
-            'Consultar Cliente',
-            'Aceptar'
-        )
+                },
+                always: () => dialog.enable_primary_action()
+            });
+        };
+
+        const render_result = (result, tax_id) => {
+            if (result.status === "existing") {
+                const customer = result.customer;
+                preview.html(`
+                    <div class="alert alert-info" style="margin-top: 12px;">
+                        <strong>${__("This customer already exists")}</strong>
+                        ${details_table([
+                            [__("Customer"), customer.customer_name],
+                            [__("DNI or RUC"), customer.tax_id],
+                            [__("Customer ID"), customer.name]
+                        ])}
+                    </div>`);
+                dialog.set_primary_action(__("Use Customer"), () => assign_customer(tax_id));
+                return;
+            }
+
+            if (result.status === "disabled") {
+                preview.html(`
+                    <div class="alert alert-warning" style="margin-top: 12px;">
+                        <strong>${__("The customer registered with this document is disabled")}</strong>
+                    </div>`);
+                dialog.get_primary_btn().addClass("hide");
+                return;
+            }
+
+            if (result.status === "not_found") {
+                preview.html(`
+                    <div class="alert alert-warning" style="margin-top: 12px;">
+                        <strong>${__("No information was found for this DNI/RUC")}</strong>
+                    </div>`);
+                dialog.get_primary_btn().addClass("hide");
+                return;
+            }
+
+            const identity = result.identity;
+            const address = identity.registered_address || {};
+            preview.html(`
+                <div class="alert alert-success" style="margin-top: 12px;">
+                    <strong>${__("Identity verified. Review the data before creating the customer.")}</strong>
+                    ${details_table([
+                        [__("Document Type"), identity.document_kind],
+                        [__("DNI or RUC"), identity.tax_id],
+                        [__("Customer Name"), identity.party_name],
+                        [__("Customer Type"), identity.party_type],
+                        [__("Registered Address"), address.address_line1],
+                        [__("District"), address.district],
+                        [__("Province"), address.province],
+                        [__("Department"), address.department]
+                    ])}
+                </div>`);
+
+            if (result.can_create) {
+                dialog.set_primary_action(__("Create and Assign"), () => assign_customer(tax_id));
+            } else {
+                preview.append(`
+                    <div class="alert alert-warning">
+                        ${__("You do not have permission to create customers")}
+                    </div>`);
+                dialog.get_primary_btn().addClass("hide");
+            }
+        };
+
+        const search_customer = () => {
+            const tax_id = String(dialog.get_value("tax_id") || "").trim();
+            if (!/^([0-9]{8}|[0-9]{11})$/.test(tax_id)) {
+                frappe.msgprint(__("DNI must contain 8 digits and RUC must contain 11 digits"));
+                return;
+            }
+
+            dialog.disable_primary_action();
+            preview.html(`<p class="text-muted" style="margin-top: 12px;">${__("Searching DNI/RUC...")}</p>`);
+            frappe.call({
+                method: "restaurant_management.api.lookup_customer_identity",
+                args: {tax_id: tax_id},
+                freeze: true,
+                freeze_message: __("Searching DNI/RUC"),
+                callback: r => {
+                    if (r.message) render_result(r.message, tax_id);
+                },
+                always: () => dialog.enable_primary_action()
+            });
+        };
+
+        dialog.set_primary_action(__("Search"), search_customer);
+        dialog.fields_dict.tax_id.$input.on("input", () => {
+            preview.empty();
+            dialog.set_primary_action(__("Search"), search_customer);
+        });
+        dialog.show();
+        dialog.fields_dict.tax_id.set_focus();
     }
 
     clear_current_order() {
