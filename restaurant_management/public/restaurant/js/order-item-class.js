@@ -389,21 +389,37 @@ class OrderItemEditor extends DeskForm {
     async make() {
         await super.make();
 
-        const update = (field) => {
-            if (this.order_item.data[field.df.fieldname] === field.get_value()) return;
+        const update = (field, input_value) => {
+            const fieldname = field.df.fieldname;
+            const value = typeof input_value === "undefined" ? field.get_value() : input_value;
+            const current_value = this.order_item.data[fieldname];
+            const unchanged = ["qty", "rate", "discount_percentage"].includes(fieldname)
+                ? flt(current_value) === flt(value)
+                : String(current_value || "") === String(value || "");
+            if (unchanged) return;
 
-            this.order_item.calculate_form(field.df.fieldname, field.get_value());
+            this.order_item.calculate_form(fieldname, value);
             this.order_item.calculate();
             this.order_item.update();
         }
 
-        this.on(["qty", "rate", "discount_percentage", "batch_no"], "change", (field) => {
+        this.on(["qty", "rate", "batch_no"], "change", (field) => {
             update(field);
         });
 
-        this.get_input("notes").css("height", "100px").on("focusout", (e) => {
-            update(this.get_field("notes"));
-        });
+        const bind_visible_value = fieldname => {
+            const field = this.get_field(fieldname);
+            if (!field || !field.$input) return;
+            field.$input
+                .off(".restaurant-item-save")
+                .on("change.restaurant-item-save blur.restaurant-item-save", () => {
+                    update(field, field.$input.val());
+                });
+        };
+
+        this.get_input("notes").css("height", "100px");
+        bind_visible_value("notes");
+        bind_visible_value("discount_percentage");
     }
 
     on_refresh_dependency() {
