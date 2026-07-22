@@ -64,7 +64,7 @@ app_include_js = [
     '/assets/restaurant_management/js/clusterize.min.js',
     '/assets/restaurant_management/js/interact.min.js',
     '/assets/restaurant_management/js/drag.js',
-    '/assets/restaurant_management/js/RM.helper.js',
+    '/assets/restaurant_management/js/RM.helper.js?v=20260722-2',
     '/assets/restaurant_management/js/object-manage.js',
 ]
 

@@ -19,11 +19,66 @@ from restaurant_management.api import (
 	DOCUMENT_METHODS,
 	READ_ONLY_DOCUMENT_METHODS,
 	_get_account_print_configuration,
+	call as call_restaurant_api,
 	print_order_account,
 )
 
 
 class TestTableOrder(unittest.TestCase):
+	@patch("restaurant_management.api._require_authenticated_user")
+	@patch("restaurant_management.api.frappe.db.sql")
+	@patch("restaurant_management.api.frappe.get_doc")
+	def test_write_dispatch_locks_and_reloads_order_before_mutation(
+		self, get_doc, sql, require_authenticated_user
+	):
+		order = MagicMock()
+		order.name = "OR-2026-00004"
+		order.push_item.return_value = {"saved": True}
+		get_doc.return_value = order
+		item = {"identifier": "ITEM-1", "qty": 1}
+
+		result = call_restaurant_api(
+			"Table Order",
+			order.name,
+			"push_item",
+			{"item": item},
+		)
+
+		order.check_permission.assert_called_once_with("write")
+		sql.assert_called_once_with(
+			"SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE",
+			(order.name,),
+		)
+		order.reload.assert_called_once_with()
+		order.push_item.assert_called_once_with(item=item)
+		self.assertEqual(result, {"saved": True})
+
+	def test_delete_item_returns_authoritative_queue_event(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00004",
+			"service_type": "Delivery",
+		})
+		event = {"action": "queue", "item_removed": "ITEM-1"}
+
+		with (
+			patch.object(frappe.db, "get_value", side_effect=["PLT-001", "Attending"]),
+			patch.object(frappe.db, "delete") as delete,
+			patch.object(frappe.db, "count", return_value=0),
+			patch.object(order, "db_commit") as db_commit,
+			patch.object(order, "synchronize", return_value=event) as synchronize,
+		):
+			result = order.delete_item("ITEM-1", unrestricted=True)
+
+		delete.assert_called_once_with("Order Entry Item", {"identifier": "ITEM-1"})
+		db_commit.assert_called_once_with()
+		synchronize.assert_called_once_with({
+			"action": "queue",
+			"item_removed": "ITEM-1",
+			"status": ["Attending"],
+		})
+		self.assertEqual(result, event)
+
 	@patch("restaurant_management.api.frappe.get_installed_apps", return_value=["silent_print"])
 	@patch("restaurant_management.api.frappe.db.get_single_value")
 	@patch("restaurant_management.api.frappe.db.get_value")

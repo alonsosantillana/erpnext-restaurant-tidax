@@ -71,8 +71,10 @@ RestaurantManage = class RestaurantManage {
 			'js/table-order-class.js',
 			'js/pay-form-class.js',
 			'js/invoice-class.js',
+			'js/fulfillment-board-class.js',
 
 			'css/restaurant-room.css',
+			'css/fulfillment-board.css',
 			'css/action-buttons.css',
 			'css/editor-order.css',
 			'css/food-command.css',
@@ -146,6 +148,16 @@ RestaurantManage = class RestaurantManage {
 			tag: "div", properties: { class: "table-container-scroll" }
 		}).on("click", () => {
 			RM.unselect_all_tables();
+		});
+
+		this.fulfillment_hub_host = frappe.jshtml({
+			tag: "div",
+			properties: { class: "fulfillment-hub-host hide" }
+		});
+
+		this.fulfillment_board_host = frappe.jshtml({
+			tag: "div",
+			properties: { class: "fulfillment-board-host hide" }
 		});
 
 		this.#components.add_table = frappe.jshtml({
@@ -286,6 +298,8 @@ RestaurantManage = class RestaurantManage {
 						${this.components.delete_room.html()}
 					</div>
 					${this.floor_map.html()}
+					${this.fulfillment_hub_host.html()}
+					${this.fulfillment_board_host.html()}
 				</div>
 			</div>
 			<div class="sidebar-footer">
@@ -297,7 +311,160 @@ RestaurantManage = class RestaurantManage {
 			<div id="customize-alert-message"></div>
 		`);
 
+		this.make_fulfillment_navigation();
+		this.make_fulfillment_hub();
+		this.fulfillment_board = new FulfillmentBoard({
+			container: this.wrapper.find(".fulfillment-board-host"),
+			on_back: () => this.show_fulfillment_hub(),
+			on_counts_change: counts => this.update_fulfillment_counts(counts)
+		});
 		this.pull_alert("left");
+	}
+
+	make_fulfillment_navigation() {
+		this.fulfillment_room_count = $("<span>").addClass("badge bg-none").text("0");
+		this.fulfillment_room_button = $("<button>")
+			.attr({ type: "button", "aria-label": "Pedidos externos" })
+			.addClass("btn-default button room fulfillment-room-selector")
+			.append(
+				this.fulfillment_icon("external-orders", "fulfillment-navigation-icon"),
+				document.createTextNode(" Pedidos externos"),
+				this.fulfillment_room_count
+			)
+			.on("click", () => this.show_fulfillment_hub())
+			.hide();
+	}
+
+	fulfillment_icon(name, class_name) {
+		return $("<span>")
+			.addClass(`fulfillment-svg-icon ${class_name || ""}`)
+			.attr("aria-hidden", "true")
+			.append($("<img>", {
+				src: `/assets/restaurant_management/restaurant/icons/${name}.svg?v=20260722-2`,
+				alt: "",
+				draggable: false
+			}));
+	}
+
+	make_fulfillment_hub() {
+		const make_card = (type, icon, title, description) => {
+			const count = $("<strong>").addClass("fulfillment-hub-count").text("0");
+			const card = $("<button>")
+				.attr({ type: "button", "data-fulfillment-type": type })
+				.addClass(`fulfillment-hub-card fulfillment-hub-card-${type.toLowerCase()}`)
+				.append(
+					this.fulfillment_icon(icon, "fulfillment-hub-card-icon"),
+					$("<span>").addClass("fulfillment-hub-card-content").append(
+						$("<strong>").addClass("fulfillment-hub-card-title").text(title),
+						$("<span>").addClass("fulfillment-hub-card-description").text(description),
+						$("<span>").addClass("fulfillment-hub-card-total").append(
+							count,
+							document.createTextNode(" pedidos activos")
+						)
+					),
+					$("<span>").addClass("fa fa-chevron-right fulfillment-hub-card-arrow")
+				)
+				.on("click", () => this.show_fulfillment(type));
+			return { card, count };
+		};
+
+		const delivery = make_card(
+			"Delivery",
+			"delivery-motorcycle",
+			"Entrega a domicilio",
+			"Pedidos que serán enviados a la dirección del cliente"
+		);
+		const pickup = make_card(
+			"Pickup",
+			"pickup-handbag",
+			"Recojo en local",
+			"Pedidos que el cliente recogerá en el restaurante"
+		);
+		this.delivery_hub_card = delivery.card;
+		this.delivery_hub_count = delivery.count;
+		this.pickup_hub_card = pickup.card;
+		this.pickup_hub_count = pickup.count;
+		this.fulfillment_hub = $("<section>")
+			.addClass("fulfillment-hub")
+			.append(
+				$("<header>").addClass("fulfillment-hub-header").append(
+					this.fulfillment_icon("external-orders", "fulfillment-hub-header-icon"),
+					$("<div>").append(
+						$("<h3>").text("Pedidos externos"),
+						$("<p>").text("Selecciona el tipo de atención que deseas gestionar")
+					)
+				),
+				$("<div>").addClass("fulfillment-hub-cards").append(
+					this.delivery_hub_card,
+					this.pickup_hub_card
+				)
+			);
+		this.wrapper.find(".fulfillment-hub-host").append(this.fulfillment_hub);
+	}
+
+	configure_fulfillment_navigation() {
+		const restrictions = this.restrictions || {};
+		const delivery_enabled = Boolean(Number(restrictions.enable_delivery));
+		const pickup_enabled = Boolean(Number(restrictions.enable_pickup));
+		const enabled_types = [];
+		if (delivery_enabled) enabled_types.push("Delivery");
+		if (pickup_enabled) enabled_types.push("Pickup");
+
+		this.delivery_hub_card.toggle(delivery_enabled);
+		this.pickup_hub_card.toggle(pickup_enabled);
+		this.fulfillment_room_button.toggle(enabled_types.length > 0);
+		if (this.fulfillment_board && enabled_types.length) {
+			this.fulfillment_board.refresh_counts(enabled_types);
+		}
+		if (!enabled_types.length && this.fulfillment_room_button.hasClass("active")) {
+			this.show_salon();
+		}
+	}
+
+	update_fulfillment_counts(counts) {
+		const delivery = Number(counts.Delivery || 0);
+		const pickup = Number(counts.Pickup || 0);
+		const total = delivery + pickup;
+		this.delivery_hub_count.text(delivery);
+		this.pickup_hub_count.text(pickup);
+		this.fulfillment_room_count
+			.text(total)
+			.toggleClass("bg-yellow", total > 0)
+			.toggleClass("bg-none", total === 0);
+	}
+
+	show_salon() {
+		if (!this.floor_map || !this.fulfillment_board) return;
+		this.fulfillment_board.hide();
+		this.wrapper.find(".fulfillment-board-host, .fulfillment-hub-host").addClass("hide");
+		this.floor_map.show();
+		this.wrapper.find(".restaurant-manage").removeClass("fulfillment-mode");
+		this.fulfillment_room_button.removeClass("active");
+	}
+
+	show_fulfillment_hub() {
+		if (this.editing) this.set_edit_status();
+		if (this.transfer_order) this.cancel_order_transfer(false);
+		this.wrapper.find(".floor-selector .button.room").removeClass("active");
+		this.fulfillment_room_button.addClass("active");
+		this.floor_map.hide();
+		this.fulfillment_board.hide();
+		this.wrapper.find(".fulfillment-board-host").addClass("hide");
+		this.wrapper.find(".fulfillment-hub-host").removeClass("hide");
+		this.wrapper.find(".restaurant-manage").addClass("fulfillment-mode");
+		this.fulfillment_board.refresh_counts();
+	}
+
+	show_fulfillment(fulfillment_type) {
+		if (this.editing) this.set_edit_status();
+		if (this.transfer_order) this.cancel_order_transfer(false);
+		this.wrapper.find(".floor-selector .button.room").removeClass("active");
+		this.fulfillment_room_button.addClass("active");
+		this.floor_map.hide();
+		this.wrapper.find(".fulfillment-hub-host").addClass("hide");
+		this.wrapper.find(".fulfillment-board-host").removeClass("hide");
+		this.wrapper.find(".restaurant-manage").addClass("fulfillment-mode");
+		this.fulfillment_board.show(fulfillment_type);
 	}
 
 	close_pos() {
@@ -346,6 +513,7 @@ RestaurantManage = class RestaurantManage {
 
 	set_current_room(room) {
 		this.current_room = room;
+		this.show_salon();
 		this.test_components();
 	}
 
@@ -383,6 +551,10 @@ RestaurantManage = class RestaurantManage {
 			}
 		});
 
+		if (this.fulfillment_room_button) {
+			this.rooms_container.append(this.fulfillment_room_button);
+		}
+
 		setTimeout(() => {
 			this.current_room = this.object(room_from_url);
 
@@ -417,6 +589,7 @@ RestaurantManage = class RestaurantManage {
 		this.#lang = r.lang;
 		this.restaurant_permissions = r.pos.restaurant_permissions;
 		this.order_item_editor_form = r.order_item_editor_form;
+		this.configure_fulfillment_navigation();
 
 		if (r.pos.has_pos) {
 			this.#pos_profile = r.pos.pos;

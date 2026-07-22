@@ -13,6 +13,7 @@ class OrderManage extends ObjectManage {
         this.print_modal = null;
         this.current_order = null;
         this.transferring_order = false;
+        this.is_fulfillment = Boolean(this.external_order_data);
         this.table_name = this.table.data.name;
         this.order_container_name = `order-container-${this.table_name}`;
         this.order_entry_container_name = `container-order-entry-${this.table_name}`;
@@ -51,7 +52,9 @@ class OrderManage extends ObjectManage {
 
     initialize() {
         if (!this.is_enabled_to_open()) return;
-        this.title = this.table.room.data.description + " (" + this.table.data.description + ")";
+        this.title = this.is_fulfillment
+            ? this.table.data.description
+            : this.table.room.data.description + " (" + this.table.data.description + ")";
         this.modal = RMHelper.default_full_modal(
             this.title,
             () => {
@@ -61,6 +64,11 @@ class OrderManage extends ObjectManage {
     }
 
     is_enabled_to_open() {
+        if (this.is_fulfillment) {
+            return RM.check_permissions("order", null, "read")
+                || RM.check_permissions("order", null, "write")
+                || RM.can_pay;
+        }
         if (!RM.can_open_order_manage(this.table)) {
             this.close();
             return false;
@@ -72,7 +80,11 @@ class OrderManage extends ObjectManage {
         if (!this.is_enabled_to_open()) return;
 
         this.modal.show();
-        this.reload_orders_silently(true);
+        if (this.container) {
+            this.reload_orders_silently(true);
+        } else {
+            this.select_order_after_reload = true;
+        }
         if (this.transferring_order) {
             if (this.current_order != null) {
                 //**To move windows over the current, on transferring order**//
@@ -142,6 +154,14 @@ class OrderManage extends ObjectManage {
             ${this.components.customer.html()}
 			${this.components.guest_count.html()}
 		`);
+
+        if (this.is_fulfillment) {
+            this.components.delete.hide();
+            this.components.change_mozo.hide();
+            this.components.new_customer.hide();
+            this.components.customer.hide();
+            this.components.guest_count.hide();
+        }
     }
 
     template() {
@@ -298,9 +318,12 @@ class OrderManage extends ObjectManage {
                 name: "Trash",
                 tag: 'button',
                 properties: {
-                    name: 'trash', 
-                    class: `btn btn-default edit-button ${default_class}`
+                    name: 'trash',
+                    class: `btn btn-default edit-button ${default_class}`,
+                    title: __("Delete selected dish (press twice)"),
+                    'aria-label': __("Delete selected dish (press twice)")
                 },
+                confirm_message: __("Press Delete again to remove the selected dish"),
                 content: '<span class="fa fa-trash">',
                 on: {
                     'click': () => {
@@ -347,7 +370,8 @@ class OrderManage extends ObjectManage {
             this.#objects[element.name] = frappe.jshtml({
                 tag: element.tag,
                 properties: element.properties,
-                content: (element.content || "")
+                content: (element.content || ""),
+                confirm_message: element.confirm_message
             }).on(
                 Object.keys(element.on)[0], element.on[Object.keys(element.on)[0]], (element.name === "Trash" ? DOUBLE_CLICK : "")
             ).disable();
@@ -398,7 +422,7 @@ class OrderManage extends ObjectManage {
             item.data.qty = qty;
             item.data.discount_percentage = discount;
             item.data.rate = rate;
-            item.data.status = "Pending";
+            item.data.status = item.order.data.attending_status || "Attending";
             item.update(!quantity_only);
             if (quantity_only) {
                 item.order.queue_item_quantity(item, qty);
@@ -560,13 +584,31 @@ class OrderManage extends ObjectManage {
                             this.no_order_message();
                             return;
                         }
-                        if (this.current_order.has_queue_items()) {
-                            frappe.msgprint(__('Adding Items, please white'));
+                        if (col.action !== "order" && this.current_order.has_queue_items()) {
+                            frappe.msgprint(__('Adding Items, please wait'));
                             return;
                         }
-                        setTimeout(`RM.object('${this.identifier}').current_order.${col.action}()`, 0);
+                        if (col.action === "order") {
+                            frappe.show_alert({
+                                message: __("Preparing order..."),
+                                indicator: "blue"
+                            });
+                        }
+                        setTimeout(() => {
+                            const current_order = this.current_order;
+                            const action = current_order && current_order[col.action];
+                            if (typeof action !== "function") return;
+                            try {
+                                const result = action.call(current_order);
+                                if (result && typeof result.catch === "function") {
+                                    result.catch(error => this.handle_order_action_error(error));
+                                }
+                            } catch (error) {
+                                this.handle_order_action_error(error);
+                            }
+                        }, 0);
                     }
-                }, (["order", "transfer"].includes(col.action) ? (!RM.restrictions.to_transfer_order ? DOUBLE_CLICK : null) : ""));
+                }, (col.action === "transfer" && !RM.restrictions.to_transfer_order ? DOUBLE_CLICK : null));
 
                 base_html += this.components[col.name].html();
             });
@@ -589,6 +631,15 @@ class OrderManage extends ObjectManage {
                 this.check_buttons_status();
             }, 0);
         }, 0);
+    }
+
+    handle_order_action_error(error) {
+        console.error("Restaurant order action failed", error);
+        RM.ready();
+        frappe.show_alert({
+            message: __("The order operation could not be completed"),
+            indicator: "red"
+        });
     }
 
     is_same_order(order = null) {
@@ -649,18 +700,18 @@ class OrderManage extends ObjectManage {
     check_buttons_status() {
         if (this.current_order == null) {
             this.disable_components();
-            if (typeof this.#components.new_order_button != "undefined"){
+            if (this.#components.new_order_button) {
                 this.#components.new_order_button.enable().show();
             }
                 
             return;
         } else {
             if (RM.check_permissions("order", null, "create")) {
-                if (typeof this.#components.new_order_button != "undefined"){
+                if (this.#components.new_order_button) {
                     this.#components.new_order_button.enable().show();
                 }
             } else {
-                if (typeof this.#components.new_order_button != "undefined"){
+                if (this.#components.new_order_button) {
                     this.#components.new_order_button.disable().hide();
                 }
             }
@@ -720,6 +771,16 @@ class OrderManage extends ObjectManage {
             this.disable_components();
         }
 
+        if (this.is_fulfillment) {
+            this.#components.delete.hide().disable();
+            this.#components.change_mozo.hide().disable();
+            this.#components.new_customer.hide().disable();
+            this.#components.customer.hide().disable();
+            this.#components.guest_count.hide().disable();
+            this.#components.Divide.hide().disable();
+            this.#components.Transfer.hide().disable();
+        }
+
         this.#components.Account.prop(
             "disabled",
             !RM.check_permissions("order", this.current_order, "print") || this.current_order.items_count === 0
@@ -765,12 +826,19 @@ class OrderManage extends ObjectManage {
         const is_cashier_or_admin = frappe.session.user === "Administrator"
             || frappe.session.user.includes("cajero")
             || frappe.session.user.includes("admin");
-        const can_delete = item.is_enabled_to_delete && (is_cashier_or_admin || item.data.status === "Attending");
+        const can_delete = item.is_enabled_to_delete && (
+            this.is_fulfillment || is_cashier_or_admin || item.data.status === "Attending"
+        );
         objects.Trash.prop("disabled", !can_delete);
-        if (frappe.model.can_create("Customer")) {
-            this.#components.new_customer.enable().show();
+        if (!this.is_fulfillment) {
+            if (frappe.model.can_create("Customer")) {
+                this.#components.new_customer.enable().show();
+            }
+            this.#components.change_mozo.enable().show();
+        } else {
+            this.#components.new_customer.hide().disable();
+            this.#components.change_mozo.hide().disable();
         }
-        this.#components.change_mozo.enable().show();
         
         item.check_status();
     }
@@ -788,6 +856,7 @@ class OrderManage extends ObjectManage {
     }
 
     add_order() {
+        if (this.is_fulfillment) return;
         RM.working("Adding Order");
         frappeHelper.api.call({
             model: "Restaurant Object",
@@ -809,6 +878,12 @@ class OrderManage extends ObjectManage {
     get_orders(current = null) {
         RM.working(__("Loading Orders in") + ": " + this.title);
         if (current == null) current = this.current_order_identifier;
+        if (this.is_fulfillment) {
+            this.external_order_data = this.normalize_order_data(this.external_order_data);
+            this.make_orders([this.external_order_data], current || this.external_order_data.data.name);
+            RM.ready();
+            return;
+        }
         frappeHelper.api.call({
             model: "Restaurant Object",
             name: this.table.data.name,
@@ -823,6 +898,49 @@ class OrderManage extends ObjectManage {
 
     reload_orders_silently(select_if_empty = false) {
         this.select_order_after_reload = this.select_order_after_reload || select_if_empty;
+        if (!this.container) return;
+        if (this.is_fulfillment) {
+            const active_order = this.current_order
+                || (this.current_order_identifier
+                    ? this.get_order(this.current_order_identifier)
+                    : null);
+            if (active_order && active_order.has_pending_order_mutations()) {
+                clearTimeout(this.fulfillment_reload_timer);
+                this.fulfillment_reload_timer = setTimeout(() => {
+                    this.fulfillment_reload_timer = null;
+                    this.reload_orders_silently(select_if_empty);
+                }, 250);
+                return;
+            }
+            if (this.orders_reloading) return;
+            clearTimeout(this.fulfillment_reload_timer);
+            this.fulfillment_reload_timer = null;
+            this.orders_reloading = true;
+            frappe.call({
+                method: "restaurant_management.api.get_fulfillment_detail",
+                args: { name: this.fulfillment_name },
+                always: r => {
+                    try {
+                        if (r && r.message && r.message.order) {
+                            const data = r.message.order;
+                            data.order = this.normalize_order_data(data.order);
+                            this.external_order_data = data.order;
+                            const order = this.get_order(data.order.name);
+                            if (order) {
+                                order.reset_data(data, QUEUE);
+                            } else {
+                                this.append_order(data.order, data.order.name);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Delivery order reload failed", error);
+                    } finally {
+                        this.orders_reloading = false;
+                    }
+                }
+            });
+            return;
+        }
         if (this.orders_reloading) return;
         this.orders_reloading = true;
 
@@ -954,6 +1072,11 @@ class OrderManage extends ObjectManage {
             this.#components.new_order_button.remove();
         }
 
+        if (this.is_fulfillment) {
+            this.#components.new_order_button = null;
+            return;
+        }
+
         const new_order_button = frappe.jshtml({
             test_field:true,
             tag: "button",
@@ -973,7 +1096,15 @@ class OrderManage extends ObjectManage {
         }
     }
 
+    normalize_order_data(order) {
+        if (!order || !order.data) return order;
+        if (!order.name) order.name = order.data.name;
+        return order;
+    }
+
     append_order(order, current = null) {
+        order = this.normalize_order_data(order);
+        if (!order || !order.name) return null;
         return super.append_child({
             child: order,
             not_exist: () => {

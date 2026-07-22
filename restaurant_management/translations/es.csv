@@ -178,3 +178,24 @@ Configure at least one non-group Customer Group before creating customers,Config
 Quantity must be at least 1. Use Delete to remove the item.,La cantidad debe ser al menos 1. Use Eliminar para retirar el plato.
 Quantity must be a whole number greater than zero,La cantidad debe ser un número entero mayor que cero.
 Only unsent dishes can change their quantity,Solo los platos no enviados pueden cambiar su cantidad.
+Click again to confirm,Vuelva a presionar para confirmar.
+Delete selected dish (press twice),Eliminar plato seleccionado (presione dos veces).
+Press Delete again to remove the selected dish,Vuelva a presionar Eliminar para quitar el plato seleccionado.
+Dish removed from the order,Plato eliminado de la orden.
+Preparing order...,Preparando orden...
+The order operation could not be completed,No se pudo completar la operación de la orden.
+The order could not be sent to production,No se pudo enviar la orden a producción.
+Order source,Origen del pedido
+All,Todos
+Tables,Mesas
+Delivery,Entrega a domicilio
+Pickup,Recojo en local
+There are no active commands for the selected source,No hay comandas activas para el origen seleccionado.
+New,Nuevo
+Preparing,Preparando
+Ready,Listo
+Assigned,Asignado
+Out for Delivery,En camino
+Delivery Failed,Entrega fallida
+Picked Up,Recogido
+Picked up,Recogido

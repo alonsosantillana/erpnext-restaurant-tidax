@@ -1,5 +1,14 @@
 let DOUBLE_CLICK = 'double_click';
 
+// Standard Frappe pages are persisted in localStorage when developer mode is
+// disabled. Restaurant Manage loads evolving operational modules, so discard
+// its page document on a full Desk load and fetch the current server version.
+try {
+    window.localStorage.removeItem("_page:restaurant-manage");
+} catch (error) {
+    console.warn("Restaurant Manage page cache could not be cleared", error);
+}
+
 class RMHelperClass {
     constructor() {
         this.icons = {

@@ -10,6 +10,7 @@ class TableOrder {
         this.button = null;
         this.item_mutation_queue = [];
         this.item_mutation_in_flight = false;
+        this.detail_mutation_in_flight = false;
         this.item_pending_to_send_status = ["Adding", null, undefined, ""];
         this.make();
 
@@ -156,8 +157,9 @@ class TableOrder {
         );
 
         this.data.items_count = active_items.length;
+        const unsent_statuses = [attending_status, "Pending", "Adding", "Add", null, undefined, ""];
         this.data.products_not_ordered = active_items.filter(
-            item => item.status === attending_status
+            item => unsent_statuses.includes(item.status)
         ).length;
 
         if (this.order_manage && this.order_manage.table) {
@@ -235,7 +237,7 @@ class TableOrder {
             const pending = this.item_mutation_queue[pending_index];
             if (pending.type === "set") {
                 pending.payload.qty = qty;
-                pending.payload.status = "Pending";
+                pending.payload.status = this.data.attending_status || "Attending";
             } else if (pending.type !== "delete") {
                 pending.type = "quantity";
                 pending.qty = qty;
@@ -254,7 +256,7 @@ class TableOrder {
     }
 
     process_item_mutation_queue() {
-        if (this.item_mutation_in_flight || !this.item_mutation_queue.length) return;
+        if (this.detail_mutation_in_flight || this.item_mutation_in_flight || !this.item_mutation_queue.length) return;
 
         const mutation = this.item_mutation_queue.shift();
         this.item_mutation_in_flight = true;
@@ -284,36 +286,74 @@ class TableOrder {
             always: (r) => {
                 const failed = !r || r.exc;
                 const has_pending_mutations = this.item_mutation_queue.length > 0;
-
-                if (failed) {
-                    this.item_mutation_queue = [];
-                    this.get_items();
-                } else if (!has_pending_mutations) {
-                    if (mutation.type === "delete") {
-                        this.delete_item(mutation.identifier);
-                    } else if (r.message) {
-                        this.order_manage.check_data(r.message);
-                    } else {
-                        this.get_items();
-                    }
-                    this.refresh_local_summary();
-                }
-
+                // Release the transport lock before reconciling UI state. If
+                // rendering fails, Delivery must not remain permanently busy.
                 this.item_mutation_in_flight = false;
-                if (!failed && this.item_mutation_queue.length) {
-                    this.process_item_mutation_queue();
-                    return;
-                }
+                try {
+                    if (failed) {
+                        this.item_mutation_queue = [];
+                        this.get_items({ silent: true });
+                    } else if (mutation.type === "delete") {
+                        this.delete_item(mutation.identifier);
+                        if (!has_pending_mutations) {
+                            this.get_items({ silent: true });
+                        }
+                        frappe.show_alert({
+                            message: __("Dish removed from the order"),
+                            indicator: "green"
+                        });
+                        this.refresh_local_summary();
+                    } else if (!has_pending_mutations) {
+                        if (r.message) {
+                            if (this.order_manage.is_fulfillment && r.message.data && r.message.data.order) {
+                                this.order_manage.external_order_data = r.message.data.order;
+                            }
+                            this.order_manage.check_data(r.message);
+                        } else {
+                            this.get_items({ silent: true });
+                        }
+                        this.refresh_local_summary();
+                    }
+                } catch (error) {
+                    console.error("Restaurant order reconciliation failed", error);
+                    this.get_items({ silent: true });
+                } finally {
+                    if (!failed && this.item_mutation_queue.length) {
+                        this.process_item_mutation_queue();
+                        return;
+                    }
 
-                this.aggregate(true);
-                window.saving = false;
-                RM.ready();
+                    this.aggregate(true);
+                    window.saving = false;
+                    RM.ready();
+                }
             }
         });
     }
 
     has_pending_item_mutations() {
         return this.item_mutation_in_flight || this.item_mutation_queue.length > 0;
+    }
+
+    has_pending_order_mutations() {
+        return this.detail_mutation_in_flight || this.has_pending_item_mutations();
+    }
+
+    async acquire_detail_mutation(timeout = 10000) {
+        const started_at = Date.now();
+        while (Date.now() - started_at < timeout) {
+            if (!this.detail_mutation_in_flight && !this.has_pending_item_mutations()) {
+                this.detail_mutation_in_flight = true;
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        return false;
+    }
+
+    release_detail_mutation() {
+        this.detail_mutation_in_flight = false;
+        this.process_item_mutation_queue();
     }
 
     push_item(new_item) {
@@ -329,7 +369,7 @@ class TableOrder {
                 if ([this.data.attending_status, "Pending", "Add", "", null, "undefined"].includes(item.data.status)) {
                     item.data.qty += 1;
                     item.data.item_tax_rate = new_item.item_tax_rate;
-                    item.data.status = "Pending";
+                    item.data.status = this.data.attending_status || "Attending";
                     item.calculate();
                     test_item = item;
                     increment_existing = true;
@@ -446,10 +486,15 @@ class TableOrder {
 
     debug_items(items) {
         const test_items = items.map(item => item.identifier);
+        const pending_items = new Set(this.item_mutation_queue.map(item => item.identifier));
 
-        Object.keys(this.items).filter(x => !test_items.includes(x)).forEach((r) => {
+        Object.keys(this.items).filter(
+            identifier => !test_items.includes(identifier) && !pending_items.has(identifier)
+        ).forEach((r) => {
             this.delete_item(r);
         });
+
+        if (pending_items.size) this.refresh_local_summary();
     }
 
     get_item(identifier) {
@@ -480,20 +525,34 @@ class TableOrder {
         return Object.keys(this.items).indexOf(test_item.data.identifier);
     }
 
-    get_items() {
-        RM.working(__("Loading items in") + ": " + this.data.name);
-        frappeHelper.api.call({
-            model: "Table Order",
-            name: this.data.name,
-            method: "get_items",
-            always: (r) => {
-                RM.ready();
-                if (typeof r.message != "undefined") {
-                    this.data = r.message.order.data;
-                    this.render();
-                    this.check_items({ items: r.message.items });
-                }
-            },
+    get_items(options = {}) {
+        const silent = Boolean(options.silent);
+        if (!silent) RM.working(__("Loading items in") + ": " + this.data.name);
+
+        return new Promise(resolve => {
+            frappeHelper.api.call({
+                model: "Table Order",
+                name: this.data.name,
+                method: "get_items",
+                always: (r) => {
+                    if (!silent) RM.ready();
+                    const loaded = Boolean(r && !r.exc && r.message && r.message.order);
+                    try {
+                        if (loaded) {
+                            this.data = r.message.order.data;
+                            if (this.order_manage.is_fulfillment) {
+                                this.order_manage.external_order_data = r.message.order;
+                            }
+                            this.render();
+                            this.check_items({ items: r.message.items });
+                        }
+                        resolve(loaded);
+                    } catch (error) {
+                        console.error("Restaurant items reload failed", error);
+                        resolve(false);
+                    }
+                },
+            });
         });
     }
 
@@ -690,8 +749,84 @@ class TableOrder {
         }
     }
 
-    order() {
+    wait_for_item_mutations(timeout = 10000) {
+        const started_at = Date.now();
+        return new Promise(resolve => {
+            const check = () => {
+                if (!this.has_pending_item_mutations()) {
+                    resolve(true);
+                    return;
+                }
+                if (Date.now() - started_at >= timeout) {
+                    resolve(false);
+                    return;
+                }
+                setTimeout(check, 50);
+            };
+            check();
+        });
+    }
+
+    wait_for_order_mutations(timeout = 10000) {
+        const started_at = Date.now();
+        return new Promise(resolve => {
+            const check = () => {
+                if (!this.has_pending_order_mutations()) {
+                    resolve(true);
+                    return;
+                }
+                if (Date.now() - started_at >= timeout) {
+                    resolve(false);
+                    return;
+                }
+                setTimeout(check, 50);
+            };
+            check();
+        });
+    }
+
+    async save_open_item_details() {
+        const editors = [];
+        this.in_items(item => {
+            if (item.form_editor && item.form_editor.has_visible_detail_changes()) {
+                editors.push(item.form_editor);
+            }
+        });
+
+        for (const editor of editors) {
+            const saved = await editor.save_visible_details({ silent: true });
+            if (!saved) return false;
+        }
+        return true;
+    }
+
+    async order() {
         if (RM.busy_message()) {
+            return;
+        }
+
+        const details_saved = await this.save_open_item_details();
+        if (!details_saved) return;
+
+        if (this.has_pending_order_mutations()) {
+            RM.working("Finishing pending dish changes", false);
+            const mutations_finished = await this.wait_for_order_mutations();
+            if (!mutations_finished) {
+                RM.ready();
+                frappe.show_alert({
+                    message: __("The dishes are still being saved. Please try again."),
+                    indicator: "orange"
+                });
+                return;
+            }
+        }
+
+        const refreshed = await this.get_items({ silent: true });
+        if (!refreshed) {
+            frappe.show_alert({
+                message: __("The order could not be refreshed before sending"),
+                indicator: "red"
+            });
             return;
         }
 
@@ -714,13 +849,24 @@ class TableOrder {
                 this.order_manage.components.Order.remove_class("btn-warning");
                 if (!r || r.exc || !r.message) {
                     RM.ready();
+                    frappe.show_alert({
+                        message: __("The order could not be sent to production"),
+                        indicator: "red"
+                    });
                     return;
                 }
 
                 RM.ready(false, "success");
                 this.data = r.message.order.data;
+                if (this.order_manage.is_fulfillment) {
+                    this.order_manage.external_order_data = r.message.order;
+                }
                 this.render();
                 this.check_items({ items: r.message.items });
+                frappe.show_alert({
+                    message: __("Order sent to production"),
+                    indicator: "green"
+                });
                 //this.print_order();
                 let m1, m2, m3, no_imp;
                 m1 = RM.restrictions.mesas_1;

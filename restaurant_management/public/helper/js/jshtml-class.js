@@ -146,6 +146,10 @@ class JSHtml {
                     if (method != null && method === "double_click") {
                         if (this.click_attempts === 0) {
                             this.#confirming = true;
+                            frappe.show_alert({
+                                message: this.confirm_message || __("Click again to confirm"),
+                                indicator: "orange"
+                            });
                             if (typeof this.text != "undefined" && this.text.length > 0) {
                                 this.val(__("Confirm"));
                             }

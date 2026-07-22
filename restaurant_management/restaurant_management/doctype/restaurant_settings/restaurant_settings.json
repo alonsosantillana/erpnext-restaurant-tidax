@@ -11,6 +11,10 @@
   "restricted_to_owner_order",
   "column_break_5",
   "multiple_pending_order",
+  "fulfillment_section",
+  "enable_delivery",
+  "enable_pickup",
+  "delivery_fee_item",
   "section_break_12",
   "pos_profile",
   "column_break_9",
@@ -153,6 +157,30 @@
    "fieldname": "multiple_pending_order",
    "fieldtype": "Check",
    "label": "Multiple pending order"
+  },
+  {
+   "fieldname": "fulfillment_section",
+   "fieldtype": "Section Break",
+   "label": "Delivery and Pickup"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_delivery",
+   "fieldtype": "Check",
+   "label": "Enable Delivery"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_pickup",
+   "fieldtype": "Check",
+   "label": "Enable Pickup"
+  },
+  {
+   "description": "Sale item used to add a delivery charge to the order and invoice.",
+   "fieldname": "delivery_fee_item",
+   "fieldtype": "Link",
+   "label": "Delivery Fee Item",
+   "options": "Item"
   },
   {
    "fieldname": "pos_profile",

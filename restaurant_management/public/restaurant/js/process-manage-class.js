@@ -4,6 +4,7 @@ ProcessManage = class ProcessManage {
         this.status = "close";
         this.modal = null;
         this.active_view = "commands";
+        this.command_service_filter = "all";
         this.dashboard = null;
         this.loading = false;
         this.transitioning = false;
@@ -147,6 +148,9 @@ ProcessManage = class ProcessManage {
             .on("click.production-center", "[data-production-view]", event => {
                 this.set_active_view($(event.currentTarget).data("production-view"));
             })
+            .on("click.production-center", "[data-command-service-filter]", event => {
+                this.set_command_service_filter($(event.currentTarget).data("command-service-filter"));
+            })
             .on("click.production-center", ".production-center-refresh", () => this.reload())
             .on("click.production-center", ".production-command-action", event => {
                 const key = $(event.currentTarget).data("command-key");
@@ -213,6 +217,15 @@ ProcessManage = class ProcessManage {
                         <span class="production-center-count" data-count="attended">0</span>
                     </button>
                 </div>
+                <div class="production-command-filter" role="group" aria-label="${__("Order source")}">
+                    <span class="production-command-filter-label">${__("Order source")}</span>
+                    <div class="production-command-filter-options">
+                        ${this.command_filter_button("all", "All")}
+                        ${this.command_filter_button("tables", "Tables")}
+                        ${this.command_filter_button("delivery", "Delivery")}
+                        ${this.command_filter_button("pickup", "Pickup")}
+                    </div>
+                </div>
                 <div class="production-center-summary"></div>
                 <div class="production-center-content" aria-live="polite"></div>
             </div>`;
@@ -226,7 +239,58 @@ ProcessManage = class ProcessManage {
         if (!["commands", "consolidation", "attended"].includes(view)) return;
         this.active_view = view;
         this.update_active_tab();
+        this.update_command_filter();
         this.render_active_view();
+    }
+
+    command_filter_button(value, label) {
+        return `
+            <button type="button" class="btn btn-default" data-command-service-filter="${value}" aria-pressed="false">
+                <span>${__(label)}</span>
+                <span class="production-command-filter-count" data-command-service-count="${value}">0</span>
+            </button>`;
+    }
+
+    set_command_service_filter(filter) {
+        if (!["all", "tables", "delivery", "pickup"].includes(filter)) return;
+        this.command_service_filter = filter;
+        this.update_command_filter();
+        this.render_active_view();
+    }
+
+    update_command_filter() {
+        const root = this.root();
+        root.find(".production-command-filter").toggle(this.active_view === "commands");
+        root.find("[data-command-service-filter]").each((index, element) => {
+            const active = $(element).data("command-service-filter") === this.command_service_filter;
+            $(element)
+                .toggleClass("active", active)
+                .attr("aria-pressed", active ? "true" : "false");
+        });
+    }
+
+    command_service_group(command) {
+        const service_type = String(command && command.service_type || "").trim().toLowerCase();
+        if (service_type === "delivery") return "delivery";
+        if (service_type === "pickup") return "pickup";
+        return "tables";
+    }
+
+    filtered_commands() {
+        const commands = (this.dashboard && this.dashboard.commands) || [];
+        if (this.command_service_filter === "all") return commands;
+        return commands.filter(command => this.command_service_group(command) === this.command_service_filter);
+    }
+
+    update_command_filter_counts() {
+        const commands = (this.dashboard && this.dashboard.commands) || [];
+        const counts = { all: commands.length, tables: 0, delivery: 0, pickup: 0 };
+        commands.forEach(command => {
+            counts[this.command_service_group(command)] += 1;
+        });
+        Object.entries(counts).forEach(([key, value]) => {
+            this.root().find(`[data-command-service-count="${key}"]`).text(value);
+        });
     }
 
     update_active_tab() {
@@ -335,6 +399,8 @@ ProcessManage = class ProcessManage {
             $("<span>").text(__("Commands: {0}", [counts.commands || 0]))
         );
 
+        this.update_command_filter_counts();
+        this.update_command_filter();
         this.render_active_view();
     }
 
@@ -347,7 +413,7 @@ ProcessManage = class ProcessManage {
         } else if (this.active_view === "attended") {
             this.render_commands(content, this.dashboard.attended || [], true);
         } else {
-            this.render_commands(content, this.dashboard.commands || [], false);
+            this.render_commands(content, this.filtered_commands(), false, this.command_service_filter !== "all");
         }
 
         const truncated = this.dashboard.truncated || {};
@@ -400,11 +466,15 @@ ProcessManage = class ProcessManage {
         content.append($("<div>", { class: "table-responsive" }).append(table));
     }
 
-    render_commands(content, commands, attended) {
+    render_commands(content, commands, attended, filtered = false) {
         if (!commands.length) {
             this.render_empty(
                 content,
-                attended ? __("There are no attended orders today") : __("There are no active commands")
+                attended
+                    ? __("There are no attended orders today")
+                    : filtered
+                        ? __("There are no active commands for the selected source")
+                        : __("There are no active commands")
             );
             return;
         }

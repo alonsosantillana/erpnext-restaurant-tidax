@@ -106,9 +106,15 @@ class ProductItem {
         });
     }
 
+    selectable_items(items) {
+        const fee_item = RM.restrictions && RM.restrictions.delivery_fee_item;
+        if (!this.order_manage.is_fulfillment || !fee_item) return items || [];
+        return (items || []).filter(item => item.item_code !== fee_item);
+    }
+
     async load_items_data() {
         this.items = await this.get_items();
-        this.items = this.items.items;
+        this.items = this.selectable_items(this.items.items);
         this.all_items = this.items;
         this.render_items();
     }
@@ -171,6 +177,7 @@ class ProductItem {
 
         this.get_items({ search_value: search_term, page_length: 9999, item_group })
             .then(({ items, serial_no, batch_no, barcode }) => {
+                items = this.selectable_items(items);
                 items.forEach(item => {
                     if (`${item.item_code}`.toLowerCase().includes(search_term)) {
                         result_arr.push(item)
@@ -319,7 +326,7 @@ class ProductItem {
 
         const item_to_push = Object.assign({}, base_item, {
             identifier: RM.uuid("entry"),
-            status: "Pending",
+            status: current_order.data.attending_status || "Attending",
             notes: null,
             process_status_data: {
                 next_action_message: 'Sent',

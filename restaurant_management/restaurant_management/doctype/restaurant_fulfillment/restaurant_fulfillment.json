@@ -1,0 +1,290 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "order",
+  "fulfillment_type",
+  "status",
+  "company",
+  "pos_profile",
+  "customer_section",
+  "customer",
+  "customer_name_snapshot",
+  "contact_phone",
+  "address",
+  "address_display_snapshot",
+  "delivery_reference",
+  "instructions",
+  "operation_section",
+  "order_channel",
+  "external_order_id",
+  "promised_at",
+  "delivery_fee",
+  "courier_name",
+  "payment_timing",
+  "expected_payment_method",
+  "payment_status",
+  "request_id",
+  "failure_reason",
+  "status_log"
+ ],
+ "fields": [
+  {
+   "default": "FUL-.YYYY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "FUL-.YYYY.-.#####",
+   "reqd": 1
+  },
+  {
+   "fieldname": "order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Restaurant Order",
+   "options": "Table Order",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "fulfillment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Fulfillment Type",
+   "options": "Delivery\nPickup",
+   "reqd": 1
+  },
+  {
+   "default": "New",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "New\nPreparing\nReady\nAssigned\nOut for Delivery\nDelivered\nDelivery Failed\nPicked Up\nCancelled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "POS Profile",
+   "options": "POS Profile",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_section",
+   "fieldtype": "Section Break",
+   "label": "Customer and destination"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_name_snapshot",
+   "fieldtype": "Data",
+   "label": "Customer Name Snapshot",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "contact_phone",
+   "fieldtype": "Data",
+   "label": "Contact Phone",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.fulfillment_type == 'Delivery'",
+   "fieldname": "address",
+   "fieldtype": "Link",
+   "label": "Delivery Address",
+   "options": "Address"
+  },
+  {
+   "depends_on": "eval:doc.fulfillment_type == 'Delivery'",
+   "fieldname": "address_display_snapshot",
+   "fieldtype": "Small Text",
+   "label": "Delivery Address Snapshot",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.fulfillment_type == 'Delivery'",
+   "fieldname": "delivery_reference",
+   "fieldtype": "Small Text",
+   "label": "Delivery Reference"
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Small Text",
+   "label": "Instructions"
+  },
+  {
+   "fieldname": "operation_section",
+   "fieldtype": "Section Break",
+   "label": "Operation"
+  },
+  {
+   "default": "Phone",
+   "fieldname": "order_channel",
+   "fieldtype": "Select",
+   "label": "Order Channel",
+   "options": "Phone\nWhatsApp\nWeb\nMarketplace\nWalk-in\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "external_order_id",
+   "fieldtype": "Data",
+   "label": "External Order ID"
+  },
+  {
+   "fieldname": "promised_at",
+   "fieldtype": "Datetime",
+   "label": "Promised At"
+  },
+  {
+   "default": "0",
+   "fieldname": "delivery_fee",
+   "fieldtype": "Currency",
+   "label": "Delivery Fee",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "courier_name",
+   "fieldtype": "Data",
+   "label": "Courier"
+  },
+  {
+   "default": "Prepaid",
+   "fieldname": "payment_timing",
+   "fieldtype": "Select",
+   "label": "Payment Timing",
+   "options": "Prepaid\nCash on Delivery",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expected_payment_method",
+   "fieldtype": "Link",
+   "label": "Expected Payment Method",
+   "options": "Mode of Payment"
+  },
+  {
+   "default": "Unpaid",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment Status",
+   "options": "Unpaid\nPaid\nRefunded",
+   "reqd": 1
+  },
+  {
+   "fieldname": "request_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Request ID",
+   "no_copy": 1,
+   "unique": 1
+  },
+  {
+   "depends_on": "eval:['Delivery Failed', 'Cancelled'].includes(doc.status)",
+   "fieldname": "failure_reason",
+   "fieldtype": "Small Text",
+   "label": "Failure or Cancellation Reason"
+  },
+  {
+   "fieldname": "status_log",
+   "fieldtype": "Table",
+   "label": "Status History",
+   "options": "Restaurant Fulfillment Status Log",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 0,
+ "links": [],
+ "module": "Restaurant Management",
+ "name": "Restaurant Fulfillment",
+ "naming_rule": "By \"Naming Series\" field",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Restaurant Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admin Resto",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Cajero",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Mozo",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Cocinero"
+  }
+ ],
+ "search_fields": "order,customer,customer_name_snapshot,contact_phone,external_order_id",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "order",
+ "track_changes": 1
+}

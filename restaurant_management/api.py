@@ -2,7 +2,8 @@ from __future__ import unicode_literals
 
 import frappe
 from frappe import _
-from frappe.utils import getdate
+from frappe.utils import cint, flt, getdate
+from erpnext.stock.get_item_details import get_pos_profile
 import requests
 
 SUCCESS = 200
@@ -23,6 +24,9 @@ DOCUMENT_METHODS = {
         "set_commands_status",
         "set_status_command",
         "set_style",
+    },
+    "Restaurant Fulfillment": {
+        "transition_status",
     },
     "Table Order": {
         "_delete",
@@ -176,6 +180,13 @@ def call(model, name, method, args=None):
     parsed_args = frappe.parse_json(args) if args else {}
     if not isinstance(parsed_args, dict):
         frappe.throw(_("Operation arguments must be an object"))
+
+    if model == "Table Order" and permission_type == "write":
+        frappe.db.sql(
+            "SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE",
+            (doc.name,),
+        )
+        doc.reload()
 
     action = getattr(doc, method)
     if callable(action):
@@ -440,6 +451,311 @@ def create_and_assign_customer(order_name, tax_id, client=None):
         },
         "address": address_name,
         "order": order_data,
+    }
+
+
+
+@frappe.whitelist(methods=["POST"])
+def create_customer_from_identity(tax_id):
+    """Create or reuse a verified DNI/RUC customer before starting an order."""
+    _require_authenticated_user()
+    tax_id = _clean_customer_tax_id(tax_id)
+
+    customer_data = _find_customer_by_tax_id(tax_id)
+    if customer_data:
+        if customer_data.get("disabled"):
+            frappe.throw(_("The customer registered with this document is disabled"))
+        customer = frappe.get_doc("Customer", customer_data["name"])
+        customer.check_permission("read")
+        return {
+            "created": False,
+            "customer": _customer_preview(customer_data),
+            "address": None,
+        }
+
+    if frappe.db.exists("Customer", {"tax_id": tax_id}):
+        frappe.throw(_("A customer with this document already exists"))
+    identity = _lookup_party_identity(tax_id)
+    if not identity.get("found"):
+        frappe.throw(_("No information was found for this DNI/RUC"))
+
+    _company, pos_profile = _active_restaurant_pos_context()
+    customer, address_name = _create_customer_from_identity(identity, pos_profile.name)
+    return {
+        "created": True,
+        "customer": {
+            "name": customer.name,
+            "customer_name": customer.customer_name,
+            "tax_id": customer.tax_id,
+            "disabled": False,
+        },
+        "address": address_name,
+    }
+
+def _active_restaurant_pos_context():
+    company = frappe.defaults.get_user_default("company")
+    if not company:
+        frappe.throw(_("Set a default Company before creating restaurant orders"))
+    if not frappe.has_permission("Company", "read", company):
+        frappe.throw(_("Not permitted to use Company {0}").format(company), frappe.PermissionError)
+
+    pos_profile = get_pos_profile(company, user=frappe.session.user)
+    if not pos_profile or pos_profile.get("disabled"):
+        frappe.throw(_("No enabled POS Profile is available for {0}").format(company))
+    return company, pos_profile
+
+
+def _existing_fulfillment_request(request_id):
+    if not request_id:
+        return None
+    name = frappe.db.get_value(
+        "Restaurant Fulfillment", {"request_id": request_id}, "name"
+    )
+    if not name:
+        return None
+    fulfillment = frappe.get_doc("Restaurant Fulfillment", name)
+    fulfillment.check_permission("read")
+    return {
+        "created": False,
+        "order": frappe.get_doc("Table Order", fulfillment.order).data(),
+        "fulfillment": fulfillment.board_summary(),
+    }
+
+
+@frappe.whitelist(methods=["POST"])
+def create_fulfillment_order(
+    fulfillment_type,
+    customer,
+    contact_phone,
+    address=None,
+    delivery_reference=None,
+    instructions=None,
+    order_channel="Phone",
+    external_order_id=None,
+    promised_at=None,
+    delivery_fee=0,
+    payment_timing="Prepaid",
+    expected_payment_method=None,
+    request_id=None,
+):
+    """Create one delivery or pickup order without a synthetic table."""
+    _require_authenticated_user()
+    fulfillment_type = str(fulfillment_type or "").strip()
+    if fulfillment_type not in {"Delivery", "Pickup"}:
+        frappe.throw(_("Select Delivery or Pickup"))
+
+    settings_field = "enable_delivery" if fulfillment_type == "Delivery" else "enable_pickup"
+    if not cint(frappe.db.get_single_value("Restaurant Settings", settings_field)):
+        frappe.throw(_("{0} is disabled in Restaurant Settings").format(fulfillment_type))
+
+    request_id = str(request_id or "").strip() or None
+    existing = _existing_fulfillment_request(request_id)
+    if existing:
+        return existing
+
+    if not frappe.has_permission("Table Order", "create"):
+        frappe.throw(_("Not permitted to create restaurant orders"), frappe.PermissionError)
+    if not frappe.has_permission("Restaurant Fulfillment", "create"):
+        frappe.throw(_("Not permitted to create delivery or pickup orders"), frappe.PermissionError)
+
+    customer_doc = frappe.get_doc("Customer", customer)
+    customer_doc.check_permission("read")
+    if customer_doc.disabled:
+        frappe.throw(_("The selected customer is disabled"))
+    if address:
+        address_doc = frappe.get_doc("Address", address)
+        address_doc.check_permission("read")
+
+    from restaurant_management.restaurant_management.doctype.restaurant_fulfillment.restaurant_fulfillment import address_belongs_to_customer
+
+    if fulfillment_type == "Delivery" and not address_belongs_to_customer(address, customer):
+        frappe.throw(_("The delivery address must belong to the selected customer"))
+    if fulfillment_type == "Pickup" and address:
+        frappe.throw(_("Pickup orders do not use a delivery address"))
+
+    delivery_fee = flt(delivery_fee)
+    if delivery_fee < 0:
+        frappe.throw(_("Delivery fee cannot be negative"))
+    if fulfillment_type == "Pickup" and delivery_fee:
+        frappe.throw(_("Pickup orders cannot have a delivery fee"))
+    delivery_fee_item = None
+    if delivery_fee:
+        delivery_fee_item = frappe.db.get_single_value(
+            "Restaurant Settings", "delivery_fee_item"
+        )
+        if not delivery_fee_item:
+            frappe.throw(_("Configure the delivery fee Item in Restaurant Settings"))
+
+    company, pos_profile = _active_restaurant_pos_context()
+    savepoint = "restaurant_fulfillment_create"
+    frappe.db.savepoint(savepoint)
+    try:
+        order = frappe.new_doc("Table Order")
+        order.service_type = fulfillment_type
+        order.status = "Attending"
+        order.company = company
+        order.pos_profile = pos_profile.name
+        order.customer = customer_doc.name
+        order.guest_count = 0
+        order.taxes_and_charges = frappe.db.get_value(
+            "POS Profile", pos_profile.name, "taxes_and_charges"
+        )
+        order.selling_price_list = pos_profile.selling_price_list
+        order.insert()
+        if delivery_fee:
+            order.add_delivery_fee_item(delivery_fee_item, delivery_fee)
+            order.reload()
+
+        fulfillment = frappe.new_doc("Restaurant Fulfillment")
+        fulfillment.order = order.name
+        fulfillment.fulfillment_type = fulfillment_type
+        fulfillment.customer = customer_doc.name
+        fulfillment.contact_phone = contact_phone
+        fulfillment.address = address
+        fulfillment.delivery_reference = delivery_reference
+        fulfillment.instructions = instructions
+        fulfillment.order_channel = order_channel
+        fulfillment.external_order_id = external_order_id
+        fulfillment.promised_at = promised_at
+        fulfillment.delivery_fee = delivery_fee
+        fulfillment.payment_timing = payment_timing
+        fulfillment.expected_payment_method = expected_payment_method
+        fulfillment.request_id = request_id
+        fulfillment.insert()
+    except frappe.DuplicateEntryError:
+        frappe.db.rollback(save_point=savepoint)
+        existing = _existing_fulfillment_request(request_id)
+        if existing:
+            return existing
+        raise
+
+    return {
+        "created": True,
+        "order": order.data(),
+        "fulfillment": fulfillment.board_summary(),
+    }
+
+
+@frappe.whitelist()
+def get_fulfillment_board(fulfillment_type, include_closed=0):
+    _require_authenticated_user()
+    fulfillment_type = str(fulfillment_type or "").strip()
+    if fulfillment_type not in {"Delivery", "Pickup"}:
+        frappe.throw(_("Select Delivery or Pickup"))
+    if not frappe.has_permission("Restaurant Fulfillment", "read"):
+        frappe.throw(_("Not permitted to view fulfillment orders"), frappe.PermissionError)
+
+    company, pos_profile = _active_restaurant_pos_context()
+    filters = {
+        "company": company,
+        "pos_profile": pos_profile.name,
+        "fulfillment_type": fulfillment_type,
+    }
+    or_filters = None
+    if not cint(include_closed):
+        filters["status"] = ("!=", "Cancelled")
+        terminal_status = "Picked Up" if fulfillment_type == "Pickup" else "Delivered"
+        or_filters = [
+            ["status", "!=", terminal_status],
+            ["payment_status", "!=", "Paid"],
+        ]
+
+    rows = frappe.get_list(
+        "Restaurant Fulfillment",
+        filters=filters,
+        or_filters=or_filters,
+        fields=[
+            "name",
+            "order",
+            "fulfillment_type",
+            "status",
+            "customer_name_snapshot",
+            "order_channel",
+            "promised_at",
+            "delivery_fee",
+            "courier_name",
+            "payment_timing",
+            "payment_status",
+            "creation",
+            "modified",
+        ],
+        order_by="modified desc",
+        limit_page_length=200,
+    )
+    if not cint(include_closed):
+        terminal_status = "Picked Up" if fulfillment_type == "Pickup" else "Delivered"
+        rows = [
+            row
+            for row in rows
+            if row.status != terminal_status or row.payment_status != "Paid"
+        ]
+
+    order_names = [row.order for row in rows]
+    orders = {
+        row.name: row
+        for row in frappe.get_all(
+            "Table Order",
+            filters={"name": ("in", order_names)},
+            fields=["name", "amount", "status"],
+            limit_page_length=len(order_names),
+        )
+    } if order_names else {}
+
+    return [
+        {
+            **dict(row),
+            "customer_name": row.customer_name_snapshot,
+            "amount": flt(orders.get(row.order, {}).get("amount")),
+            "order_status": orders.get(row.order, {}).get("status"),
+        }
+        for row in rows
+    ]
+
+
+@frappe.whitelist()
+def get_fulfillment_counts():
+    _require_authenticated_user()
+    if not frappe.has_permission("Restaurant Fulfillment", "read"):
+        frappe.throw(_("Not permitted to view fulfillment orders"), frappe.PermissionError)
+
+    company, pos_profile = _active_restaurant_pos_context()
+    counts = {}
+    for fulfillment_type, terminal_status in {
+        "Delivery": "Delivered",
+        "Pickup": "Picked Up",
+    }.items():
+        rows = frappe.get_all(
+            "Restaurant Fulfillment",
+            filters={
+                "company": company,
+                "pos_profile": pos_profile.name,
+                "fulfillment_type": fulfillment_type,
+                "status": ("!=", "Cancelled"),
+            },
+            or_filters=[
+                ["status", "!=", terminal_status],
+                ["payment_status", "!=", "Paid"],
+            ],
+            fields=["count(name) as total"],
+        )
+        counts[fulfillment_type] = cint(rows[0].total) if rows else 0
+    return counts
+
+
+@frappe.whitelist()
+def get_fulfillment_detail(name):
+    _require_authenticated_user()
+    fulfillment = frappe.get_doc("Restaurant Fulfillment", name)
+    fulfillment.check_permission("read")
+    company, pos_profile = _active_restaurant_pos_context()
+    if fulfillment.company != company or fulfillment.pos_profile != pos_profile.name:
+        frappe.throw(_("Fulfillment is outside the active Company or POS Profile"), frappe.PermissionError)
+
+    order = frappe.get_doc("Table Order", fulfillment.order)
+    order.check_permission("read")
+    return {
+        "fulfillment": fulfillment.as_dict(),
+        "order": order.data(),
     }
 
 

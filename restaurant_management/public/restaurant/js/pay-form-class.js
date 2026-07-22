@@ -133,6 +133,16 @@ class PayForm extends DeskForm {
     }
 
     set_guest_count_input(){
+        if (this.order.data.service_type && this.order.data.service_type !== "Dine In") {
+            this.guest_count = frappe.jshtml({
+                tag: "input",
+                properties: { type: "hidden" }
+            }).val("0").int();
+            this.get_field("guest_count").$wrapper.empty().append(this.guest_count.html());
+            this.get_field("guest_count").$wrapper.parent().hide();
+            return;
+        }
+        this.get_field("guest_count").$wrapper.parent().show();
         if(this.doc.guest_count == 0){
             this.guest_count = frappe.jshtml({
                 tag: "input",

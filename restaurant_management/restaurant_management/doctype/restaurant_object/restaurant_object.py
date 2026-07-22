@@ -289,6 +289,8 @@ class RestaurantObject(Document):
             "comentario",
             "room_description",
             "table_description",
+            "service_type",
+            "customer_name",
         ]
         today = frappe.utils.nowdate()
         tomorrow = frappe.utils.add_days(today, 1)
@@ -352,6 +354,8 @@ class RestaurantObject(Document):
                     "short_name": self.order_short_name(item.parent),
                     "table_description": order.table_description or item.table_description,
                     "room_description": order.room_description,
+                    "service_type": order.service_type or "Dine In",
+                    "customer_name": order.customer_name,
                     "waiter": order.cambio_mozo_nombre or waiter_names.get(waiter) or waiter,
                     "comment": order.comentario,
                     "ordered_time": item.ordered_time,
@@ -571,14 +575,30 @@ class RestaurantObject(Document):
         active_items = []
         daily_items = []
         if order_names:
+            fee_item = frappe.db.get_single_value(
+                "Restaurant Settings", "delivery_fee_item"
+            )
+            active_filters = [
+                ["parent", "in", order_names],
+                ["status", "in", active_statuses],
+                ["item_group", "in", item_groups],
+                ["qty", ">", 0],
+            ]
+            daily_filters = [
+                ["parent", "in", order_names],
+                ["status", "in", daily_statuses],
+                ["item_group", "in", item_groups],
+                ["qty", ">", 0],
+                ["ordered_time", ">=", today],
+                ["ordered_time", "<", tomorrow],
+            ]
+            if fee_item:
+                active_filters.append(["item_code", "!=", fee_item])
+                daily_filters.append(["item_code", "!=", fee_item])
+
             active_items = frappe.get_all(
                 "Order Entry Item",
-                filters={
-                    "parent": ("in", order_names),
-                    "status": ("in", active_statuses),
-                    "item_group": ("in", item_groups),
-                    "qty": (">", 0),
-                },
+                filters=active_filters,
                 fields=item_fields,
                 order_by="ordered_time asc",
                 limit_page_length=PRODUCTION_CENTER_ITEM_LIMIT + 1,
@@ -586,14 +606,7 @@ class RestaurantObject(Document):
             if daily_statuses:
                 daily_items = frappe.get_all(
                     "Order Entry Item",
-                    filters=[
-                        ["parent", "in", order_names],
-                        ["status", "in", daily_statuses],
-                        ["item_group", "in", item_groups],
-                        ["qty", ">", 0],
-                        ["ordered_time", ">=", today],
-                        ["ordered_time", "<", tomorrow],
-                    ],
+                    filters=daily_filters,
                     fields=item_fields,
                     order_by="ordered_time asc",
                     limit_page_length=0,
@@ -873,6 +886,10 @@ class RestaurantObject(Document):
         for order_name in order_names:
             order = frappe.get_doc("Table Order", order_name)
             order.synchronize(dict(status=[expected_status, next_status]))
+            if not order.is_dine_in:
+                from restaurant_management.restaurant_management.doctype.restaurant_fulfillment.restaurant_fulfillment import sync_order_preparation
+
+                sync_order_preparation(order_name)
 
         return {
             "updated": identifiers,

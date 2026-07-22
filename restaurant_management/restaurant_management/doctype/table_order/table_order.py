@@ -106,8 +106,42 @@ def apply_pos_tax_inclusion(invoice, tax_inclusive):
 
 class TableOrder(Document):
     def validate(self):
+        self.validate_service_context()
         self.set_default_customer()
         self.validate_global_discount()
+
+    def validate_service_context(self):
+        self.service_type = self.service_type or "Dine In"
+        if self.service_type not in {"Dine In", "Delivery", "Pickup"}:
+            frappe.throw(_("Select a valid service type"))
+        if self.service_type == "Dine In" and not self.table:
+            frappe.throw(_("Dine-in orders require a restaurant table"))
+        if self.service_type in {"Delivery", "Pickup"} and self.table:
+            frappe.throw(_("Delivery and pickup orders cannot use a restaurant table"))
+
+    @property
+    def is_dine_in(self):
+        return (self.service_type or "Dine In") == "Dine In"
+
+    @property
+    def context_label(self):
+        if self.is_dine_in:
+            return f"{self.room_description} ({self.table_description})"
+        service_label = "DELIVERY" if self.service_type == "Delivery" else "PICKUP"
+        customer_name = self.customer_name or self.customer or ""
+        return f"{service_label} {self.short_name} | {customer_name}".strip()
+
+    @staticmethod
+    def item_process_status_data(item):
+        from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import RestaurantObject
+
+        status = RestaurantObject._status(item.status)
+        return {
+            "next_action_message": status["action_message"],
+            "color": status["color"],
+            "icon": status["icon"],
+            "status_message": status["message"],
+        }
 
     def on_update(self):
         previous = self.get_doc_before_save()
@@ -116,7 +150,7 @@ class TableOrder(Document):
             or self.has_value_changed("discount_global_percent")
         ):
             self.synchronize(dict(action="Update"))
-        elif previous and self.has_value_changed("guest_count"):
+        elif previous and self.has_value_changed("guest_count") and self.is_dine_in:
             self._table.synchronize()
 
     def validate_global_discount(self):
@@ -230,6 +264,8 @@ class TableOrder(Document):
         return quantities
 
     def divide(self, items, client):
+        if not self.is_dine_in:
+            frappe.throw(_("Only dine-in orders can be divided"))
         quantities = self.validate_divide_items(items)
         new_order = frappe.new_doc("Table Order")
         self.transfer_order_values(new_order)
@@ -268,7 +304,7 @@ class TableOrder(Document):
                     total_time_minutes=item.total_time_minutes,
                     preparation_time_target=item.preparation_time_target,
                     preparation_time_source=item.preparation_time_source,
-                    table_description=f'{self.room_description} ({self.table_description})',
+                    table_description=self.context_label,
                     has_batch_no=item.has_batch_no,
                     batch_no=item.batch_no,
                     has_serial_no=item.has_serial_no,
@@ -313,7 +349,26 @@ class TableOrder(Document):
         )
         frappe.publish_realtime("synchronize_order_data", event, after_commit=True)
 
-        self._table.synchronize()
+        if self.is_dine_in:
+            self._table.synchronize()
+        else:
+            fulfillment = frappe.db.get_value(
+                "Restaurant Fulfillment",
+                {"order": self.name},
+                ["name", "fulfillment_type", "status"],
+                as_dict=True,
+            )
+            if fulfillment:
+                frappe.publish_realtime(
+                    "restaurant_fulfillment_update",
+                    {
+                        "name": fulfillment.name,
+                        "order": self.name,
+                        "fulfillment_type": fulfillment.fulfillment_type,
+                        "status": fulfillment.status,
+                    },
+                    after_commit=True,
+                )
 
         if status is not None:
             RestaurantManage.production_center_notify(status)
@@ -342,8 +397,10 @@ class TableOrder(Document):
         guest_count = cint(guest_count)
         if not customer:
             frappe.throw(_("Seleccione un cliente"))
-        if guest_count <= 0:
+        if self.is_dine_in and guest_count <= 0:
             frappe.throw(_("La cantidad de comensales debe ser mayor que cero"))
+        if not self.is_dine_in:
+            guest_count = max(0, guest_count)
 
         voucher_config = get_voucher_config(voucher_type, emission_mode)
         customer_identity = get_customer_identity(customer, voucher_config)
@@ -415,7 +472,19 @@ class TableOrder(Document):
             invoice.total_amount_free = self.amount
             invoice.is_free_global = 1
 
-        invoice.table_description = self.table_description
+        invoice.table_description = self.context_label
+        if not self.is_dine_in:
+            fulfillment = frappe.db.get_value(
+                "Restaurant Fulfillment",
+                {"order": self.name},
+                ["address", "address_display_snapshot", "contact_phone"],
+                as_dict=True,
+            )
+            if fulfillment:
+                invoice.customer_address = fulfillment.address
+                invoice.shipping_address_name = fulfillment.address
+                invoice.address_display = fulfillment.address_display_snapshot
+                invoice.contact_mobile = fulfillment.contact_phone
         invoice.validate()
         invoice.save()
         invoice.submit()
@@ -429,6 +498,31 @@ class TableOrder(Document):
         self.save()
         self.submit()
 
+        if not self.is_dine_in:
+            fulfillment = frappe.db.get_value(
+                "Restaurant Fulfillment",
+                {"order": self.name},
+                ["name", "fulfillment_type", "status"],
+                as_dict=True,
+            )
+            if fulfillment:
+                frappe.db.set_value(
+                    "Restaurant Fulfillment",
+                    fulfillment.name,
+                    "payment_status",
+                    "Paid",
+                )
+                frappe.publish_realtime(
+                    "restaurant_fulfillment_update",
+                    {
+                        "name": fulfillment.name,
+                        "order": self.name,
+                        "fulfillment_type": fulfillment.fulfillment_type,
+                        "status": fulfillment.status,
+                    },
+                    after_commit=True,
+                )
+
         frappe.msgprint(_('Invoice Created'), indicator='green', alert=True)
 
         self.synchronize(dict(action="Invoiced", status=["Invoiced"]))
@@ -439,6 +533,8 @@ class TableOrder(Document):
         )
 
     def transfer(self, table, client):
+        if not self.is_dine_in:
+            frappe.throw(_("Only dine-in orders can be transferred to another table"))
         last_table = self._table
         new_table = frappe.get_doc("Restaurant Object", table)
 
@@ -451,7 +547,7 @@ class TableOrder(Document):
         self.save()
 
         for i in self.entry_items:
-            table_description = f'{self.room_description} ({self.table_description})'
+            table_description = self.context_label
             frappe.db.set_value("Order Entry Item", {"identifier": i.identifier}, "table_description",
                                 table_description)
 
@@ -480,6 +576,8 @@ class TableOrder(Document):
         to_doc.selling_price_list = self.selling_price_list
         to_doc.pos_profile = self.pos_profile
         to_doc.table = self.table
+        if to_doc.doctype == "Table Order":
+            to_doc.service_type = self.service_type
 
     def get_invoice(self, entry_items=None, make=False):
         invoice = frappe.new_doc("POS Invoice")
@@ -574,6 +672,73 @@ class TableOrder(Document):
         self.calculate_order(all_items)
         self.synchronize(dict(action="queue"))
 
+    def add_delivery_fee_item(self, item_code, rate):
+        if self.service_type != "Delivery":
+            frappe.throw(_("Delivery fees only apply to delivery orders"))
+
+        rate = flt(rate)
+        if rate <= 0:
+            frappe.throw(_("Delivery fee must be greater than zero"))
+        item_doc = frappe.get_cached_doc("Item", item_code)
+        if item_doc.disabled or not item_doc.is_sales_item:
+            frappe.throw(_("Configure an enabled sales Item for the delivery fee"))
+        if item_doc.is_stock_item:
+            frappe.throw(_("The delivery fee Item must be non-stock"))
+
+        existing = [item for item in self.entry_items if item.item_code == item_code]
+        if len(existing) > 1:
+            frappe.throw(_("The order contains more than one delivery fee line"))
+        identifier = (
+            existing[0].identifier
+            if existing
+            else f"delivery_fee_{frappe.generate_hash(length=10)}"
+        )
+        timestamp = frappe.utils.now_datetime()
+        entry = {
+            "identifier": identifier,
+            "item_code": item_code,
+            "qty": 1,
+            "rate": rate,
+            "price_list_rate": rate,
+            "discount_percentage": 0,
+            "discount_amount": 0,
+            "item_tax_template": None,
+            "item_tax_rate": "{}",
+            "status": "Completed",
+            "notes": _("Delivery fee"),
+            "ordered_time": timestamp,
+            "ordered_nro": 0,
+            "ordered_finish": 0,
+            "processing_started_at": timestamp,
+            "processing_started_by": frappe.session.user,
+            "completed_at": timestamp,
+            "completed_by": frappe.session.user,
+            "waiting_time_minutes": 0,
+            "preparation_time_minutes": 0,
+            "total_time_minutes": 0,
+            "preparation_time_target": 0,
+            "preparation_time_source": None,
+            "has_batch_no": 0,
+            "batch_no": None,
+            "has_serial_no": 0,
+            "serial_no": None,
+            "unit_value": 0,
+        }
+        action = self.update_item(entry, unrestricted=True)
+        if action == "db_commit":
+            self.reload()
+        self.aggregate()
+        return identifier
+
+    def _validate_delivery_fee_item_change(self, item_code, unrestricted=False):
+        if unrestricted or self.is_dine_in:
+            return
+        fee_item = frappe.db.get_single_value(
+            "Restaurant Settings", "delivery_fee_item"
+        )
+        if fee_item and item_code == fee_item:
+            frappe.throw(_("Change the delivery fee from the delivery details"))
+
     def push_item(self, item):
         if self.customer is None:
             frappe.throw(_("Please set a Customer"))
@@ -627,6 +792,10 @@ class TableOrder(Document):
         return self.synchronize(dict(item=identifier))
 
     def delete_item(self, item, unrestricted=False, synchronize=True):
+        item_code = frappe.db.get_value(
+            "Order Entry Item", {"identifier": item}, "item_code"
+        )
+        self._validate_delivery_fee_item_change(item_code, unrestricted)
         if not unrestricted:
             from restaurant_management.restaurant_management.restaurant_manage import check_exceptions
             check_exceptions(
@@ -639,7 +808,9 @@ class TableOrder(Document):
         self.db_commit()
 
         if synchronize and frappe.db.count("Order Entry Item", {"identifier": item}) == 0:
-            self.synchronize(dict(action='queue', item_removed=item, status=[status]))
+            return self.synchronize(
+                dict(action='queue', item_removed=item, status=[status])
+            )
 
     def db_commit(self):
         frappe.db.commit()
@@ -662,6 +833,7 @@ class TableOrder(Document):
         self.save()
 
     def update_item(self, entry, unrestricted=False, synchronize_on_delete=True):
+        self._validate_delivery_fee_item_change(entry.get("item_code"), unrestricted)
         if entry["qty"] == 0:
             self.delete_item(entry["identifier"], unrestricted, synchronize_on_delete)
             return "db_commit"
@@ -723,7 +895,7 @@ class TableOrder(Document):
                 status=entry_status,
                 identifier=entry["identifier"],
                 notes=entry["notes"],
-                table_description=f'{self.room_description} ({self.table_description})',
+                table_description=self.context_label,
                 ordered_time=None if is_unsent else entry.get("ordered_time"),
                 ordered_nro=0 if is_unsent else (entry.get("ordered_nro") or 1),
                 ordered_finish=entry.get("ordered_finish") or 0,
@@ -795,7 +967,7 @@ class TableOrder(Document):
                 total_time_minutes=entry_item.get("total_time_minutes"),
                 preparation_time_target=entry_item.get("preparation_time_target"),
                 preparation_time_source=entry_item.get("preparation_time_source"),
-                table_description=f'{self.room_description} ({self.table_description})',
+                table_description=self.context_label,
                 has_batch_no=entry_item["has_batch_no"],
                 batch_no=entry_item["batch_no"],
                 has_serial_no=entry_item["has_serial_no"],
@@ -838,12 +1010,21 @@ class TableOrder(Document):
                 discount=self.discount,
                 discount_global_percent=self.discount_global_percent,
                 owner=self.owner,
-                guest_count=self.guest_count
+                guest_count=self.guest_count,
+                service_type=self.service_type or "Dine In",
+                customer_name=self.customer_name,
+                context_label=self.context_label,
+                fulfillment=frappe.db.get_value(
+                    "Restaurant Fulfillment",
+                    {"order": self.name},
+                    ["name", "status", "fulfillment_type"],
+                    as_dict=True,
+                ) if not self.is_dine_in else None,
             )
         )
 
     def items_list(self, from_item=None):
-        table = self._table
+        table = self._table if self.is_dine_in else None
         items = []
         for item in self.entry_items:
             if item.qty > 0 and (from_item is None or from_item == item.identifier):
@@ -887,15 +1068,19 @@ class TableOrder(Document):
 
                 row["order_name"] = item.parent
                 row["entry_name"] = item.name
-                row["short_name"] = table.order_short_name(item.parent)
-                row["process_status_data"] = table.process_status_data(item)
+                row["short_name"] = table.order_short_name(item.parent) if table else self.short_name
+                row["process_status_data"] = (
+                    table.process_status_data(item)
+                    if table
+                    else self.item_process_status_data(item)
+                )
 
                 items.append(row)
         return items
 
     @property
     def send(self):
-        table = self._table
+        table = self._table if self.is_dine_in else None
         items_to_return = []
         data_to_send = []
         ordered_items = [
@@ -933,10 +1118,15 @@ class TableOrder(Document):
                 item.ordered_finish = 0
                 item.save()
 
-                data_to_send.append(table.get_command_data(item))
+                if table:
+                    data_to_send.append(table.get_command_data(item))
 
         self.reload()
         self.synchronize(dict(status=["Sent"]))
+        if not self.is_dine_in:
+            from restaurant_management.restaurant_management.doctype.restaurant_fulfillment.restaurant_fulfillment import sync_order_preparation
+
+            sync_order_preparation(self.name)
 
         return self.data()
 
@@ -1085,4 +1275,11 @@ class TableOrder(Document):
         self.save()
 
     def after_delete(self):
-        self.synchronize(dict(action="Delete", status=["Deleted"]))
+        if self.is_dine_in:
+            self.synchronize(dict(action="Delete", status=["Deleted"]))
+        else:
+            frappe.publish_realtime(
+                "restaurant_fulfillment_update",
+                {"order": self.name, "action": "Delete"},
+                after_commit=True,
+            )
