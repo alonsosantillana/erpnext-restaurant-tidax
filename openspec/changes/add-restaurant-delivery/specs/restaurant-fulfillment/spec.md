@@ -117,6 +117,12 @@ Production Center SHALL display an explicit service-type label and order identit
 - **THEN** only active commands from the selected source are displayed without a server reload
 - **AND** the selected filter remains applied after realtime dashboard updates
 
+#### Scenario: Notify a new active command
+- **GIVEN** the Commands view completed its initial dashboard load
+- **WHEN** a previously unseen active command arrives through realtime reconciliation
+- **THEN** the client plays one alert sound and displays one visual notification
+- **AND** polling or duplicate realtime events for the same command do not repeat the notification
+
 ### Requirement: Payment timing does not equal payment receipt
 The system SHALL distinguish prepaid and cash-on-delivery intent from actual payment status and SHALL NOT treat an expected delivery payment method as money received.
 

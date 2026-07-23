@@ -199,3 +199,5 @@ Out for Delivery,En camino
 Delivery Failed,Entrega fallida
 Picked Up,Recogido
 Picked up,Recogido
+New command received,Nueva comanda recibida
+{0} new commands received,Se recibieron {0} comandas nuevas

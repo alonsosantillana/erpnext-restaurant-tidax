@@ -44,6 +44,7 @@
 - [x] 5.3 Excluir el Item de tarifa de centros de produccion.
 - [ ] 5.4 Retirar del flujo nuevo la clasificacion por prefijo `D` y documentar los filtros legacy pendientes de limpieza.
 - [x] 5.5 Agregar en Comandas un filtro persistente en tiempo real para Todos, Mesas, Entrega a domicilio y Recojo en local.
+- [x] 5.6 Emitir un unico aviso sonoro y visual por cada nueva comanda recibida despues de la carga inicial.
 
 ## 6. Pago, factura e impresion
 

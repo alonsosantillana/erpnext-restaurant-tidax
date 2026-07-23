@@ -6,6 +6,8 @@ ProcessManage = class ProcessManage {
         this.active_view = "commands";
         this.command_service_filter = "all";
         this.dashboard = null;
+        this.command_snapshot_initialized = false;
+        this.seen_command_keys = new Set();
         this.loading = false;
         this.transitioning = false;
         this.pending_reload = false;
@@ -328,6 +330,7 @@ ProcessManage = class ProcessManage {
                 this.loading = false;
 
                 if (response && !response.exc && response.message) {
+                    this.notify_new_commands(response.message);
                     this.dashboard = response.message;
                     this.stale = false;
                     this.render_dashboard();
@@ -379,6 +382,38 @@ ProcessManage = class ProcessManage {
             $("<div>", { class: "production-center-state text-danger" })
                 .text(__("Production center data could not be loaded"))
         );
+    }
+
+    notify_new_commands(dashboard) {
+        const keys = (dashboard && dashboard.commands || [])
+            .map(command => command.key)
+            .filter(Boolean);
+
+        if (!this.command_snapshot_initialized) {
+            keys.forEach(key => this.seen_command_keys.add(key));
+            this.command_snapshot_initialized = true;
+            return 0;
+        }
+
+        const new_keys = keys.filter(key => !this.seen_command_keys.has(key));
+        keys.forEach(key => this.seen_command_keys.add(key));
+        if (
+            !new_keys.length
+            || !this.is_open()
+            || document.hidden
+            || this.active_view !== "commands"
+        ) {
+            return 0;
+        }
+
+        frappe.utils.play_sound("chime");
+        frappe.show_alert({
+            message: new_keys.length === 1
+                ? __("New command received")
+                : __("{0} new commands received", [new_keys.length]),
+            indicator: "orange"
+        });
+        return new_keys.length;
     }
 
     render_dashboard() {

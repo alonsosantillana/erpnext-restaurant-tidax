@@ -15,6 +15,10 @@ app_license = "GPL-3.0-only"
 required_apps = ["erpnext", "ovenube_peru", "silent_print"]
 source_link = "https://github.com/joepa37/restaurant_management"
 
+sounds = [
+    {"name": "chime", "src": "/assets/frappe/sounds/chime.mp3", "volume": 0.7},
+]
+
 doc_events = {
     "POS Profile": {
         "on_create": "restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.set_settings_data",
