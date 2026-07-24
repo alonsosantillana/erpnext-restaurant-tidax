@@ -9,6 +9,10 @@ from frappe import _
 from frappe.model.document import Document
 import re
 
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
+
 
 PRODUCTION_CENTER_ITEM_LIMIT = 500
 
@@ -67,6 +71,40 @@ def production_transition_values(entry, next_status, now, user):
 
 
 class RestaurantObject(Document):
+    def validate(self):
+        self.set_and_validate_company()
+
+    def set_and_validate_company(self):
+        active_company = frappe.defaults.get_user_default("company")
+        if self.type == "Room":
+            self.company = self.company or active_company
+            if self.room:
+                frappe.throw(_("A Room cannot belong to another Room"))
+        elif self.room:
+            parent = frappe.db.get_value(
+                "Restaurant Object",
+                self.room,
+                ["type", "company"],
+                as_dict=True,
+            )
+            if not parent or parent.type != "Room":
+                frappe.throw(_("Select a valid restaurant Room"))
+            if self.company and self.company != parent.company:
+                frappe.throw(
+                    _("Restaurant Object and Room must belong to the same company")
+                )
+            self.company = parent.company
+        else:
+            self.company = self.company or active_company
+
+        if not self.company:
+            frappe.throw(_("Company is required for Restaurant Object"))
+        if not frappe.has_permission("Company", "read", self.company):
+            frappe.throw(
+                _("Not permitted to use Company {0}").format(self.company),
+                frappe.PermissionError,
+            )
+
     @property
     def _room(self):
         return frappe.get_doc("Restaurant Object", self.room)
@@ -99,6 +137,7 @@ class RestaurantObject(Document):
                 "production_center_update",
                 {
                     "center": self.name,
+                    "company": self.company,
                     "orders_count": notification["orders_count"],
                 },
                 after_commit=True,
@@ -138,12 +177,21 @@ class RestaurantObject(Document):
                 frappe.throw(_("The table {0} is Assigned to another User").format(self.description))
 
     def validate_table(self):
-        restaurant_settings = frappe.get_single("Restaurant Settings")
-        if not restaurant_settings.multiple_pending_order and self.orders_count > 0:
+        settings = get_restaurant_settings(company=self.company)
+        if not settings.multiple_pending_order and self.orders_count > 0:
             frappe.throw(_("Complete pending orders"))
 
     def add_order(self, client=None):
         # last_user = self.current_user
+        active_company = frappe.defaults.get_user_default("company")
+        if not active_company or active_company != self.company:
+            frappe.throw(
+                _("Select company {0} before creating an order for this table").format(
+                    self.company
+                ),
+                frappe.PermissionError,
+            )
+
         self.validate_transaction()
 
         self.validate_table()
@@ -151,7 +199,7 @@ class RestaurantObject(Document):
         from erpnext.stock.get_item_details import get_pos_profile
         # from erpnext.controllers.accounts_controller import get_default_taxes_and_charges
 
-        company = frappe.defaults.get_user_default('company')
+        company = self.company
         pos_profile = get_pos_profile(company, user=frappe.session.user)
 
         order = frappe.new_doc("Table Order")
@@ -191,7 +239,8 @@ class RestaurantObject(Document):
 
         return frappe.db.count("Table Order", {
             "room" if self.type == "Room" else "table": self.name,
-            "status": "Attending"
+            "status": "Attending",
+            "company": self.company,
         })
 
     @property
@@ -201,7 +250,8 @@ class RestaurantObject(Document):
 
         active_orders = frappe.get_all("Table Order", filters={
             "table": self.name,
-            "status": "Attending"
+            "status": "Attending",
+            "company": self.company,
         }, pluck="name")
         if not active_orders:
             return 0
@@ -221,7 +271,8 @@ class RestaurantObject(Document):
 
         guest_counts = frappe.get_all("Table Order", filters={
             "table": self.name,
-            "status": "Attending"
+            "status": "Attending",
+            "company": self.company,
         }, pluck="guest_count")
         return sum(frappe.utils.cint(value) for value in guest_counts)
 
@@ -229,16 +280,24 @@ class RestaurantObject(Document):
     def orders_count_in_production_center(self):
         status_managed = self._status_managed
         items_group = self._items_group
+        if not status_managed or not items_group or not self.company:
+            return 0
 
-        if len(status_managed) > 0 and len(items_group) > 0:
-            return frappe.db.count("Order Entry Item", {
-                "status": ("in", status_managed),
-                "item_group": ("in", items_group),
-                "parent": ("!=", ""),
-                "qty": (">", "0")
-            })
+        order_names = frappe.get_all(
+            "Table Order",
+            filters={"company": self.company},
+            pluck="name",
+            limit_page_length=0,
+        )
+        if not order_names:
+            return 0
 
-        return 0
+        return frappe.db.count("Order Entry Item", {
+            "status": ("in", status_managed),
+            "item_group": ("in", items_group),
+            "parent": ("in", order_names),
+            "qty": (">", "0"),
+        })
 
     def _validate_production_center(self):
         if self.type != "Production Center":
@@ -253,20 +312,25 @@ class RestaurantObject(Document):
             or permissions.get("create")
         )
         if not can_manage_all_rooms:
-            allowed_rooms = set(frappe.get_single("Restaurant Settings").rooms_access())
+            settings = get_restaurant_settings(company=self.company)
+            allowed_rooms = set(settings.rooms_access())
             if self.room not in allowed_rooms:
                 frappe.throw(_("Not permitted to use Production Center {0}").format(self.description), frappe.PermissionError)
 
-    @staticmethod
-    def _production_company_and_profile():
+    def _production_company_and_profile(self):
         from erpnext.stock.get_item_details import get_pos_profile
 
-        company = frappe.defaults.get_user_default("company")
+        company = self.company
         if not company:
-            frappe.throw(_("Set a default Company before opening Production Center"))
+            frappe.throw(_("Configure a Company for this Production Center"))
+        active_company = frappe.defaults.get_user_default("company")
+        if active_company != company:
+            frappe.throw(
+                _("Production Center belongs to company {0}").format(company),
+                frappe.PermissionError,
+            )
         if not frappe.has_permission("Company", "read", company):
             frappe.throw(_("Not permitted to use Company {0}").format(company), frappe.PermissionError)
-
         pos_profile = get_pos_profile(company, user=frappe.session.user)
         if not pos_profile or pos_profile.get("disabled"):
             frappe.throw(_("No enabled POS Profile is available for {0}").format(company))
@@ -575,9 +639,8 @@ class RestaurantObject(Document):
         active_items = []
         daily_items = []
         if order_names:
-            fee_item = frappe.db.get_single_value(
-                "Restaurant Settings", "delivery_fee_item"
-            )
+            settings = get_restaurant_settings(company=company, pos_profile=pos_profile)
+            fee_item = settings.delivery_fee_item
             active_filters = [
                 ["parent", "in", order_names],
                 ["status", "in", active_statuses],
@@ -707,7 +770,8 @@ class RestaurantObject(Document):
     def orders_list(self, name=None):
         orders = frappe.get_all("Table Order", fields="name", filters={
             "table" if name is None else "name": name if name is not None else self.name,
-            "status": "Attending"
+            "status": "Attending",
+            "company": self.company,
         })
         for order in orders:
             data = frappe.get_doc("Table Order", order.name).short_data()
@@ -719,7 +783,8 @@ class RestaurantObject(Document):
     def get_objects(self, name=None):
         tables = frappe.get_all("Restaurant Object", "name", filters={
             "room" if name is None else "name": self.name if name is None else name,
-            "type": ("!=", "Room")
+            "type": ("!=", "Room"),
+            "company": self.company,
         })
 
         for table in tables:
@@ -730,9 +795,9 @@ class RestaurantObject(Document):
         return tables
 
     def get_data(self):
-        fields = ["name", "description", "orders_count"] if self.type == "Room" \
-            else ["name", "type", "description", "no_of_seats", "identifier", "orders_count",
-                  "data_style", "min_size", "current_user", "color", 'shape']
+        fields = ["name", "company", "description", "orders_count"] if self.type == "Room" \
+            else ["name", "company", "type", "description", "no_of_seats", "identifier",
+                  "orders_count", "data_style", "min_size", "current_user", "color", 'shape']
         data = {}
 
         for field in fields:
@@ -762,7 +827,10 @@ class RestaurantObject(Document):
     def add_object(self, t="Table"):
         import random
 
-        objects_count = frappe.db.count("Restaurant Object", filters={"room": self.name})
+        objects_count = frappe.db.count("Restaurant Object", filters={
+            "room": self.name,
+            "company": self.company,
+        })
         table = frappe.new_doc("Restaurant Object")
 
         zIndex = objects_count + 60
@@ -774,6 +842,7 @@ class RestaurantObject(Document):
         data_style = f'"x":"{left}","y":"{top}","z-index":"{zIndex}","width":"100px","height":"100px"'
         table.type = t
         table.room = self.name
+        table.company = self.company
         table.data_style = "{" + data_style + "}"
         table.color = color
         table.description = f"{t[:1]}{(objects_count + 1)}"
@@ -782,7 +851,9 @@ class RestaurantObject(Document):
         table.save()
 
         frappe.publish_realtime(
-            "order_entry_update", self, after_commit=True
+            "order_entry_update",
+            {"company": self.company, "room": self.name},
+            after_commit=True,
         )
         data = self.get_objects(table.name)
 
@@ -795,7 +866,7 @@ class RestaurantObject(Document):
 
     def count_objects(self, t):
         return frappe.db.count("Restaurant Object", filters={
-            "room": self.name, "type": t
+            "room": self.name, "type": t, "company": self.company,
         })
 
     def set_status_command(self, identifier, tiempo=None, expected_status=None):
@@ -924,21 +995,29 @@ class RestaurantObject(Document):
         return {"data": item[0]} if len(item) > 0 else None
 
     def commands_food(self, identifier=None, last_status=None):
-        status_managed = self.status_managed
+        company, pos_profile = self._production_company_and_profile()
+        order_names = list(self._production_order_data(company, pos_profile))
+        if not order_names:
+            return []
 
         filters = {
-            "status": ("in", [item.status_managed for item in status_managed]),
+            "parent": ("in", order_names),
             "item_group": ("in", self._items_group),
-            "parent": ("!=", ""),
-            "qty": (">", "0")
-        } if identifier is None else {
-            "identifier": identifier
+            "qty": (">", "0"),
         }
+        if identifier:
+            filters["identifier"] = identifier
+        else:
+            filters["status"] = ("in", self._status_managed)
 
         items = []
-        for entry in frappe.get_all("Order Entry Item", "*", filters=filters, order_by="ordered_time"):
+        for entry in frappe.get_all(
+            "Order Entry Item",
+            "*",
+            filters=filters,
+            order_by="ordered_time",
+        ):
             items.append(self.get_command_data(entry, last_status))
-
         return items
 
     def get_command_data(self, entry, las_status=None):

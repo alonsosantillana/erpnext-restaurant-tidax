@@ -86,7 +86,6 @@ class TestTableOrder(unittest.TestCase):
 		self, get_value, get_single_value, get_installed_apps
 	):
 		get_single_value.side_effect = lambda doctype, fieldname: {
-			("Restaurant Settings", "print_format"): "Order Account",
 			("Silent Print Settings", "print_user"): "Administrator",
 			("Silent Print Settings", "tab_id"): "12345",
 		}.get((doctype, fieldname))
@@ -106,7 +105,12 @@ class TestTableOrder(unittest.TestCase):
 
 		get_value.side_effect = configured_value
 
-		configuration = _get_account_print_configuration()
+		order = MagicMock()
+		with patch(
+			"restaurant_management.api.get_restaurant_settings",
+			return_value=frappe._dict(print_format="Order Account"),
+		):
+			configuration = _get_account_print_configuration(order)
 
 		self.assertEqual(configuration.print_format, "Order Account")
 		self.assertEqual(configuration.print_type, "ORDER")
@@ -131,6 +135,7 @@ class TestTableOrder(unittest.TestCase):
 		result = print_order_account("OR-2026-00003")
 
 		order.check_permission.assert_called_once_with("print")
+		get_configuration.assert_called_once_with(order)
 		print_silently.assert_called_once_with(
 			doctype="Table Order",
 			name="OR-2026-00003",

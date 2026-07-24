@@ -29,6 +29,9 @@ from erpnext.manufacturing.doctype.production_plan.production_plan import (
 from erpnext.selling.doctype.customer.customer import check_credit_limit
 from erpnext.setup.doctype.item_group.item_group import get_item_group_defaults
 from erpnext.stock.doctype.item.item import get_item_defaults
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
 from erpnext.stock.get_item_details import get_default_bom, get_price_list_rate
 from erpnext.stock.stock_balance import get_reserved_qty, update_bin_qty
 
@@ -44,11 +47,28 @@ def obtener_cliente_por_filtro(filtro):
     return cliente
 
 @frappe.whitelist()
-def obtener_res_set(filtro):    
-    res_set = frappe.db.sql(f"""SELECT value FROM `tabSingles`
-                            where doctype = 'Restaurant Settings' and field = '{filtro}';""", as_dict=True)
+def obtener_res_set(filtro, order=None, invoice=None):
+    allowed_fields = {"print_format", "print_format_order", "print_format_ce"}
+    if filtro not in allowed_fields:
+        frappe.throw(_("Restaurant setting is not available"), frappe.PermissionError)
 
-    return res_set
+    if order and invoice:
+        frappe.throw(_("Select either an order or an invoice context"))
+
+    company = None
+    order_doc = None
+    if invoice:
+        invoice_doc = frappe.get_doc("POS Invoice", invoice)
+        invoice_doc.check_permission("read")
+        company = invoice_doc.company
+    if order:
+        order_doc = frappe.get_doc("Table Order", order)
+        order_doc.check_permission("read")
+    settings = get_restaurant_settings(
+        company=company,
+        order=order_doc,
+    )
+    return [{"value": settings.get(filtro)}]
 
 @frappe.whitelist()
 def get_ordenes_cocina_resumen(usuario):

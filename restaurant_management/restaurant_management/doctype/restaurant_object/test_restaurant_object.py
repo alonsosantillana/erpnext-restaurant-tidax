@@ -297,12 +297,14 @@ class TestRestaurantObject(FrappeTestCase):
 			"doctype": "Restaurant Object",
 			"name": "TABLE-TEST",
 			"type": "Table",
+			"company": "Company A",
 		})
 
 		self.assertEqual(table.guest_count, 5)
 		get_all.assert_called_once_with("Table Order", filters={
 			"table": "TABLE-TEST",
-			"status": "Attending"
+			"status": "Attending",
+			"company": "Company A",
 		}, pluck="guest_count")
 
 	def test_unsent_item_status_uses_mustard_pending_message(self):
@@ -321,6 +323,7 @@ class TestRestaurantObject(FrappeTestCase):
 			"name": "PC-TEST",
 			"type": "Production Center",
 			"current_user": "cook@example.com",
+			"company": "Company A",
 		})
 
 		with patch.object(
@@ -341,7 +344,7 @@ class TestRestaurantObject(FrappeTestCase):
 				call("PC-TEST", notification, after_commit=True),
 				call(
 					"production_center_update",
-					{"center": "PC-TEST", "orders_count": 2},
+					{"center": "PC-TEST", "company": "Company A", "orders_count": 2},
 					after_commit=True,
 				),
 			]
@@ -692,6 +695,10 @@ class TestRestaurantObject(FrappeTestCase):
 				return_value=["FOOD"],
 			),
 			patch.object(center, "_production_order_data", return_value=orders),
+			patch(
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.get_restaurant_settings",
+				return_value=frappe._dict(delivery_fee_item=None),
+			),
 			patch(
 				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.utils.nowdate",
 				return_value="2026-07-21",

@@ -3,6 +3,22 @@ import frappe
 from frappe import _
 from erpnext.selling.page.point_of_sale.point_of_sale import get_items as get_v15_pos_items
 from erpnext.stock.get_item_details import get_pos_profile
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
+
+def get_active_restaurant_company():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+    company = frappe.defaults.get_user_default("company")
+    if not company:
+        frappe.throw(_("Set a default Company before opening Restaurant Manage"))
+    if not frappe.has_permission("Company", "read", company):
+        frappe.throw(
+            _("Not permitted to use Company {0}").format(company),
+            frappe.PermissionError,
+        )
+    return company
 
 class RestaurantManage:
     @staticmethod
@@ -21,17 +37,20 @@ class RestaurantManage:
         user_perm = frappe.permissions.get_doc_permissions(
             frappe.new_doc("Restaurant Object"))
 
+        company = get_active_restaurant_company()
         if frappe.session.user == "Administrator" or user_perm.get("write") or user_perm.get("create"):
             rooms = frappe.get_all("Restaurant Object", "name, description", {
                 "type": "Room",
+                "company": company,
             })
         else:
-            restaurant_settings = frappe.get_single("Restaurant Settings")
-            rooms_enabled = restaurant_settings.rooms_access()
+            settings = get_restaurant_settings(company=company)
+            rooms_enabled = settings.rooms_access()
 
             rooms = frappe.get_all("Restaurant Object", "name, description", {
                 "type": "Room",
-                "name": ("in", rooms_enabled)
+                "name": ("in", rooms_enabled),
+                "company": company,
             })
 
         for room in rooms:
@@ -44,6 +63,7 @@ class RestaurantManage:
     def add_room():
         room = frappe.new_doc("Restaurant Object")
         room.type = "Room"
+        room.company = get_active_restaurant_company()
         room.description = f"Room {(RestaurantManage().count_roms() + 1)}"
         room.save()
 
@@ -51,72 +71,74 @@ class RestaurantManage:
 
     @staticmethod
     def count_roms():
-        return frappe.db.count("Restaurant Object", filters={"type": "Room"})
+        return frappe.db.count("Restaurant Object", filters={
+            "type": "Room",
+            "company": get_active_restaurant_company(),
+        })
 
     @staticmethod
     def listener(data):
-        for d in data:
-            if len(data[d]["data"]) == 0:
-                return data
+        company = get_active_restaurant_company()
+        for object_type in data:
+            payload = data[object_type]["data"]
+            if not payload:
+                continue
 
-            if d == "Table":
-                cond = "and `table` in (%s)" % (', '.join([f"'{row}'" for row in data[d]["data"]]))
+            if object_type in {"Table", "Room"}:
+                fieldname = object_type.lower()
+                names = list(payload)
+                counts = frappe.get_all(
+                    "Table Order",
+                    filters={
+                        fieldname: ("in", names),
+                        "status": "Attending",
+                        "company": company,
+                    },
+                    fields=[
+                        f"{fieldname} as name",
+                        "count(name) as count",
+                    ],
+                    group_by=fieldname,
+                )
+                for row in counts:
+                    if row.name in payload:
+                        payload[row.name]["count"] = row.count
 
-                oc = frappe.db.sql(f"""
-                        SELECT `table` as name, count(`table`) as count
-                        FROM `tabTable Order`
-                        WHERE status = 'Attending' {cond}
-                        GROUP by `table`
-                        """, as_dict=True)
+            elif object_type == "Production Center":
+                for center_name in list(payload):
+                    center = frappe.get_doc("Restaurant Object", center_name)
+                    if center.company != company:
+                        payload.pop(center_name, None)
+                        continue
+                    payload[center_name]["count"] = center.orders_count_in_production_center
 
-                for o in oc:
-                    data[d]["data"][o.name]["count"] = o.count
-
-            if d == "Room":
-                cond = "and `room` in (%s)" % (', '.join([f"'{row}'" for row in data[d]["data"]]))
-
-                oc = frappe.db.sql(f"""
-                        SELECT `room` as name, count(`room`) as count
-                        FROM `tabTable Order`
-                        WHERE status = 'Attending' {cond}
-                        GROUP by `room`
-                        """, as_dict=True)
-
-                for o in oc:
-                    data[d]["data"][o.name]["count"] = o.count
-
-            if d == "Production Center":
-                for pc in data[d]["data"]:
-                    production_center = frappe.get_doc("Restaurant Object", pc)
-
-                    data[d]["data"][pc]["count"] = production_center.orders_count_in_production_center
-
-            if d == "Process":
-                production_center = frappe.get_doc("Restaurant Object", data[d]["data"])
-                status_managed = production_center.status_managed
-
+            elif object_type == "Process":
+                center = frappe.get_doc("Restaurant Object", payload)
+                if center.company != company:
+                    frappe.throw(_("Production Center belongs to another company"))
+                order_names = frappe.get_all(
+                    "Table Order",
+                    filters={"company": company},
+                    pluck="name",
+                    limit_page_length=0,
+                )
                 filters = {
-                    "status": ("in", [item.status_managed for item in status_managed]),
-                    "item_group": ("in", production_center._items_group),
-                    "parent": ("!=", "")
+                    "status": ("in", center._status_managed),
+                    "item_group": ("in", center._items_group),
+                    "parent": ("in", order_names or [""]),
                 }
-
-                data = dict(Process=frappe.get_all("Order Entry Item", "identifier,status", filters=filters))
+                data = dict(Process=frappe.get_all(
+                    "Order Entry Item",
+                    "identifier,status",
+                    filters=filters,
+                ))
 
         return data
 
 
 @frappe.whitelist()
 def get_bootstrap():
-    if frappe.session.user == "Guest":
-        frappe.throw(_("Authentication required"), frappe.AuthenticationError)
-
-    company = frappe.defaults.get_user_default("company")
-    if not company:
-        frappe.throw(_("Set a default Company before opening Restaurant Manage"))
-
-    if not frappe.has_permission("Company", "read", company):
-        frappe.throw(_("Not permitted to use Company {0}").format(company), frappe.PermissionError)
+    company = get_active_restaurant_company()
 
     pos_profile = get_pos_profile(company, user=frappe.session.user)
     if not pos_profile or pos_profile.get("disabled"):
@@ -146,6 +168,7 @@ def get_rooms():
 def add_room(client=None):
     room = RestaurantManage().add_room()
     response = dict(
+        company=room.company,
         client=client,
         current_room=room.name,
         rooms=RestaurantManage().get_rooms()
@@ -172,16 +195,19 @@ def listeners(args):
 
 @frappe.whitelist()
 def get_settings_data():
-    restaurant_settings = frappe.get_single("Restaurant Settings")
-    return restaurant_settings.settings_data()
+    settings = get_restaurant_settings(company=get_active_restaurant_company())
+    return settings.settings_data()
 
 
 def pos_profile_data():
-    restaurant_settings = frappe.get_single("Restaurant Settings")
-    return restaurant_settings.pos_profile_data()
+    settings = get_restaurant_settings()
+    return settings.pos_profile_data()
 
 def set_settings_data(doc, method=None):
-    frappe.publish_realtime("update_settings")
+    company = doc.get("company") or frappe.db.get_value(
+        "POS Profile", doc.get("parent"), "company"
+    )
+    frappe.publish_realtime("update_settings", {"company": company}, after_commit=True)
 
 def set_pos_profile(doc, method=None):
     frappe.publish_realtime("pos_profile_update", pos_profile_data())

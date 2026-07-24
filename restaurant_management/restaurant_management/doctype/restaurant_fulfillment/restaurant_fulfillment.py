@@ -4,6 +4,9 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, now_datetime, strip_html
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
 
 
 FULFILLMENT_TRANSITIONS = {
@@ -295,7 +298,8 @@ def sync_order_preparation(order_name):
     if fulfillment.status not in {"New", "Preparing", "Ready"}:
         return fulfillment.board_summary()
 
-    fee_item = frappe.db.get_single_value("Restaurant Settings", "delivery_fee_item")
+    settings = get_restaurant_settings(fulfillment=fulfillment)
+    fee_item = settings.delivery_fee_item
     items = frappe.get_all(
         "Order Entry Item",
         filters={

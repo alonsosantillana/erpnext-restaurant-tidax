@@ -767,7 +767,8 @@ RestaurantManage = class RestaurantManage {
 			}
 		});
 
-		frappe.realtime.on("update_settings", () => {
+		frappe.realtime.on("update_settings", (data) => {
+			if (data && data.company && data.company !== this.bootstrap.company) return;
 			this.settings_data.then(() => {
 				this.make_rooms();
 				this.check_permissions_status();
@@ -776,6 +777,7 @@ RestaurantManage = class RestaurantManage {
 
 		frappe.realtime.on("check_rooms", (r) => {
 			this.sync_rooms(r);
+			if (r && r.company && r.company !== this.bootstrap.company) return;
 		});
 
 		frappe.realtime.on("pos_profile_update", (r) => {

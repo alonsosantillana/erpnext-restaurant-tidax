@@ -13,6 +13,9 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 from restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item import (
     preparation_targets,
 )
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
 status_attending = "Attending"
 
 VOUCHER_CONFIG = {
@@ -114,10 +117,38 @@ class TableOrder(Document):
         self.service_type = self.service_type or "Dine In"
         if self.service_type not in {"Dine In", "Delivery", "Pickup"}:
             frappe.throw(_("Select a valid service type"))
-        if self.service_type == "Dine In" and not self.table:
-            frappe.throw(_("Dine-in orders require a restaurant table"))
-        if self.service_type in {"Delivery", "Pickup"} and self.table:
+
+        profile_company = (
+            frappe.db.get_value("POS Profile", self.pos_profile, "company")
+            if self.pos_profile
+            else None
+        )
+        if not self.company:
+            self.company = profile_company
+        if profile_company and self.company != profile_company:
+            frappe.throw(_("POS Profile and order must belong to the same company"))
+
+        if self.service_type == "Dine In":
+            if not self.table:
+                frappe.throw(_("Dine-in orders require a restaurant table"))
+            table_context = frappe.db.get_value(
+                "Restaurant Object",
+                self.table,
+                ["type", "company"],
+                as_dict=True,
+            )
+            if not table_context or table_context.type != "Table":
+                frappe.throw(_("Select a valid restaurant table"))
+            if self.company and self.company != table_context.company:
+                frappe.throw(
+                    _("Restaurant table and order must belong to the same company")
+                )
+            self.company = table_context.company
+        elif self.table:
             frappe.throw(_("Delivery and pickup orders cannot use a restaurant table"))
+
+        if not self.company:
+            frappe.throw(_("Company is required for a restaurant order"))
 
     @property
     def is_dine_in(self):
@@ -437,9 +468,8 @@ class TableOrder(Document):
             if(it.price_list_rate == 0):
                 total_free += 1 * it.qty
 
-        series = frappe.db.get_single_value(
-            "Restaurant Settings", voucher_config["series_field"]
-        )
+        settings = get_restaurant_settings(order=self)
+        series = settings.get(voucher_config["series_field"])
         if not series:
             frappe.throw(
                 _("Configure la serie {0} en Restaurant Settings").format(
@@ -537,6 +567,12 @@ class TableOrder(Document):
             frappe.throw(_("Only dine-in orders can be transferred to another table"))
         last_table = self._table
         new_table = frappe.get_doc("Restaurant Object", table)
+        if new_table.type != "Table":
+            frappe.throw(_("Select a valid restaurant table"))
+        if new_table.company != self.company:
+            frappe.throw(
+                _("Orders cannot be transferred between companies")
+            )
 
         # last_table.validate_user()
         last_table_name = self.table
@@ -733,9 +769,8 @@ class TableOrder(Document):
     def _validate_delivery_fee_item_change(self, item_code, unrestricted=False):
         if unrestricted or self.is_dine_in:
             return
-        fee_item = frappe.db.get_single_value(
-            "Restaurant Settings", "delivery_fee_item"
-        )
+        settings = get_restaurant_settings(order=self)
+        fee_item = settings.delivery_fee_item
         if fee_item and item_code == fee_item:
             frappe.throw(_("Change the delivery fee from the delivery details"))
 

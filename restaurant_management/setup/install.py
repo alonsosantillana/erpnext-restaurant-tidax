@@ -128,8 +128,9 @@ frappe.ui.form.on('POS Profile User', {
                     "get_query": () => {
                         return {
                             filters: [
-                    			['type', '=', 'Room']
-                    		]
+                            ['type', '=', 'Room'],
+                            ['company', '=', frm.doc.company]
+                            ]
                         }
                     }
                 }

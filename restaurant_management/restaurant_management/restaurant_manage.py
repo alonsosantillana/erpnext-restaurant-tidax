@@ -1,6 +1,9 @@
 from __future__ import unicode_literals
 import frappe
 from frappe import _
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
 
 
 def check_exceptions(model, error_message):
@@ -13,14 +16,11 @@ def check_exceptions(model, error_message):
         if model["data"].owner != frappe.session.user or model["short_name"] == "table":
             has_permission = False
 
-            exceptions = frappe.get_single("Restaurant Settings")
+            company = model["data"].get("company")
+            exceptions = get_restaurant_settings(company=company)
             profile = frappe.db.get_value("User", frappe.session.user, "role_profile_name")
-
-            permissions = frappe.db.get_all("Restaurant Exceptions", fields=(
-                "order_write", "order_delete", "order_manage"
-            ), filters={
-                "role_profile": profile
-            })
+            permissions = [row for row in exceptions.restaurant_exceptions
+                           if row.role_profile == profile]
 
             if model["short_name"] == "order" and not exceptions.restricted_to_owner_order:
                 has_permission = True

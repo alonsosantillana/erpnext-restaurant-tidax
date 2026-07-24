@@ -1,75 +1,67 @@
 {
  "actions": [],
- "creation": "2020-06-07 20:39:44.010918",
+ "autoname": "field:company",
+ "creation": "2026-07-24 00:00:00.000000",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "for_tables_section",
+  "company",
+  "restrictions_section",
   "restricted_to_owner_table",
-  "for_orders_section",
   "restricted_to_owner_order",
-  "column_break_5",
+  "column_break_restrictions",
   "multiple_pending_order",
+  "color",
+  "restaurant_permissions_info",
+  "exceptions_section",
+  "restaurant_exceptions",
   "fulfillment_section",
   "enable_delivery",
   "enable_pickup",
+  "column_break_fulfillment",
   "delivery_fee_item",
-  "section_break_12",
+  "pos_and_print_section",
   "pos_profile",
-  "column_break_9",
-  "color",
-  "column_break_7",
   "print_format_order",
+  "column_break_print",
   "print_format",
   "print_format_ce",
-  "sec_brk_001",
+  "voucher_series_section",
   "serie_factura",
-  "col_brk_001",
   "serie_boleta",
-  "col_brk_002",
+  "column_break_series",
   "serie_factura_m",
-  "col_brk_003",
   "serie_boleta_m",
   "double_click_events_section",
-  "double_click_events_info",
-  "column_break_10",
   "to_new_order",
   "to_pay",
-  "column_break_13",
+  "column_break_events",
   "to_transfer_order",
   "to_change_status_order",
-  "section_break_11",
-  "restaurant_permissions_info",
-  "restaurant_exceptions",
-  "sec_brk_002",
+  "double_click_events_info",
+  "legacy_print_section",
   "no_imprimir",
-  "clm_brk_001",
   "mesas_1",
-  "clm_brk_002",
+  "column_break_legacy_print",
   "mesas_2",
-  "clm_brk_003",
-  "mesas_3",
-  "legacy_company"
+  "mesas_3"
  ],
  "fields": [
   {
-   "fieldname": "for_tables_section",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "restrictions_section",
    "fieldtype": "Section Break",
    "label": "Restrictions"
-  },
-  {
-   "fieldname": "for_orders_section",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_11",
-   "fieldtype": "Section Break",
-   "label": "Exceptions"
-  },
-  {
-   "fieldname": "restaurant_permissions_info",
-   "fieldtype": "HTML"
   },
   {
    "default": "0",
@@ -84,73 +76,7 @@
    "label": "Restrict order by owner"
   },
   {
-   "fieldname": "color",
-   "fieldtype": "Color",
-   "label": "Restriction Color"
-  },
-  {
-   "fieldname": "section_break_12",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_7",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "print_format",
-   "fieldtype": "Link",
-   "label": "Print Format Pre-Cuenta",
-   "options": "Print Format"
-  },
-  {
-   "fieldname": "double_click_events_section",
-   "fieldtype": "Section Break",
-   "label": "One Click Events"
-  },
-  {
-   "fieldname": "column_break_10",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1",
-   "fieldname": "to_new_order",
-   "fieldtype": "Check",
-   "label": "To new Order"
-  },
-  {
-   "default": "1",
-   "fieldname": "to_pay",
-   "fieldtype": "Check",
-   "label": "To Pay"
-  },
-  {
-   "fieldname": "column_break_13",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1",
-   "fieldname": "to_transfer_order",
-   "fieldtype": "Check",
-   "label": "To transfer Order"
-  },
-  {
-   "default": "0",
-   "fieldname": "to_change_status_order",
-   "fieldtype": "Check",
-   "label": "To Change status Order"
-  },
-  {
-   "fieldname": "double_click_events_info",
-   "fieldtype": "HTML"
-  },
-  {
-   "fieldname": "restaurant_exceptions",
-   "fieldtype": "Table",
-   "label": "Restaurant Exceptions",
-   "options": "Restaurant Exceptions"
-  },
-  {
-   "fieldname": "column_break_5",
+   "fieldname": "column_break_restrictions",
    "fieldtype": "Column Break"
   },
   {
@@ -158,6 +84,26 @@
    "fieldname": "multiple_pending_order",
    "fieldtype": "Check",
    "label": "Multiple pending order"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Color",
+   "label": "Restriction Color"
+  },
+  {
+   "fieldname": "restaurant_permissions_info",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "exceptions_section",
+   "fieldtype": "Section Break",
+   "label": "Exceptions"
+  },
+  {
+   "fieldname": "restaurant_exceptions",
+   "fieldtype": "Table",
+   "label": "Restaurant Exceptions",
+   "options": "Restaurant Exceptions"
   },
   {
    "fieldname": "fulfillment_section",
@@ -177,6 +123,10 @@
    "label": "Enable Pickup"
   },
   {
+   "fieldname": "column_break_fulfillment",
+   "fieldtype": "Column Break"
+  },
+  {
    "description": "Sale item used to add a delivery charge to the order and invoice.",
    "fieldname": "delivery_fee_item",
    "fieldtype": "Link",
@@ -184,19 +134,31 @@
    "options": "Item"
   },
   {
-   "fieldname": "pos_profile",
-   "fieldtype": "Link",
-   "label": "POS Profile",
-   "options": "POS Profile"
+   "fieldname": "pos_and_print_section",
+   "fieldtype": "Section Break",
+   "label": "POS and Print Formats"
   },
   {
-   "fieldname": "column_break_9",
-   "fieldtype": "Column Break"
+   "description": "Optional reference. Runtime access remains controlled by the POS Profiles available to the current user.",
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "label": "Default POS Profile",
+   "options": "POS Profile"
   },
   {
    "fieldname": "print_format_order",
    "fieldtype": "Link",
    "label": "Print Format Order",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "column_break_print",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_format",
+   "fieldtype": "Link",
+   "label": "Print Format Pre-Cuenta",
    "options": "Print Format"
   },
   {
@@ -206,7 +168,7 @@
    "options": "Print Format"
   },
   {
-   "fieldname": "sec_brk_001",
+   "fieldname": "voucher_series_section",
    "fieldtype": "Section Break",
    "label": "Series Comprobantes"
   },
@@ -216,16 +178,12 @@
    "label": "Serie Factura Electronica"
   },
   {
-   "fieldname": "col_brk_001",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "serie_boleta",
    "fieldtype": "Data",
    "label": "Serie Boleta Electronica"
   },
   {
-   "fieldname": "col_brk_002",
+   "fieldname": "column_break_series",
    "fieldtype": "Column Break"
   },
   {
@@ -234,43 +192,68 @@
    "label": "Serie Factura Manual"
   },
   {
-   "fieldname": "col_brk_003",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "serie_boleta_m",
    "fieldtype": "Data",
    "label": "Serie Boleta Manual"
   },
   {
-   "fieldname": "sec_brk_002",
+   "fieldname": "double_click_events_section",
    "fieldtype": "Section Break",
-   "label": "Impresion"
+   "label": "One Click Events"
+  },
+  {
+   "default": "1",
+   "fieldname": "to_new_order",
+   "fieldtype": "Check",
+   "label": "To new Order"
+  },
+  {
+   "default": "1",
+   "fieldname": "to_pay",
+   "fieldtype": "Check",
+   "label": "To Pay"
+  },
+  {
+   "fieldname": "column_break_events",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "to_transfer_order",
+   "fieldtype": "Check",
+   "label": "To transfer Order"
   },
   {
    "default": "0",
-   "description": "Sigla inicial de las mesas, las cuales no se mostraran en los ambientes de cocinas. El check es si no se quiere imprimir en ticketera",
+   "fieldname": "to_change_status_order",
+   "fieldtype": "Check",
+   "label": "To Change status Order"
+  },
+  {
+   "fieldname": "double_click_events_info",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "legacy_print_section",
+   "fieldtype": "Section Break",
+   "label": "Legacy Print Routing"
+  },
+  {
+   "default": "0",
+   "description": "Legacy option used by the existing ticket routing integration.",
    "fieldname": "no_imprimir",
    "fieldtype": "Check",
    "label": "No imprimir"
-  },
-  {
-   "fieldname": "clm_brk_001",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "clm_brk_002",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "clm_brk_003",
-   "fieldtype": "Column Break"
   },
   {
    "default": "Z",
    "fieldname": "mesas_1",
    "fieldtype": "Data",
    "label": "Mesas 1"
+  },
+  {
+   "fieldname": "column_break_legacy_print",
+   "fieldtype": "Column Break"
   },
   {
    "default": "Z",
@@ -283,31 +266,24 @@
    "fieldname": "mesas_3",
    "fieldtype": "Data",
    "label": "Mesas 3"
-  },
-  {
-   "fieldname": "legacy_company",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Legacy Company",
-   "options": "Company",
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
- "issingle": 1,
  "links": [],
- "modified": "2024-03-09 03:37:46.726544",
+ "modified": "2026-07-24 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
- "name": "Restaurant Settings",
+ "name": "Restaurant Company Settings",
  "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
    "delete": 1,
    "email": 1,
+   "export": 1,
    "print": 1,
    "read": 1,
+   "report": 1,
    "role": "System Manager",
    "share": 1,
    "write": 1
@@ -317,6 +293,7 @@
    "delete": 1,
    "export": 1,
    "read": 1,
+   "report": 1,
    "role": "Admin Resto",
    "write": 1
   },
@@ -336,9 +313,11 @@
    "role": "Cocinero"
   }
  ],
- "quick_entry": 1,
+ "quick_entry": 0,
+ "search_fields": "company",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "company",
  "track_changes": 1
 }

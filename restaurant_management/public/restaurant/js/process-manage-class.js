@@ -44,7 +44,10 @@ ProcessManage = class ProcessManage {
 
     init_realtime() {
         frappe.realtime.on("production_center_update", data => {
-            if (data && data.center === this.table.data.name) this.schedule_reload();
+            if (data && data.company && data.company !== RM.bootstrap.company) return;
+            if (data && data.center === this.table.data.name) {
+                this.schedule_reload();
+            }
         });
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden && this.is_open() && this.stale) this.schedule_reload();

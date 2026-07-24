@@ -226,47 +226,6 @@ class FoodCommand {
         });
     }
 
-    // TIDAX: OBTENCION DE RESTRICCION DE MESAS
-    obtenerMesas(mesas) {
-        return new Promise((resolve, reject) => {
-            frappe.call({
-                method: 'frappe.client.get_value',
-                args: {
-                    doctype: 'Restaurant Settings',
-                    fieldname: mesas
-                },
-                callback: function (response) {
-                    let xxx = mesas.substring(6, 7);
-                    if (response && response.message) {
-                        let yyy = response.message['mesas_' + xxx];
-                        const mesas_1 = yyy;
-                        resolve(mesas_1);
-                    } else {
-                        reject('No se pudo obtener el valor de mesas_1.');
-                    }
-                },
-                error: function (err) {
-                    reject('Error al obtener el valor de mesas_1:', err);
-                }
-            });
-        });
-    }
-
-    async usarMesas(resultado) {
-        try {
-            const mesas_1 = await this.obtenerMesas("mesas_1");
-            const mesas_2 = await this.obtenerMesas("mesas_2");
-            const mesas_3 = await this.obtenerMesas("mesas_3");
-            if (!resultado.includes(mesas_1) && !resultado.includes(mesas_2) && !resultado.includes(mesas_3)) {
-                // Aquí puedes realizar cualquier lógica adicional
-                $(this.process_manage.command_container()).append(
-                    this.item.html()
-                );
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    }
 
     remove() {
         this.item.remove();

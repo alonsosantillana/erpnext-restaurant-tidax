@@ -47,7 +47,7 @@
    "is_query_report": 0,
    "label": "Settings",
    "link_count": 0,
-   "link_to": "Restaurant Settings",
+   "link_to": "Restaurant Company Settings",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -183,7 +183,7 @@
    "is_query_report": 0,
    "label": "Configuraci\u00f3n",
    "link_count": 0,
-   "link_to": "Restaurant Settings",
+   "link_to": "Restaurant Company Settings",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"

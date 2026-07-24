@@ -422,7 +422,8 @@ class PayForm extends DeskForm {
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
             args: {
-                filtro: "print_format_ce"
+                filtro: "print_format_ce",
+                invoice: invoice_name
             },
             callback: function(r) {
                 if (r.message) {
@@ -452,7 +453,8 @@ class PayForm extends DeskForm {
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
             args: {
-                filtro: "print_format_ce"
+                filtro: "print_format_ce",
+                invoice: invoice_name
             },
             callback: function(r) {
                 if (r.message) {

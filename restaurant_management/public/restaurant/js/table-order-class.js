@@ -959,7 +959,8 @@ class TableOrder {
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
             args: {
-                filtro: "print_format"
+                filtro: "print_format",
+                order: this.data.name
             },
             callback: function(r) {
                 if (r.message) {
@@ -1005,7 +1006,8 @@ class TableOrder {
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
             args: {
-                filtro: "print_format_order"
+                filtro: "print_format_order",
+                order: this.data.name
             },
             callback: function(r) {
                 if (r.message) {
@@ -1035,7 +1037,8 @@ class TableOrder {
         frappe.call({
             method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
             args: {
-                filtro: "print_format_order"
+                filtro: "print_format_order",
+                order: this.data.name
             },
             callback: function(r) {
                 if (r.message) {

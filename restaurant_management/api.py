@@ -5,6 +5,9 @@ from frappe import _
 from frappe.utils import cint, flt, getdate
 from erpnext.stock.get_item_details import get_pos_profile
 import requests
+from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
+)
 
 SUCCESS = 200
 NOT_FOUND = 400
@@ -64,12 +67,13 @@ def _require_authenticated_user():
         frappe.throw(_("Authentication required"), frappe.AuthenticationError)
 
 
-def _get_account_print_configuration():
+def _get_account_print_configuration(order):
     installed_apps = set(frappe.get_installed_apps())
     if "silent_print" not in installed_apps:
         frappe.throw(_("Silent Print is not installed"))
 
-    print_format = frappe.db.get_single_value("Restaurant Settings", "print_format")
+    settings = get_restaurant_settings(order=order)
+    print_format = settings.print_format
     if not print_format:
         frappe.throw(_("Configure the pre-account Print Format in Restaurant Settings"))
 
@@ -142,7 +146,7 @@ def print_order_account(order_name):
     if order.items_count == 0:
         frappe.throw(_("The order has no dishes to print"))
 
-    configuration = _get_account_print_configuration()
+    configuration = _get_account_print_configuration(order)
     print_silently = frappe.get_attr(
         "silent_print.utils.print_format.print_silently"
     )
@@ -544,9 +548,11 @@ def create_fulfillment_order(
     if fulfillment_type not in {"Delivery", "Pickup"}:
         frappe.throw(_("Select Delivery or Pickup"))
 
+    company, pos_profile = _active_restaurant_pos_context()
+    settings = get_restaurant_settings(company=company, pos_profile=pos_profile.name)
     settings_field = "enable_delivery" if fulfillment_type == "Delivery" else "enable_pickup"
-    if not cint(frappe.db.get_single_value("Restaurant Settings", settings_field)):
-        frappe.throw(_("{0} is disabled in Restaurant Settings").format(fulfillment_type))
+    if not cint(settings.get(settings_field)):
+        frappe.throw(_("{0} is disabled for company {1}").format(fulfillment_type, company))
 
     request_id = str(request_id or "").strip() or None
     existing = _existing_fulfillment_request(request_id)
@@ -580,13 +586,10 @@ def create_fulfillment_order(
         frappe.throw(_("Pickup orders cannot have a delivery fee"))
     delivery_fee_item = None
     if delivery_fee:
-        delivery_fee_item = frappe.db.get_single_value(
-            "Restaurant Settings", "delivery_fee_item"
-        )
+        delivery_fee_item = settings.delivery_fee_item
         if not delivery_fee_item:
             frappe.throw(_("Configure the delivery fee Item in Restaurant Settings"))
 
-    company, pos_profile = _active_restaurant_pos_context()
     savepoint = "restaurant_fulfillment_create"
     frappe.db.savepoint(savepoint)
     try:
