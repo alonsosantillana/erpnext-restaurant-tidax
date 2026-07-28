@@ -28,6 +28,14 @@ doc_events = {
         "on_create": "restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.set_settings_data",
         "on_update": "restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.set_settings_data"
     },
+    "POS Opening Entry": {
+        "autoname": "restaurant_management.restaurant_management.pos_series.autoname_pos_document",
+        "validate": "restaurant_management.restaurant_management.pos_series.validate_pos_document_series",
+    },
+    "POS Closing Entry": {
+        "autoname": "restaurant_management.restaurant_management.pos_series.autoname_pos_document",
+        "validate": "restaurant_management.restaurant_management.pos_series.validate_pos_document_series",
+    },
 }
 
 after_migrate = "restaurant_management.setup.install.after_migrate"
@@ -88,6 +96,8 @@ app_include_js = [
 doctype_js = {
     "Material Request" : "public/js/material_request.js",
     "Resto Gastos" : "public/js/resto_gastos.js",
+    "POS Opening Entry": "public/js/pos_entry_series.js",
+    "POS Closing Entry": "public/js/pos_entry_series.js",
 }
 # doctype_js = {{"doctype" : "public/js/doctype.js"}}
 # doctype_list_js = {{"doctype" : "public/js/doctype_list.js"}}

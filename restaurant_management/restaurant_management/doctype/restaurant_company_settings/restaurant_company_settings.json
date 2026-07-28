@@ -27,6 +27,10 @@
   "column_break_print",
   "print_format",
   "print_format_ce",
+  "pos_entry_series_section",
+  "pos_opening_series",
+  "column_break_pos_entry_series",
+  "pos_closing_series",
   "voucher_series_section",
   "serie_factura",
   "serie_boleta",
@@ -166,6 +170,29 @@
    "fieldtype": "Link",
    "label": "Print Format CE",
    "options": "Print Format"
+  },
+  {
+   "fieldname": "pos_entry_series_section",
+   "fieldtype": "Section Break",
+   "label": "POS Opening and Closing Series"
+  },
+  {
+   "description": "Naming series used by new POS Opening Entry documents for this company.",
+   "fieldname": "pos_opening_series",
+   "fieldtype": "Data",
+   "label": "POS Opening Series",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_pos_entry_series",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Naming series used by new POS Closing Entry documents for this company.",
+   "fieldname": "pos_closing_series",
+   "fieldtype": "Data",
+   "label": "POS Closing Series",
+   "reqd": 1
   },
   {
    "fieldname": "voucher_series_section",

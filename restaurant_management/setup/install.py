@@ -40,7 +40,27 @@ docs = {
             non_negative=1,
             precision="2",
         ),
-    )
+    ),
+    "POS Opening Entry": dict(
+        restaurant_naming_series=dict(
+            label="POS Opening Series",
+            fieldtype="Data",
+            insert_after="company",
+            read_only=1,
+            bold=1,
+            no_copy=1,
+        ),
+    ),
+    "POS Closing Entry": dict(
+        restaurant_naming_series=dict(
+            label="POS Closing Series",
+            fieldtype="Data",
+            insert_after="company",
+            read_only=1,
+            bold=1,
+            no_copy=1,
+        ),
+    ),
 }
 
 fields_not_needed = ['parent', 'parenttype', 'restaurant_permissions']

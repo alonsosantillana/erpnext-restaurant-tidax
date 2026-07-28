@@ -2,6 +2,37 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Restaurant Company Settings", {
+	async company(frm) {
+		if (!frm.doc.company || (!frm.is_new() && frm.doc.pos_opening_series)) {
+			return;
+		}
+
+		const response = await frappe.db.get_value(
+			"Company",
+			frm.doc.company,
+			"abbr"
+		);
+		const abbr = (response.message?.abbr || "")
+			.toUpperCase()
+			.replace(/[^A-Z0-9-]+/g, "-")
+			.replace(/^-|-$/g, "");
+		if (!abbr) {
+			return;
+		}
+		if (!frm.doc.pos_opening_series) {
+			await frm.set_value(
+				"pos_opening_series",
+				`POS-OPE-${abbr}-.YYYY.-.#####`
+			);
+		}
+		if (!frm.doc.pos_closing_series) {
+			await frm.set_value(
+				"pos_closing_series",
+				`POS-CLO-${abbr}-.YYYY.-.#####`
+			);
+		}
+	},
+
 	setup(frm) {
 		frm.set_query("pos_profile", () => ({
 			filters: { company: frm.doc.company, disabled: 0 },

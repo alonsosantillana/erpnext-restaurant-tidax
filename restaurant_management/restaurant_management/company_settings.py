@@ -137,6 +137,13 @@ class RestaurantSettingsMixin:
         if self.doctype == LEGACY_SETTINGS_DOCTYPE and not company:
             return
 
+        if self.doctype == COMPANY_SETTINGS_DOCTYPE:
+            from restaurant_management.restaurant_management.pos_series import (
+                validate_company_pos_series,
+            )
+
+            validate_company_pos_series(self)
+
         if self.get("pos_profile"):
             profile_company = frappe.db.get_value(
                 "POS Profile", self.pos_profile, "company"

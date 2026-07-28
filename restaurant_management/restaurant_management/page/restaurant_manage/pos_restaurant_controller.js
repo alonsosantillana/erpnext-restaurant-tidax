@@ -57,6 +57,19 @@ erpnext.PointOfSale.RestaurantController = class {
 				dialog.fields_dict.balance_details.grid.refresh();
 			});
 		}
+		const fetch_pos_series = () => {
+			const company = dialog.fields_dict.company.get_value();
+			if (!company) return;
+			return frappe.call({
+				method: "restaurant_management.restaurant_management.pos_series.get_pos_document_series",
+				args: {
+					company,
+					document_type: "POS Opening Entry"
+				}
+			}).then((response) => {
+				dialog.set_value("restaurant_naming_series", response.message);
+			});
+		}
 		const pos_profile_query = {
 			query: 'erpnext.accounts.doctype.pos_profile.pos_profile.pos_profile_query',
 			filters: { company: RM.pos_profile.company }
@@ -68,6 +81,10 @@ erpnext.PointOfSale.RestaurantController = class {
 				{
 					fieldtype: 'Link', label: __('Company'), default: RM.pos_profile.company,
 					options: 'Company', fieldname: 'company', reqd: 1, read_only: 1
+				},
+				{
+					fieldtype: 'Data', label: __('POS Opening Series'),
+					fieldname: 'restaurant_naming_series', read_only: 1
 				},
 				{
 					fieldtype: 'Link', label: __('POS Profile'),
@@ -107,6 +124,7 @@ erpnext.PointOfSale.RestaurantController = class {
 			primary_action_label: __('Submit...')
 		});
 		dialog.show();
+		fetch_pos_series();
 	}
 
 	async prepare_app_defaults(data) {
