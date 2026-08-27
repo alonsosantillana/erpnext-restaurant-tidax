@@ -30,14 +30,29 @@
   {
    "role": "Admin Resto"
   },
+{
+   "role": "resto_admin"
+  },
   {
    "role": "Cajero"
+  },
+{
+   "role": "resto_cajero"
   },
   {
    "role": "Mozo"
   },
+{
+   "role": "resto_mozo"
+  },
   {
    "role": "Cocinero"
+  },
+{
+   "role": "resto_cocina"
+  },
+{
+   "role": "resto_delivery"
   }
  ],
  "script": null,

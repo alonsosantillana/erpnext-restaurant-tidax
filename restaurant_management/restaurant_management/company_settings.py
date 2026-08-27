@@ -9,6 +9,28 @@ COMPANY_SETTINGS_DOCTYPE = "Restaurant Company Settings"
 LEGACY_SETTINGS_DOCTYPE = "Restaurant Settings"
 
 
+def get_user_restaurant_company(user=None):
+    """Return the active Company or the user's default Company permission."""
+    user = user or frappe.session.user
+    company = frappe.defaults.get_user_default("company", user=user)
+    if company:
+        return company
+
+    if not user or user == "Guest":
+        return None
+
+    return frappe.db.get_value(
+        "User Permission",
+        {
+            "user": user,
+            "allow": "Company",
+            "is_default": 1,
+            "apply_to_all_doctypes": 1,
+        },
+        "for_value",
+    )
+
+
 def _document_company(document, doctype):
     if not document:
         return None
@@ -52,7 +74,7 @@ def resolve_restaurant_company(
         resolved
         or profile_company
         or company
-        or frappe.defaults.get_user_default("company")
+        or get_user_restaurant_company()
     )
 
 
@@ -167,6 +189,31 @@ class RestaurantSettingsMixin:
                     _("Delivery Fee Item must be an enabled sales Item")
                 )
 
+        if self.get("enable_tips"):
+            self._validate_tip_payable_account(company)
+
+    def _validate_tip_payable_account(self, company):
+        account_name = self.get("tip_payable_account")
+        if not account_name:
+            frappe.throw(_("Configure the Tips Payable Account"))
+
+        account = frappe.db.get_value(
+            "Account",
+            account_name,
+            ["company", "root_type", "is_group", "disabled"],
+            as_dict=True,
+        )
+        if not account or account.disabled:
+            frappe.throw(_("Tips Payable Account must be an enabled Account"))
+        if account.company != company:
+            frappe.throw(
+                _("Tips Payable Account must belong to company {0}").format(company)
+            )
+        if account.root_type != "Liability" or account.is_group:
+            frappe.throw(
+                _("Tips Payable Account must be a non-group Liability account")
+            )
+
     def publish_settings_update(self):
         frappe.publish_realtime(
             "update_settings",
@@ -192,6 +239,10 @@ class RestaurantSettingsMixin:
                     frappe.new_doc("Restaurant Object")
                 ),
                 rooms_access=list(self.rooms_access()),
+                configured_rooms_count=frappe.db.count(
+                    "Restaurant Object",
+                    {"type": "Room", "company": self.settings_company},
+                ),
             ),
             restrictions=self,
             exceptions=[

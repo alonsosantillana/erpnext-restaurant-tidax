@@ -4,9 +4,35 @@ class PayForm extends DeskForm {
     payment_methods = {};
     guest_count = null;
     discount_global_percent = null;
+    tip_amount_input = null;
+    tip_mode_of_payment = null;
     form_name = "Payment Order";
     has_primary_action = false;
-    
+
+    get payable_amount() {
+        const order_amount = flt(this.order && this.order.amount);
+        const discount_percent = flt(this.order && this.order.data.discount_global_percent);
+        const discount_amount = flt(this.order && this.order.data.discount);
+
+        if (discount_percent > 0) {
+            return Math.max(flt(order_amount * (1 - discount_percent / 100), 2), 0);
+        }
+        return Math.max(flt(order_amount - discount_amount, 2), 0);
+    }
+
+    get tips_enabled() {
+        return Boolean(Number(RM.restrictions && RM.restrictions.enable_tips));
+    }
+
+    get tip_amount() {
+        if (!this.tips_enabled || !this.tip_amount_input) return 0;
+        return Math.max(flt(this.tip_amount_input.float_val, 2), 0);
+    }
+
+    get total_charge_amount() {
+        return flt(this.payable_amount + this.tip_amount, 2);
+    }
+
     constructor(options) {
         super(options);
 
@@ -75,6 +101,7 @@ class PayForm extends DeskForm {
         this.set_receipt_defaults();
         // this.set_discount_global_percent_input();
         this.update_paid_value();
+        this.refresh_payment_button_amount();
     }
 
     make_inputs() {
@@ -118,7 +145,9 @@ class PayForm extends DeskForm {
             );
         });
 
-        this.get_field("payment_methods").$wrapper.empty().append(payment_methods);
+        const $payment_wrapper = this.get_field("payment_methods").$wrapper;
+        $payment_wrapper.empty().append(payment_methods);
+        this.make_tip_inputs($payment_wrapper);
 
         this.set_guest_count_input();
         this.set_receipt_defaults();
@@ -130,6 +159,64 @@ class PayForm extends DeskForm {
         /*RM.pos_profile.payments.forEach(mode_of_payment => {
             console.log(this.payment_methods[mode_of_payment.mode_of_payment])
         });*/
+    }
+
+    make_tip_inputs($payment_wrapper) {
+        this.tip_amount_input = null;
+        this.tip_mode_of_payment = null;
+        if (!this.tips_enabled) return;
+
+        this.tip_amount_input = frappe.jshtml({
+            tag: "input",
+            properties: {
+                type: "text",
+                class: "input-with-feedback form-control bold",
+                placeholder: "0.00"
+            },
+        }).on(["change", "keyup"], () => {
+            this.update_paid_value();
+        }).on("click", (obj) => {
+            this.num_pad.input = obj;
+        }).float();
+
+        this.tip_mode_of_payment = $("<select>", {
+            class: "form-control",
+            "aria-label": __("Tip collection method")
+        });
+        RM.pos_profile.payments.forEach((payment_method) => {
+            this.tip_mode_of_payment.append(
+                $("<option>", {
+                    value: payment_method.mode_of_payment,
+                    text: payment_method.mode_of_payment
+                })
+            );
+        });
+        const default_method = RM.pos_profile.payments.find(
+            (payment_method) => payment_method.default === 1
+        );
+        if (default_method) {
+            this.tip_mode_of_payment.val(default_method.mode_of_payment);
+        }
+        this.tip_mode_of_payment.on("change", () => this.refresh_payment_button_amount());
+
+        const $tip_section = $(`
+            <div class="restaurant-tip-payment border-top pt-3 mt-3">
+                <div class="form-group restaurant-tip-amount">
+                    <label class="control-label">${__("Tip")}</label>
+                    <div class="control-input-wrapper"></div>
+                    <small class="text-muted">${__("The tip is collected separately and is not part of the fiscal sale.")}</small>
+                </div>
+                <div class="form-group restaurant-tip-method">
+                    <label class="control-label">${__("Tip collection method")}</label>
+                    <div class="control-input-wrapper"></div>
+                </div>
+            </div>
+        `);
+        $tip_section.find(".restaurant-tip-amount .control-input-wrapper")
+            .append(this.tip_amount_input.html());
+        $tip_section.find(".restaurant-tip-method .control-input-wrapper")
+            .append(this.tip_mode_of_payment);
+        $payment_wrapper.append($tip_section);
     }
 
     set_guest_count_input(){
@@ -191,19 +278,6 @@ class PayForm extends DeskForm {
     }
 
     make_payment_button() {
-        // TIDAX: MOSTRAR EN BOTON EL IMPORTE DE PAGO
-        let importe;
-        if(this.doc.discount_global_percent){
-            importe = parseFloat(this.doc.amount)*(1-parseFloat(this.doc.discount_global_percent)/100);
-            importe = importe.toFixed(2);
-        }else if(this.doc.discount){
-            importe = parseFloat(this.doc.amount)-(parseFloat(this.doc.discount));
-            importe = importe.toFixed(2);
-        }else{
-            importe = parseFloat(this.doc.amount);
-            importe = importe.toFixed(2);
-        }
-
         this.button_payment = frappe.jshtml({
             tag: "button",
             wrapper: this.get_field("payment_button").$wrapper,
@@ -212,14 +286,23 @@ class PayForm extends DeskForm {
                 class: `btn btn-primary btn-lg btn-flat`,
                 style: "width: 100%; height: 60px;"
             },
-            //content: `<span style="font-size: 25px; font-weight: 400">{{text}} ${this.order.total_money}</span>`,
-            content: `<span style="font-size: 25px; font-weight: 400">{{text}} S/ ${importe}</span>`,
-            text: `${__("Pay")}`
+            content: `<span style="font-size: 25px; font-weight: 400">{{text}}</span>`,
+            text: this.payment_button_label
         }).on("click", () => {
             if (!RM.can_pay) return;
             this.button_payment.disable().val(__("Paying"));
             this.send_payment();
         }, !RM.restrictions.to_pay ? DOUBLE_CLICK : null).prop("disabled", !RM.can_pay);
+    }
+
+    get payment_button_label() {
+        return `${__("Pay")} S/ ${this.total_charge_amount.toFixed(2)}`;
+    }
+
+    refresh_payment_button_amount() {
+        if (this.button_payment) {
+            this.button_payment.val(this.payment_button_label, false);
+        }
     }
 
     get payments_values() {
@@ -245,7 +328,8 @@ class PayForm extends DeskForm {
             this.button_payment.disable();
             return;
         }
-        this.button_payment.enable().val(__("Pay")).remove_class("btn-warning");
+        this.button_payment.enable().remove_class("btn-warning");
+        this.refresh_payment_button_amount();
     }
 
     #send_payment() {
@@ -260,23 +344,21 @@ class PayForm extends DeskForm {
             return;
         }
 
-        // this.payments_values es un objeto JSON
-        let suma_valor = 0; // Inicializa la variable suma_valor
-        for (let key in this.payments_values) {
-            if (this.payments_values.hasOwnProperty(key)) {
-                if (key !== "Propinas") {
-                    // Accede al valor utilizando la clave (key)
-                    let value = this.payments_values[key];
-                    suma_valor += value; // Agrega el valor al acumulador suma_valor
-                    //alert(`Clave: ${key}, Valor: ${value}, Suma_valor: ${suma_valor}, Total:  ${this.doc.amount}`);
-                }
-            }
-        }
+        let suma_valor = 0;
+        Object.values(this.payments_values).forEach((value) => {
+            suma_valor += flt(value);
+        });
         if(suma_valor == 0.01){
             suma_valor = 0;
         }
-        if(suma_valor !== this.doc.amount){
-            alert(`El pago debe ser ${this.doc.amount}`);
+        const payable_amount = this.payable_amount;
+        if (this.tip_amount > 0 && !this.tip_mode_of_payment.val()) {
+            frappe.msgprint(__("Seleccione el medio de cobro de la propina"));
+            this.reset_payment_button();
+            return;
+        }
+        if(Math.abs(suma_valor - payable_amount) > 0.005){
+            frappe.msgprint(__("El pago debe ser {0}", [RM.format_currency(payable_amount)]));
             this.reset_payment_button();
         }
         else{
@@ -294,12 +376,23 @@ class PayForm extends DeskForm {
                 customer: this.get_value("customer"),
                 guest_count: this.guest_count.float_val,
                 voucher_type: voucher_type,
-                emission_mode: emission_mode
+                emission_mode: emission_mode,
+                tip_amount: this.tip_amount,
+                tip_mode_of_payment: this.tip_amount > 0
+                    ? this.tip_mode_of_payment.val()
+                    : null
             },
             always: (r) => {
                 RM.ready();
                 
                 if (r.message && r.message.status) {
+                    if (r.message.tip_status === "Pending Accounting") {
+                        frappe.msgprint({
+                            title: __("Propina pendiente de contabilización"),
+                            message: __("El comprobante fue generado, pero la propina requiere regularización contable."),
+                            indicator: "orange"
+                        });
+                    }
                     order_manage.clear_current_order();
                     order_manage.check_buttons_status();
                     order_manage.check_item_editor_status();
@@ -315,7 +408,7 @@ class PayForm extends DeskForm {
 
                     // TIDAX
                     RM.working("Generating Invoice Electronic");
-                    var com = frappe.defaults.get_user_default('company');
+                    var com = RM.company;
 
                     new Promise(function(resolve, reject) {
                         frappe.call({
@@ -509,29 +602,16 @@ class PayForm extends DeskForm {
     //TIDAX
     update_paid_value() {
         let total = 0;
-        let total_con_desc = 0;
         setTimeout(() => {
             Object.keys(this.payment_methods).forEach((payment_method) => {
-                total += this.payment_methods[payment_method].float_val;
+                total += flt(this.payment_methods[payment_method].float_val);
             });
 
-            //TIDAX
-            if(this.doc.discount > 0) {
-                total_con_desc = this.order.amount - this.doc.discount
-                this.set_value("amount", total_con_desc);
-                this.set_value("total_payment", total);
-                this.set_value("change_amount", (total - total_con_desc));
-            }
-            else if(this.doc.discount_global_percent > 0){
-                total_con_desc = this.order.amount*(1-(this.doc.discount_global_percent/100));
-                this.set_value("amount", total_con_desc);
-                this.set_value("total_payment", total);
-                this.set_value("change_amount", (total - total_con_desc));
-            }
-            else{
-                this.set_value("total_payment", total);
-                this.set_value("change_amount", (total - this.order.amount));
-            }
+            const payable_amount = this.payable_amount;
+            this.set_value("amount", payable_amount);
+            this.set_value("total_payment", total);
+            this.set_value("change_amount", flt(total - payable_amount, 2));
+            this.refresh_payment_button_amount();
         }, 0);
     }
     // update_paid_value() {

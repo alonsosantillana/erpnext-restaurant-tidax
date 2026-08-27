@@ -31,8 +31,14 @@
   {
    "role": "Cajero"
   },
+{
+   "role": "resto_cajero"
+  },
   {
    "role": "Admin Resto"
+  },
+{
+   "role": "resto_admin"
   }
  ]
 }

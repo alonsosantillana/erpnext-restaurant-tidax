@@ -10,6 +10,7 @@ from frappe.model.document import Document
 import re
 
 from restaurant_management.restaurant_management.company_settings import (
+    get_user_restaurant_company,
     get_restaurant_settings,
 )
 
@@ -75,7 +76,7 @@ class RestaurantObject(Document):
         self.set_and_validate_company()
 
     def set_and_validate_company(self):
-        active_company = frappe.defaults.get_user_default("company")
+        active_company = get_user_restaurant_company()
         if self.type == "Room":
             self.company = self.company or active_company
             if self.room:
@@ -183,7 +184,7 @@ class RestaurantObject(Document):
 
     def add_order(self, client=None):
         # last_user = self.current_user
-        active_company = frappe.defaults.get_user_default("company")
+        active_company = get_user_restaurant_company()
         if not active_company or active_company != self.company:
             frappe.throw(
                 _("Select company {0} before creating an order for this table").format(
@@ -323,7 +324,7 @@ class RestaurantObject(Document):
         company = self.company
         if not company:
             frappe.throw(_("Configure a Company for this Production Center"))
-        active_company = frappe.defaults.get_user_default("company")
+        active_company = get_user_restaurant_company()
         if active_company != company:
             frappe.throw(
                 _("Production Center belongs to company {0}").format(company),
@@ -760,7 +761,7 @@ class RestaurantObject(Document):
                 key=lambda row: (row["item_name"] or row["item_code"]),
             ),
             "attended": attended,
-            "can_transition": frappe.has_permission("Restaurant Object", "write", doc=self),
+            "can_transition": frappe.has_permission("Table Order", "write"),
             "truncated": {
                 "active": active_truncated,
                 "attended": False,

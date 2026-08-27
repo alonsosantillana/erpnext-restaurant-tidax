@@ -22,8 +22,14 @@
   {
    "role": "Admin Resto"
   },
+{
+   "role": "resto_admin"
+  },
   {
    "role": "Cajero"
+  },
+{
+   "role": "resto_cajero"
   },
   {
    "role": "Administrator"

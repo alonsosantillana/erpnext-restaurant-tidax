@@ -259,6 +259,18 @@
    "share": 1,
    "write": 1
   },
+{
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_admin",
+   "share": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "email": 1,
@@ -270,15 +282,47 @@
    "share": 1,
    "write": 1
   },
+{
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_cajero",
+   "share": 1,
+   "write": 1
+  },
+{
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_delivery",
+   "share": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "read": 1,
    "role": "Mozo",
    "write": 1
   },
+{
+   "create": 1,
+   "read": 1,
+   "role": "resto_mozo",
+   "write": 1
+  },
   {
    "read": 1,
    "role": "Cocinero"
+  },
+{
+   "read": 1,
+   "role": "resto_cocina"
   }
  ],
  "search_fields": "order,customer,customer_name_snapshot,contact_phone,external_order_id",

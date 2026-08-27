@@ -297,6 +297,14 @@ RestaurantManage = class RestaurantManage {
 						${this.components.edit_room.html()}
 						${this.components.delete_room.html()}
 					</div>
+					<div class="restaurant-empty-rooms hide">
+						<span class="fa fa-object-group restaurant-empty-rooms-icon"></span>
+						<div class="restaurant-empty-rooms-title">${__("No rooms configured")}</div>
+						<div class="restaurant-empty-rooms-help"></div>
+						<button class="btn btn-primary restaurant-empty-rooms-create">
+							<span class="fa fa-plus"></span> ${__("Create first room")}
+						</button>
+					</div>
 					${this.floor_map.html()}
 					${this.fulfillment_hub_host.html()}
 					${this.fulfillment_board_host.html()}
@@ -311,6 +319,9 @@ RestaurantManage = class RestaurantManage {
 			<div id="customize-alert-message"></div>
 		`);
 
+		this.wrapper.find(".restaurant-empty-rooms-create").on("click", () => {
+			this.add_room();
+		});
 		this.make_fulfillment_navigation();
 		this.make_fulfillment_hub();
 		this.fulfillment_board = new FulfillmentBoard({
@@ -555,6 +566,8 @@ RestaurantManage = class RestaurantManage {
 			this.rooms_container.append(this.fulfillment_room_button);
 		}
 
+		this.update_empty_rooms_state();
+
 		setTimeout(() => {
 			this.current_room = this.object(room_from_url);
 
@@ -570,6 +583,29 @@ RestaurantManage = class RestaurantManage {
 
 	has_access_to_room(room) {
 		return this.rooms_access.includes(room) || frappe.session.user === "Administrator" || this.permissions.restaurant_object.create || this.permissions.restaurant_object.write
+	}
+
+	update_empty_rooms_state() {
+		const is_empty = !Array.isArray(this.rooms) || this.rooms.length === 0;
+		const can_configure = Boolean(this.permissions?.restaurant_object?.write);
+		const configured_rooms_count = Number(this.permissions?.configured_rooms_count || 0);
+		const has_unassigned_rooms = is_empty && !can_configure && configured_rooms_count > 0;
+		const $restaurant = this.wrapper.find(".restaurant-manage");
+		const $empty_state = this.wrapper.find(".restaurant-empty-rooms");
+
+		$restaurant.toggleClass("rooms-empty", is_empty);
+		$empty_state.toggleClass("hide", !is_empty);
+		$empty_state.find(".restaurant-empty-rooms-create").toggle(can_configure);
+		$empty_state.find(".restaurant-empty-rooms-title").text(
+			has_unassigned_rooms ? __("No rooms assigned") : __("No rooms configured")
+		);
+		$empty_state.find(".restaurant-empty-rooms-help").text(
+			has_unassigned_rooms
+				? __("Ask a restaurant administrator to assign rooms for {0} in the POS Profile.", [this.company])
+				: can_configure
+				? __("Create the first room to start adding tables and production centers for {0}.", [this.company])
+				: __("Ask a restaurant administrator to configure rooms for {0}.", [this.company])
+		);
 	}
 
 	get settings_data() {
@@ -837,7 +873,7 @@ RestaurantManage = class RestaurantManage {
 		this.rooms = data.rooms || [];
 
 		this.settings_data.then(() => {
-			this.rooms = this.rooms.filter(room => this.rooms_access.includes(room.name) || frappe.session.user === "Administrator");
+			this.rooms = this.rooms.filter(room => this.has_access_to_room(room.name));
 			this.render_rooms(data.client === RM.client ? data.current_room : false);
 		});
 	}

@@ -6,6 +6,7 @@ from frappe.utils import cint, flt, getdate
 from erpnext.stock.get_item_details import get_pos_profile
 import requests
 from restaurant_management.restaurant_management.company_settings import (
+    get_user_restaurant_company,
     get_restaurant_settings,
 )
 
@@ -59,6 +60,15 @@ READ_ONLY_DOCUMENT_METHODS = {
 DELETE_DOCUMENT_METHODS = {
     ("Restaurant Object", "_delete"),
     ("Table Order", "_delete"),
+}
+
+# Some actions are routed through Restaurant Object for UI convenience but do
+# not modify the room/table/production-center layout itself. Requiring write
+# permission on Restaurant Object would also grant configuration access.
+RELATED_DOCUMENT_PERMISSIONS = {
+    ("Restaurant Object", "add_order"): ("Table Order", "create"),
+    ("Restaurant Object", "set_commands_status"): ("Table Order", "write"),
+    ("Restaurant Object", "set_status_command"): ("Table Order", "write"),
 }
 
 
@@ -173,13 +183,25 @@ def call(model, name, method, args=None):
         frappe.throw(_("Unsupported restaurant operation"), frappe.PermissionError)
 
     doc = frappe.get_doc(model, name)
-    if (model, method) in READ_ONLY_DOCUMENT_METHODS:
+    operation = (model, method)
+    related_permission = RELATED_DOCUMENT_PERMISSIONS.get(operation)
+    if operation in READ_ONLY_DOCUMENT_METHODS or related_permission:
         permission_type = "read"
-    elif (model, method) in DELETE_DOCUMENT_METHODS:
+    elif operation in DELETE_DOCUMENT_METHODS:
         permission_type = "delete"
     else:
         permission_type = "write"
     doc.check_permission(permission_type)
+
+    if related_permission:
+        related_doctype, related_permission_type = related_permission
+        if not frappe.has_permission(related_doctype, related_permission_type):
+            frappe.throw(
+                _("Not permitted to {0} {1}").format(
+                    related_permission_type, related_doctype
+                ),
+                frappe.PermissionError,
+            )
 
     parsed_args = frappe.parse_json(args) if args else {}
     if not isinstance(parsed_args, dict):
@@ -497,7 +519,7 @@ def create_customer_from_identity(tax_id):
     }
 
 def _active_restaurant_pos_context():
-    company = frappe.defaults.get_user_default("company")
+    company = get_user_restaurant_company()
     if not company:
         frappe.throw(_("Set a default Company before creating restaurant orders"))
     if not frappe.has_permission("Company", "read", company):

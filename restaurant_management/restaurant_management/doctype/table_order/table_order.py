@@ -6,12 +6,18 @@ from __future__ import unicode_literals
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, today
+from erpnext.stock.get_item_details import get_price_list_rate_for
 import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
 from restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item import (
     preparation_targets,
+)
+from restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip import (
+    create_tip_record,
+    post_tip_collection,
+    validate_tip_request,
 )
 from restaurant_management.restaurant_management.company_settings import (
     get_restaurant_settings,
@@ -413,11 +419,17 @@ class TableOrder(Document):
         guest_count=0,
         voucher_type=None,
         emission_mode=None,
+        tip_amount=0,
+        tip_mode_of_payment=None,
     ):
-        # TIDAX: obteniendo el perfil del usuario para ver si puede realizar el comprobante
-        profile = frappe.db.get_value("User", frappe.session.user, "role_profile_name")
-        if profile == "Resto_Mozos" or profile == "Resto_Cocinas":
-            return frappe.throw(_("No tiene permisos suficientes para generar el comprobante"))
+        # Restaurant roles do not implicitly grant accounting permissions. The
+        # effective ERPNext permission is authoritative and also supports users
+        # configured without one of the obsolete Role Profile names.
+        if not frappe.has_permission("POS Invoice", "create"):
+            frappe.throw(
+                _("No tiene permisos suficientes para generar el comprobante"),
+                frappe.PermissionError,
+            )
 
         if self.link_invoice:
             return frappe.throw(_("The order has been invoiced"))
@@ -432,6 +444,8 @@ class TableOrder(Document):
             frappe.throw(_("La cantidad de comensales debe ser mayor que cero"))
         if not self.is_dine_in:
             guest_count = max(0, guest_count)
+
+        tip_context = validate_tip_request(self, tip_amount, tip_mode_of_payment)
 
         voucher_config = get_voucher_config(voucher_type, emission_mode)
         customer_identity = get_customer_identity(customer, voucher_config)
@@ -516,8 +530,20 @@ class TableOrder(Document):
                 invoice.address_display = fulfillment.address_display_snapshot
                 invoice.contact_mobile = fulfillment.contact_phone
         invoice.validate()
+        invoice_total = flt(invoice.rounded_total or invoice.grand_total, 2)
+        payment_total = flt(
+            sum(flt(payment.amount) for payment in invoice.payments),
+            2,
+        )
+        if abs(payment_total - invoice_total) > 0.005:
+            frappe.throw(
+                _("Los medios de pago deben sumar {0}").format(invoice_total)
+            )
         invoice.save()
+        tip = create_tip_record(self, invoice, tip_context)
         invoice.submit()
+        if tip:
+            tip = post_tip_collection(tip)
 
         self.status = "Invoiced"
         self.link_invoice = invoice.name
@@ -559,7 +585,10 @@ class TableOrder(Document):
 
         return dict(
             status=True,
-            invoice_name=invoice.name
+            invoice_name=invoice.name,
+            tip_name=tip.name if tip else None,
+            tip_amount=tip.amount if tip else 0,
+            tip_status=tip.status if tip else None,
         )
 
     def transfer(self, table, client):
@@ -628,17 +657,46 @@ class TableOrder(Document):
             # print("GET INVOICE -------------------->")
             # print(item)
             if item["qty"] > 0:
-                rate = 0 if item["rate"] is None else item["rate"]
-                price_list_rate = 0 if item["price_list_rate"] is None else item["price_list_rate"]
-                unit_value = 0 if item["unit_value"] is None else item["unit_value"]
+                price_list_rate = flt(item.get("price_list_rate"))
+                rate = flt(item.get("rate"))
+                discount_percentage = flt(item.get("discount_percentage"))
+                unit_value = flt(item.get("unit_value"))
+
+                if price_list_rate <= 0:
+                    price_list_rate = flt(
+                        get_price_list_rate_for(
+                            frappe._dict(
+                                price_list=self.selling_price_list,
+                                customer=self.customer,
+                                uom=item.get("stock_uom"),
+                                stock_uom=item.get("stock_uom"),
+                                transaction_date=today(),
+                                qty=flt(item.get("qty")),
+                                conversion_factor=1,
+                                ignore_party=True,
+                            ),
+                            item.get("item_code"),
+                        )
+                    )
+                    if price_list_rate <= 0:
+                        frappe.throw(
+                            _("Item {0} has no price configured in Price List {1}").format(
+                                frappe.bold(item.get("item_name") or item.get("item_code")),
+                                frappe.bold(self.selling_price_list),
+                            )
+                        )
+
+                    item["price_list_rate"] = price_list_rate
+                    rate = price_list_rate * (1 - discount_percentage / 100)
+                    item["rate"] = rate
 
                 margin_rate_or_amount = (rate - price_list_rate)
                 invoice.append('items', dict(
                     identifier=item["identifier"],
                     item_code=item["item_code"],
                     qty=item["qty"],
-                    rate=item["rate"],
-                    discount_percentage=item["discount_percentage"],
+                    rate=rate,
+                    discount_percentage=discount_percentage,
 
                     item_tax_template=item["item_tax_template"] if "item_tax_template" in item else None,
                     item_tax_rate=item["item_tax_rate"] if "item_tax_rate" in item else None,

@@ -1,0 +1,42 @@
+[
+  {
+    "desk_access": 1,
+    "disabled": 0,
+    "doctype": "Role",
+    "is_custom": 0,
+    "name": "resto_admin",
+    "role_name": "resto_admin"
+  },
+  {
+    "desk_access": 1,
+    "disabled": 0,
+    "doctype": "Role",
+    "is_custom": 0,
+    "name": "resto_cajero",
+    "role_name": "resto_cajero"
+  },
+  {
+    "desk_access": 1,
+    "disabled": 0,
+    "doctype": "Role",
+    "is_custom": 0,
+    "name": "resto_mozo",
+    "role_name": "resto_mozo"
+  },
+  {
+    "desk_access": 1,
+    "disabled": 0,
+    "doctype": "Role",
+    "is_custom": 0,
+    "name": "resto_cocina",
+    "role_name": "resto_cocina"
+  },
+  {
+    "desk_access": 1,
+    "disabled": 0,
+    "doctype": "Role",
+    "is_custom": 0,
+    "name": "resto_delivery",
+    "role_name": "resto_delivery"
+  }
+]

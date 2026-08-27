@@ -26,6 +26,9 @@
   {
    "role": "Admin Resto"
   },
+{
+   "role": "resto_admin"
+  },
   {
    "role": "Administrator"
   }

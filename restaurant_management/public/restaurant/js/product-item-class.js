@@ -282,6 +282,18 @@ class ProductItem {
             return;
         }
 
+        if (item.price_list_rate == null || flt(item.price_list_rate) <= 0) {
+            frappe.msgprint({
+                title: __("Price not configured"),
+                message: __("Item {0} has no price configured in Price List {1}", [
+                    frappe.utils.escape_html(item.item_name || item.item_code),
+                    frappe.utils.escape_html(RM.pos_profile.selling_price_list || ""),
+                ]),
+                indicator: "orange",
+            });
+            return;
+        }
+
         const base_item = {
             name: null,
             entry_name: null,

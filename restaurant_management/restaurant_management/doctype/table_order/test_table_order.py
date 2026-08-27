@@ -26,6 +26,56 @@ from restaurant_management.api import (
 
 class TestTableOrder(unittest.TestCase):
 	@patch("restaurant_management.api._require_authenticated_user")
+	@patch("restaurant_management.api.frappe.has_permission", return_value=True)
+	@patch("restaurant_management.api.frappe.get_doc")
+	def test_add_order_uses_table_read_and_order_create_permissions(
+		self, get_doc, has_permission, require_authenticated_user
+	):
+		table = MagicMock()
+		table.add_order.return_value = {"name": "OR-2026-00008"}
+		get_doc.return_value = table
+
+		result = call_restaurant_api(
+			"Restaurant Object",
+			"T2",
+			"add_order",
+			{"client": "Consumidor Final"},
+		)
+
+		table.check_permission.assert_called_once_with("read")
+		has_permission.assert_called_once_with("Table Order", "create")
+		table.add_order.assert_called_once_with(client="Consumidor Final")
+		self.assertEqual(result, {"name": "OR-2026-00008"})
+
+	@patch("restaurant_management.api._require_authenticated_user")
+	@patch("restaurant_management.api.frappe.has_permission", return_value=False)
+	@patch("restaurant_management.api.frappe.get_doc")
+	def test_add_order_is_denied_without_order_create_permission(
+		self, get_doc, has_permission, require_authenticated_user
+	):
+		table = MagicMock()
+		get_doc.return_value = table
+
+		with self.assertRaises(frappe.PermissionError):
+			call_restaurant_api("Restaurant Object", "T2", "add_order")
+
+		table.check_permission.assert_called_once_with("read")
+		has_permission.assert_called_once_with("Table Order", "create")
+		table.add_order.assert_not_called()
+
+	def test_make_invoice_requires_effective_pos_invoice_create_permission(self):
+		order = TableOrder({"doctype": "Table Order", "name": "OR-2026-00008"})
+
+		with (
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.has_permission",
+				return_value=False,
+			),
+			self.assertRaises(frappe.PermissionError),
+		):
+			order.make_invoice(mode_of_payment="Cash")
+
+	@patch("restaurant_management.api._require_authenticated_user")
 	@patch("restaurant_management.api.frappe.db.sql")
 	@patch("restaurant_management.api.frappe.get_doc")
 	def test_write_dispatch_locks_and_reloads_order_before_mutation(

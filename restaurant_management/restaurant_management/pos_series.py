@@ -9,6 +9,7 @@ from frappe.utils import cstr
 
 from restaurant_management.restaurant_management.company_settings import (
     COMPANY_SETTINGS_DOCTYPE,
+    get_user_restaurant_company,
     get_restaurant_settings,
 )
 
@@ -22,18 +23,28 @@ POS_SERIES_PREFIXES = {
     "POS Closing Entry": "POS-CLO",
 }
 SERIES_DISPLAY_FIELD = "restaurant_naming_series"
+TABLE_ORDER_SERIES_FIELD = "order_naming_series"
+
+
+def get_company_series_abbreviation(company):
+    abbr = cstr(frappe.db.get_value("Company", company, "abbr")).strip().upper()
+    abbr = re.sub(r"[^A-Z0-9-]+", "-", abbr).strip("-")
+    if not abbr:
+        frappe.throw(_("Company {0} requires an abbreviation").format(company))
+    return abbr
 
 
 def get_default_pos_series(company, document_type):
     if document_type not in POS_SERIES_FIELDS:
         frappe.throw(_("Unsupported POS series document: {0}").format(document_type))
 
-    abbr = cstr(frappe.db.get_value("Company", company, "abbr")).strip().upper()
-    abbr = re.sub(r"[^A-Z0-9-]+", "-", abbr).strip("-")
-    if not abbr:
-        frappe.throw(_("Company {0} requires an abbreviation").format(company))
+    abbr = get_company_series_abbreviation(company)
 
     return f"{POS_SERIES_PREFIXES[document_type]}-{abbr}-.YYYY.-.#####"
+
+
+def get_default_table_order_series(company):
+    return f"OR-{get_company_series_abbreviation(company)}-.YYYY.-.#####"
 
 
 def validate_company_pos_series(settings):
@@ -41,6 +52,13 @@ def validate_company_pos_series(settings):
         return
 
     configured = {}
+    order_series = cstr(settings.get(TABLE_ORDER_SERIES_FIELD)).strip()
+    if not order_series:
+        order_series = get_default_table_order_series(settings.company)
+        settings.set(TABLE_ORDER_SERIES_FIELD, order_series)
+    NamingSeries(order_series).validate()
+    configured[TABLE_ORDER_SERIES_FIELD] = order_series
+
     for document_type, fieldname in POS_SERIES_FIELDS.items():
         series = cstr(settings.get(fieldname)).strip()
         if not series:
@@ -52,10 +70,10 @@ def validate_company_pos_series(settings):
         configured[fieldname] = series
 
     if len(set(configured.values())) != len(configured):
-        frappe.throw(_("POS opening and closing series must be different"))
+        frappe.throw(_("Restaurant document series must be different"))
 
     for series in configured.values():
-        for other_fieldname in POS_SERIES_FIELDS.values():
+        for other_fieldname in [TABLE_ORDER_SERIES_FIELD, *POS_SERIES_FIELDS.values()]:
             company = frappe.db.get_value(
                 COMPANY_SETTINGS_DOCTYPE,
                 {
@@ -66,10 +84,51 @@ def validate_company_pos_series(settings):
             )
             if company:
                 frappe.throw(
-                    _("POS series {0} is already assigned to company {1}").format(
+                    _("Restaurant series {0} is already assigned to company {1}").format(
                         series, company
                     )
                 )
+
+
+def get_company_table_order_series(company):
+    settings = get_restaurant_settings(company=company)
+    series = cstr(settings.get(TABLE_ORDER_SERIES_FIELD)).strip()
+    if not series:
+        series = get_default_table_order_series(company)
+    NamingSeries(series).validate()
+    return series
+
+
+def resolve_table_order_company(doc):
+    if doc.doctype != "Table Order":
+        frappe.throw(_("Unsupported restaurant order document: {0}").format(doc.doctype))
+
+    company = doc.get("company")
+    profile = doc.get("pos_profile")
+    table = doc.get("table")
+    profile_company = (
+        frappe.db.get_value("POS Profile", profile, "company") if profile else None
+    )
+    table_company = (
+        frappe.db.get_value("Restaurant Object", table, "company") if table else None
+    )
+
+    companies = {value for value in (company, profile_company, table_company) if value}
+    if len(companies) > 1:
+        frappe.throw(_("Table Order context belongs to different companies"))
+
+    company = next(iter(companies), None) or get_user_restaurant_company()
+    if not company:
+        frappe.throw(_("Company is required to resolve the Table Order series"))
+    doc.company = company
+    return company
+
+
+def autoname_table_order(doc, method=None):
+    company = resolve_table_order_company(doc)
+    series = get_company_table_order_series(company)
+    doc.naming_series = series
+    doc.name = make_autoname(series, doc=doc)
 
 
 def get_company_pos_series(company, document_type):

@@ -21,12 +21,18 @@
   "enable_pickup",
   "column_break_fulfillment",
   "delivery_fee_item",
+  "tips_section",
+  "enable_tips",
+  "column_break_tips",
+  "tip_payable_account",
   "pos_and_print_section",
   "pos_profile",
   "print_format_order",
   "column_break_print",
   "print_format",
   "print_format_ce",
+  "order_series_section",
+  "order_naming_series",
   "pos_entry_series_section",
   "pos_opening_series",
   "column_break_pos_entry_series",
@@ -138,6 +144,30 @@
    "options": "Item"
   },
   {
+   "fieldname": "tips_section",
+   "fieldtype": "Section Break",
+   "label": "Tips"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_tips",
+   "fieldtype": "Check",
+   "label": "Enable Tips"
+  },
+  {
+   "fieldname": "column_break_tips",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "enable_tips",
+   "description": "Liability account credited when a tip is collected. Tips are not part of the fiscal sale.",
+   "fieldname": "tip_payable_account",
+   "fieldtype": "Link",
+   "label": "Tips Payable Account",
+   "mandatory_depends_on": "enable_tips",
+   "options": "Account"
+  },
+  {
    "fieldname": "pos_and_print_section",
    "fieldtype": "Section Break",
    "label": "POS and Print Formats"
@@ -170,6 +200,18 @@
    "fieldtype": "Link",
    "label": "Print Format CE",
    "options": "Print Format"
+  },
+  {
+   "fieldname": "order_series_section",
+   "fieldtype": "Section Break",
+   "label": "Restaurant Order Series"
+  },
+  {
+   "description": "Naming series used by new Table Order documents for this company.",
+   "fieldname": "order_naming_series",
+   "fieldtype": "Data",
+   "label": "Table Order Series",
+   "reqd": 1
   },
   {
    "fieldname": "pos_entry_series_section",
@@ -324,20 +366,49 @@
    "role": "Admin Resto",
    "write": 1
   },
+{
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_admin",
+   "write": 1
+  },
   {
    "export": 1,
    "read": 1,
    "role": "Cajero"
+  },
+{
+   "export": 1,
+   "read": 1,
+   "role": "resto_cajero"
   },
   {
    "export": 1,
    "read": 1,
    "role": "Mozo"
   },
+{
+   "export": 1,
+   "read": 1,
+   "role": "resto_mozo"
+  },
+{
+   "export": 1,
+   "read": 1,
+   "role": "resto_delivery"
+  },
   {
    "export": 1,
    "read": 1,
    "role": "Cocinero"
+  },
+{
+   "export": 1,
+   "read": 1,
+   "role": "resto_cocina"
   }
  ],
  "quick_entry": 0,

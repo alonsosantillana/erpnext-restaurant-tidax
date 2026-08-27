@@ -10,7 +10,7 @@ from frappe import _
 import frappe
 import os
 
-def execute(filters=None):
+def execute_legacy(filters=None):
 	return get_columns(filters), get_data(filters)
 
 def get_data(filters):
@@ -48,3 +48,63 @@ def get_columns(filters=None):
     ]
 
     return columns
+
+
+def execute(filters=None):
+    filters = frappe._dict(filters or {})
+    company = filters.get("company")
+    if not company:
+        frappe.throw(_("Company is required"))
+    if not frappe.has_permission("Company", "read", doc=company):
+        frappe.throw(
+            _("No tiene permiso para consultar la empresa {0}").format(company),
+            frappe.PermissionError,
+        )
+
+    data = frappe.db.sql(
+        """
+        SELECT
+            pce.posting_date AS fecha,
+            SUM(pce.grand_total) AS total_ingreso,
+            COALESCE((
+                SELECT SUM(tip.amount)
+                FROM `tabRestaurant Tip` tip
+                WHERE tip.company = pce.company
+                  AND tip.posting_date = pce.posting_date
+                  AND tip.status != 'Cancelled'
+            ), 0) AS propinas,
+            COALESCE((
+                SELECT SUM(gasto.gto_total)
+                FROM `tabResto Gastos` gasto
+                WHERE gasto.date_gto = pce.posting_date
+                  AND gasto.docstatus = 1
+            ), 0) AS total_gastos
+        FROM `tabPOS Closing Entry` pce
+        WHERE pce.company = %(company)s
+          AND pce.posting_date BETWEEN %(from_date)s AND %(to_date)s
+          AND pce.docstatus = 1
+        GROUP BY pce.company, pce.posting_date
+        ORDER BY pce.posting_date DESC
+        """,
+        {
+            "company": company,
+            "from_date": filters.get("report_date_from"),
+            "to_date": filters.get("report_date_to"),
+        },
+        as_dict=True,
+    )
+    for row in data:
+        row.cierre = (
+            frappe.utils.flt(row.total_ingreso)
+            + frappe.utils.flt(row.propinas)
+            - frappe.utils.flt(row.total_gastos)
+        )
+
+    columns = [
+        {"fieldname": "fecha", "label": _("Fecha"), "fieldtype": "Date", "width": 100},
+        {"fieldname": "total_ingreso", "label": _("Total Ingreso"), "fieldtype": "Currency", "width": 150},
+        {"fieldname": "propinas", "label": _("Propinas"), "fieldtype": "Currency", "width": 150},
+        {"fieldname": "total_gastos", "label": _("Total Gastos"), "fieldtype": "Currency", "width": 150},
+        {"fieldname": "cierre", "label": _("Cierre"), "fieldtype": "Currency", "width": 150},
+    ]
+    return columns, data

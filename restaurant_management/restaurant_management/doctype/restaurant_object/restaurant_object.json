@@ -178,7 +178,6 @@
    "write": 1
   },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -199,8 +198,19 @@
    "share": 1,
    "write": 1
   },
-  {
+{
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_admin",
+   "share": 1,
+   "write": 1
+  },
+  {
    "email": 1,
    "export": 1,
    "print": 1,
@@ -209,8 +219,16 @@
    "role": "Cajero",
    "share": 1
   },
+{
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_cajero",
+   "share": 1
+  },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -219,14 +237,40 @@
    "role": "Mozo",
    "share": 1
   },
+{
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_mozo",
+   "share": 1
+  },
+{
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_delivery",
+   "share": 1
+  },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Cocinero",
+   "share": 1
+  },
+{
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "resto_cocina",
    "share": 1
   }
  ],

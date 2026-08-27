@@ -25,6 +25,9 @@
  "roles": [
   {
    "role": "Admin Resto"
+  },
+{
+   "role": "resto_admin"
   }
  ],
  "source": "",

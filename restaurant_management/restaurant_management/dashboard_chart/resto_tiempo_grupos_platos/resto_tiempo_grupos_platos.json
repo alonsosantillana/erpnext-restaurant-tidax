@@ -27,8 +27,14 @@
   {
    "role": "Admin Resto"
   },
+{
+   "role": "resto_admin"
+  },
   {
    "role": "Cocinero"
+  },
+{
+   "role": "resto_cocina"
   }
  ],
  "source": "",

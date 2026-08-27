@@ -3,6 +3,12 @@ People at table,Personas en la mesa,
 Guest Count,Número de comensales,
 Ordered dishes,Platos pedidos,
 Table capacity,Capacidad de la mesa,
+No rooms configured,No hay ambientes configurados,
+No rooms assigned,No tiene ambientes asignados,
+Ask a restaurant administrator to assign rooms for {0} in the POS Profile.,Solicite a un administrador del restaurante asignar ambientes para {0} en el perfil POS.,
+Create first room,Crear primer ambiente,
+Create the first room to start adding tables and production centers for {0}.,Cree el primer ambiente para comenzar a agregar mesas y centros de producción para {0}.,
+Ask a restaurant administrator to configure rooms for {0}.,Solicite a un administrador del restaurante configurar los ambientes para {0}.,
 Cancel transfer,Cancelar transferencia,
 Transfer cancelled,Transferencia cancelada,
 Transferring order {0} from {1}. Select the destination table.,Transfiriendo la orden {0} desde {1}. Seleccione la mesa destino.,
@@ -201,3 +207,21 @@ Picked Up,Recogido
 Picked up,Recogido
 New command received,Nueva comanda recibida
 {0} new commands received,Se recibieron {0} comandas nuevas
+Price not configured,Precio no configurado
+Item {0} has no price configured in Price List {1},El producto {0} no tiene un precio configurado en la lista de precios {1}
+Restaurant Order Series,Serie de órdenes del restaurante
+Table Order Series,Serie de órdenes
+Naming series used by new Table Order documents for this company.,Serie utilizada por las nuevas órdenes de esta empresa.
+Restaurant document series must be different,Las series de documentos del restaurante deben ser diferentes.
+Restaurant series {0} is already assigned to company {1},La serie del restaurante {0} ya está asignada a la empresa {1}.
+Table Order context belongs to different companies,El contexto de la orden pertenece a empresas diferentes.
+Company is required to resolve the Table Order series,Se requiere una empresa para determinar la serie de la orden.
+Tip,Propina
+Tips,Propinas
+Enable Tips,Habilitar propinas
+Tip Amount,Importe de propina
+Tips Payable Account,Cuenta de propinas por pagar
+Collection Method,Medio de cobro
+Tip collection method,Medio de cobro de la propina
+The tip is collected separately and is not part of the fiscal sale.,La propina se cobra por separado y no forma parte de la venta fiscal.
+Pending Accounting,Pendiente de contabilización

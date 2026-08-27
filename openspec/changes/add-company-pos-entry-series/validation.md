@@ -28,6 +28,10 @@ ni consumir contadores:
 - Python, JavaScript, JSON y `git diff --check`: correctos.
 - OpenSpec: válido.
 
-ERPCLOUD todavía necesita un POS Profile propio para insertar una apertura POS real;
-la resolución y nomenclatura independiente ya fueron verificadas sin persistir
-documentos.
+La validación real se completó el 2026-07-28:
+
+- `POS-OPE-ADA-2026-00001`, usuario `cajero.addera@tidax.pe`, POS Profile `Resto`;
+- `POS-OPE-ECS-2026-00002`, usuario `cajero.erpcloud@tidax.pe`, POS Profile `Resto2`.
+
+Ambas aperturas están enviadas y abiertas, pertenecen a su empresa respectiva y
+confirman la separación de series sin depender de nombres simulados.

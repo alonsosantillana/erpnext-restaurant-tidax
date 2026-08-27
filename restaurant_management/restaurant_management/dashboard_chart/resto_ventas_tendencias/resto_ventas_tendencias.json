@@ -21,6 +21,9 @@
  "roles": [
   {
    "role": "Admin Resto"
+  },
+{
+   "role": "resto_admin"
   }
  ],
  "time_interval": "Yearly",

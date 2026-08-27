@@ -186,7 +186,7 @@
    "allow_read_on_all_link_options": 0,
    "collapsible": 0,
    "extra_field": 1,
-   "fetch_from": "address.posa_delivery_charges",
+   "fetch_from": null,
    "fetch_if_empty": 0,
    "fieldname": "delivery_charges",
    "fieldtype": "Read Only",

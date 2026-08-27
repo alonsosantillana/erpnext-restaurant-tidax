@@ -4,13 +4,14 @@ from frappe import _
 from erpnext.selling.page.point_of_sale.point_of_sale import get_items as get_v15_pos_items
 from erpnext.stock.get_item_details import get_pos_profile
 from restaurant_management.restaurant_management.company_settings import (
+    get_user_restaurant_company,
     get_restaurant_settings,
 )
 
 def get_active_restaurant_company():
     if frappe.session.user == "Guest":
         frappe.throw(_("Authentication required"), frappe.AuthenticationError)
-    company = frappe.defaults.get_user_default("company")
+    company = get_user_restaurant_company()
     if not company:
         frappe.throw(_("Set a default Company before opening Restaurant Manage"))
     if not frappe.has_permission("Company", "read", company):

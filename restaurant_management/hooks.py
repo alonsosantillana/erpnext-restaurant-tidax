@@ -36,6 +36,12 @@ doc_events = {
         "autoname": "restaurant_management.restaurant_management.pos_series.autoname_pos_document",
         "validate": "restaurant_management.restaurant_management.pos_series.validate_pos_document_series",
     },
+    "POS Invoice": {
+        "on_cancel": "restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip.cancel_tip_for_invoice",
+    },
+    "Table Order": {
+        "autoname": "restaurant_management.restaurant_management.pos_series.autoname_table_order",
+    },
 }
 
 after_migrate = "restaurant_management.setup.install.after_migrate"
@@ -52,6 +58,20 @@ app_include_css = [
 ]
 
 fixtures = [
+    {
+        "dt": "Role",
+        "filters": [[
+            "name",
+            "in",
+            [
+                "resto_admin",
+                "resto_cajero",
+                "resto_mozo",
+                "resto_cocina",
+                "resto_delivery",
+            ],
+        ]],
+    },
     {
         "dt": "Custom Field",
         "filters": [[
