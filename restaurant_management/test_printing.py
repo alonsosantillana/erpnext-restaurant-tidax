@@ -7,8 +7,10 @@ from restaurant_management.printing import (
 	_get_route,
 	_station_is_active,
 	_validate_client_id,
+	disconnect_station,
 	queue_invoice_print,
 	render_job,
+	resolve_job,
 )
 from frappe.utils import add_to_date, now_datetime
 
@@ -59,6 +61,53 @@ class TestRestaurantPrinting(FrappeTestCase):
 
 		self.assertEqual(payload["url"], "RPJ-TEST-00001.pdf")
 		self.assertEqual(payload["file_content"], "UERG")
+
+	def test_disconnect_releases_only_the_claimed_station(self):
+		station = frappe._dict(
+			name="Test Station", company="Test Company", station_user="cashier.com"
+		)
+		with (
+			patch("restaurant_management.printing._get_station", return_value=station) as get_station,
+			patch("restaurant_management.printing.frappe.db.set_value") as set_value,
+			patch("restaurant_management.printing.frappe.publish_realtime"),
+		):
+			result = disconnect_station(station.name, "browser-1")
+
+		get_station.assert_called_once_with(station.name, "browser-1", require_lease=True)
+		values = set_value.call_args.args[2]
+		self.assertIsNone(values["client_id"])
+		self.assertIsNone(values["lease_expires_on"])
+		self.assertEqual(values["bridge_state"], "idle")
+		self.assertEqual(result["company"], station.company)
+
+	def test_ambiguous_job_can_be_confirmed_as_printed(self):
+		doc = frappe._dict(name="RPJ-TEST-00002", status="Ambiguous", station="Test Station")
+		with (
+			patch("restaurant_management.printing._can_operate_job", return_value=True),
+			patch("restaurant_management.printing.frappe.get_doc", return_value=doc),
+			patch("restaurant_management.printing.frappe.db.set_value") as set_value,
+		):
+			result = resolve_job(doc.name, "confirm_printed")
+
+		self.assertEqual(result["status"], "Confirmed Printed")
+		values = set_value.call_args.args[2]
+		self.assertEqual(values["status"], "Confirmed Printed")
+		self.assertIsNone(values["last_error"])
+		self.assertTrue(values["resolved_by"])
+		self.assertTrue(values["resolved_on"])
+
+	def test_failed_job_discard_requires_an_audit_reason(self):
+		doc = frappe._dict(name="RPJ-TEST-00003", status="Failed", station="Test Station")
+		with (
+			patch("restaurant_management.printing._can_operate_job", return_value=True),
+			patch("restaurant_management.printing.frappe.get_doc", return_value=doc),
+			patch("restaurant_management.printing.frappe.db.set_value") as set_value,
+		):
+			self.assertRaises(
+				frappe.ValidationError, resolve_job, doc.name, "discard", ""
+			)
+
+		set_value.assert_not_called()
 
 	@patch("restaurant_management.printing.frappe.session", frappe._dict(user="Guest"))
 	def test_guest_cannot_validate_station_client(self):

@@ -4,7 +4,7 @@
  "doctype":"DocType",
  "editable_grid":1,
  "engine":"InnoDB",
- "field_order":["company","station","route_type","production_center","source_section","source_doctype","source_name","print_format","print_type","copies","lifecycle_section","status","attempt_count","idempotency_key","requested_by","requested_on","claim_section","claimed_by","client_id","claimed_on","accepted_on","printer_name","response_message","last_error"],
+ "field_order":["company","station","route_type","production_center","source_section","source_doctype","source_name","print_format","print_type","copies","lifecycle_section","status","attempt_count","idempotency_key","requested_by","requested_on","claim_section","claimed_by","client_id","claimed_on","accepted_on","printer_name","response_message","last_error","resolution_section","resolved_by","resolved_on","resolution_note"],
  "fields":[
   {"fieldname":"company","fieldtype":"Link","label":"Company","options":"Company","reqd":1,"in_list_view":1,"in_standard_filter":1},
   {"fieldname":"station","fieldtype":"Link","label":"Station","options":"Restaurant Print Station","reqd":1,"in_list_view":1},
@@ -17,7 +17,7 @@
   {"fieldname":"print_type","fieldtype":"Data","label":"Hardware Print Type","reqd":1},
   {"fieldname":"copies","fieldtype":"Int","label":"Copies","default":"1","reqd":1},
   {"fieldname":"lifecycle_section","fieldtype":"Section Break","label":"Lifecycle"},
-  {"fieldname":"status","fieldtype":"Select","label":"Status","options":"Pending\nSending\nAccepted by HWB\nFailed\nAmbiguous\nCancelled","default":"Pending","reqd":1,"read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"status","fieldtype":"Select","label":"Status","options":"Pending\nSending\nAccepted by HWB\nConfirmed Printed\nFailed\nAmbiguous\nCancelled","default":"Pending","reqd":1,"read_only":1,"in_list_view":1,"in_standard_filter":1},
   {"fieldname":"attempt_count","fieldtype":"Int","label":"Attempts","default":"0","read_only":1},
   {"fieldname":"idempotency_key","fieldtype":"Data","label":"Idempotency Key","reqd":1,"unique":1,"read_only":1},
   {"fieldname":"requested_by","fieldtype":"Link","label":"Requested By","options":"User","read_only":1},
@@ -29,7 +29,11 @@
   {"fieldname":"accepted_on","fieldtype":"Datetime","label":"Accepted On","read_only":1},
   {"fieldname":"printer_name","fieldtype":"Data","label":"Printer","read_only":1},
   {"fieldname":"response_message","fieldtype":"Small Text","label":"Bridge Response","read_only":1},
-  {"fieldname":"last_error","fieldtype":"Small Text","label":"Last Error","read_only":1}
+  {"fieldname":"last_error","fieldtype":"Small Text","label":"Last Error","read_only":1},
+  {"fieldname":"resolution_section","fieldtype":"Section Break","label":"Resolution"},
+  {"fieldname":"resolved_by","fieldtype":"Link","label":"Resolved By","options":"User","read_only":1},
+  {"fieldname":"resolved_on","fieldtype":"Datetime","label":"Resolved On","read_only":1},
+  {"fieldname":"resolution_note","fieldtype":"Small Text","label":"Resolution Note","read_only":1}
  ],
  "module":"Restaurant Management",
  "name":"Restaurant Print Job",

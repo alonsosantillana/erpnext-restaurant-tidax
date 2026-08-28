@@ -18,7 +18,7 @@ from restaurant_management.restaurant_management.company_settings import (
 
 CLIENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 ROUTE_TYPES = {"INVOICE", "ACCOUNT", "ORDER", "KITCHEN"}
-TERMINAL_STATUSES = {"Accepted by HWB", "Cancelled"}
+TERMINAL_STATUSES = {"Accepted by HWB", "Confirmed Printed", "Cancelled"}
 BRIDGE_STATES = {"idle", "connecting", "open", "closed", "failed"}
 
 
@@ -267,6 +267,29 @@ def heartbeat(station, client_id, hw_bridge_version=None, bridge_state=None):
 
 
 @frappe.whitelist(methods=["POST"])
+def disconnect_station(station, client_id):
+	"""Immediately release only the caller's assigned company station lease."""
+	doc = _get_station(station, client_id, require_lease=True)
+	frappe.db.set_value(
+		"Restaurant Print Station",
+		doc.name,
+		{
+			"client_id": None,
+			"lease_expires_on": None,
+			"bridge_state": "idle",
+		},
+		update_modified=False,
+	)
+	frappe.publish_realtime(
+		"restaurant_print_station",
+		{"station": doc.name, "company": doc.company, "active": False},
+		user=doc.station_user,
+		after_commit=True,
+	)
+	return {"station": doc.name, "company": doc.company, "active": False}
+
+
+@frappe.whitelist(methods=["POST"])
 def claim_jobs(station, client_id, limit=3):
 	doc = _get_station(station, client_id, require_lease=True)
 	limit = min(10, max(1, cint(limit)))
@@ -406,6 +429,57 @@ def retry_job(job):
 		user=frappe.db.get_value("Restaurant Print Station", retry.station, "station_user"), after_commit=True,
 	)
 	return {"job": retry.name, "status": retry.status, "retried_from": doc.name}
+
+
+def _can_operate_job(doc):
+	"""Allow administrators or the cashier assigned to this job's station."""
+	if {"resto_admin", "System Manager"}.intersection(frappe.get_roles()):
+		return True
+	return (
+		frappe.db.get_value("Restaurant Print Station", doc.station, "station_user")
+		== frappe.session.user
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def resolve_job(job, action, note=None):
+	"""Close an ambiguous or failed print incident without deleting its audit trail."""
+	_authenticated_user()
+	doc = frappe.get_doc("Restaurant Print Job", job)
+	if not _can_operate_job(doc):
+		frappe.throw(
+			_("Only the assigned print station operator or a restaurant administrator can resolve this job"),
+			frappe.PermissionError,
+		)
+
+	action = str(action or "").strip().lower()
+	note = str(note or "").strip()[:1000]
+	if action == "confirm_printed":
+		if doc.status != "Ambiguous":
+			frappe.throw(_("Only an Ambiguous job can be confirmed as printed"))
+		status = "Confirmed Printed"
+		default_note = _("Physically confirmed at the printer")
+	elif action == "discard":
+		if doc.status not in {"Failed", "Ambiguous"}:
+			frappe.throw(_("Only Failed or Ambiguous jobs can be discarded"))
+		if not note:
+			frappe.throw(_("Enter a reason for discarding the print job"), frappe.ValidationError)
+		status = "Cancelled"
+		default_note = note
+	else:
+		frappe.throw(_("Unsupported print job resolution"), frappe.ValidationError)
+
+	values = {
+		"status": status,
+		"resolved_by": frappe.session.user,
+		"resolved_on": now_datetime(),
+		"resolution_note": note or default_note,
+		"last_error": None,
+	}
+	if status == "Confirmed Printed":
+		values["accepted_on"] = now_datetime()
+	frappe.db.set_value("Restaurant Print Job", doc.name, values, update_modified=False)
+	return {"job": doc.name, "status": status}
 
 
 @frappe.whitelist(methods=["GET"])

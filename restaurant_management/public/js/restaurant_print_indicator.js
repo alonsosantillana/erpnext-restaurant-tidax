@@ -72,6 +72,7 @@
         refresh();
         indicator.timer = window.setInterval(refresh, refresh_interval_ms);
         frappe.realtime.on("restaurant_print_job", refresh);
+        frappe.realtime.on("restaurant_print_station", refresh);
     };
 
     $(document).on("app_ready", initialize);

@@ -34,6 +34,23 @@ both supported response contracts.
 - **THEN** the job becomes Ambiguous
 - **AND** it is not retried automatically
 
+### Requirement: Auditable incident resolution
+
+A station operator SHALL be able to close failed or ambiguous jobs without deleting their history.
+
+#### Scenario: Physically confirmed ambiguous job
+
+- **WHEN** the assigned station operator confirms an Ambiguous job was printed
+- **THEN** the job becomes Confirmed Printed
+- **AND** the resolving user, date and note are stored
+- **AND** the job no longer contributes to Attention required
+
+#### Scenario: Obsolete incident
+
+- **WHEN** an assigned operator discards a Failed or Ambiguous job with a reason
+- **THEN** the job becomes Cancelled without creating another print request
+- **AND** its resolution remains auditable
+
 ### Requirement: Company and station routing
 
 Every route SHALL belong to one Company and SHALL target an enabled station of
@@ -43,6 +60,12 @@ the same Company.
 
 - **WHEN** a route references a station from another Company
 - **THEN** validation rejects the configuration
+
+#### Scenario: Immediate station disconnect
+
+- **WHEN** the assigned operator disconnects an active station with its current browser lease
+- **THEN** that station becomes inactive immediately
+- **AND** no station or lease belonging to another Company is modified
 
 ### Requirement: Optional operational printing
 

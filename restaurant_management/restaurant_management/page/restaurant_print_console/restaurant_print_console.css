@@ -7,3 +7,4 @@
 .restaurant-print-station table {width:100%; background:var(--card-bg)}
 .restaurant-print-station th,.restaurant-print-station td {padding:9px; border-bottom:1px solid var(--border-color)}
 .restaurant-print-station .job-error {max-width:360px; white-space:normal; color:var(--red-600)}
+.restaurant-print-station .print-job-actions {display:flex; flex-wrap:wrap; gap:6px}

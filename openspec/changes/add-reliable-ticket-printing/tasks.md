@@ -18,12 +18,14 @@
 - [x] 3.2 Add company validation, leases, idempotency and lifecycle APIs.
 - [x] 3.3 Add the permanent print-station page and status UI.
 - [x] 3.4 Route precuenta and electronic invoice printing through the queue.
-- [ ] 3.5 Add optional ORDER and KITCHEN triggers for newly sent rounds.
+- [x] 3.5 Add auditable confirm-printed and discard actions for print incidents.
+- [x] 3.6 Add an immediate, company-scoped station disconnect action.
+- [ ] 3.7 Add optional ORDER and KITCHEN triggers for newly sent rounds.
 
 ## 4. Qualification
 
 - [ ] 4.1 Add Python and browser-facing regression tests.
 - [x] 4.2 Run migrate, build and static checks on v15.local.
 - [ ] 4.3 Validate offline, rejection, acknowledgement and ambiguous scenarios.
-- [ ] 4.4 Execute a controlled physical print with POS-80-Series and HWB 0.13.0.
+- [x] 4.4 Execute a controlled physical print with POS-80-Series and HWB 0.13.0.
 - [ ] 4.5 Record optional HWB 1.0.1 and ESC/POS follow-up validation.

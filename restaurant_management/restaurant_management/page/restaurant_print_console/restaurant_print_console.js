@@ -60,7 +60,8 @@ class RestaurantPrintStationPage {
             max_queue: 5,
             on_state_change: state => this.render_state(state),
         });
-        this.page.set_primary_action(__("Reconnect"), () => this.printer.reconnect(), "refresh");
+        this.page.set_primary_action(__("Reconnect"), () => this.running ? this.printer.reconnect() : this.start(), "refresh");
+        this.page.set_secondary_action(__("Desconectar estación"), () => this.confirm_disconnect(), "close");
         this.render_shell();
     }
 
@@ -115,6 +116,35 @@ class RestaurantPrintStationPage {
         clearInterval(this.poll_timer);
         if (this.realtime_handler) frappe.realtime.off("restaurant_print_job", this.realtime_handler);
         this.printer.close();
+    }
+
+    confirm_disconnect() {
+        if (!this.station || !this.running) return;
+        frappe.confirm(
+            __("La estación dejará de imprimir y podrá abrirse inmediatamente en otro navegador. ¿Desea desconectarla?"),
+            () => this.disconnect()
+        );
+    }
+
+    async disconnect() {
+        const station = this.station;
+        this.stop();
+        try {
+            await frappe.call({
+                method: "restaurant_management.printing.disconnect_station",
+                type: "POST",
+                args: {station: station.name, client_id: this.client_id},
+            });
+            station.active = false;
+            this.render_state("closed");
+            frappe.show_alert({
+                message: __("Estación desconectada"),
+                indicator: "green",
+            });
+        } catch (error) {
+            await this.start();
+            throw error;
+        }
     }
 
     render_state(state) {
@@ -204,18 +234,30 @@ class RestaurantPrintStationPage {
         this.$root.find('[data-role="attention"]').text(jobs.filter(j => ["Failed", "Ambiguous"].includes(j.status)).length);
         const is_admin = frappe.user_roles.includes("System Manager") || frappe.user_roles.includes("resto_admin");
         const is_cashier = frappe.user_roles.includes("resto_cajero");
-        this.$root.find("[data-role=jobs]").html(jobs.map(job => `<tr>
+        this.$root.find("[data-role=jobs]").html(jobs.map(job => {
+            const actions = [];
+            if (job.status === "Failed" && (is_admin || is_cashier)) {
+                actions.push(`<button class="btn btn-xs btn-default" data-retry-job="${frappe.utils.escape_html(job.name)}">${__("Retry")}</button>`);
+            }
+            if (job.status === "Ambiguous" && is_admin) {
+                actions.push(`<button class="btn btn-xs btn-default" data-retry-job="${frappe.utils.escape_html(job.name)}">${__("Retry")}</button>`);
+            }
+            if (["Failed", "Ambiguous"].includes(job.status) && (is_admin || is_cashier)) {
+                if (job.status === "Ambiguous") {
+                    actions.push(`<button class="btn btn-xs btn-primary" data-confirm-job="${frappe.utils.escape_html(job.name)}">${__("Confirm printed")}</button>`);
+                }
+                actions.push(`<button class="btn btn-xs btn-default" data-discard-job="${frappe.utils.escape_html(job.name)}">${__("Discard")}</button>`);
+            }
+            return `<tr>
             <td>${frappe.utils.escape_html(job.name)}</td>
             <td>${frappe.utils.escape_html(job.route_type)}</td>
             <td>${frappe.utils.escape_html(job.source_name)}</td>
             <td>${frappe.utils.escape_html(job.status)}</td>
             <td>${job.attempt_count || 0}</td>
             <td class="job-error">${frappe.utils.escape_html(job.last_error || job.printer_name || "")}</td>
-            <td>${((job.status === "Failed" && (is_admin || is_cashier))
-                    || (job.status === "Ambiguous" && is_admin))
-                ? `<button class="btn btn-xs btn-default" data-retry-job="${frappe.utils.escape_html(job.name)}">${__("Retry")}</button>`
-                : ""}</td>
-        </tr>`).join(""));
+            <td><div class="print-job-actions">${actions.join("")}</div></td>
+        </tr>`;
+        }).join(""));
         this.$root.find("[data-retry-job]").on("click", event => {
             frappe.call({
                 method: "restaurant_management.printing.retry_job",
@@ -223,6 +265,31 @@ class RestaurantPrintStationPage {
                 args: {job: $(event.currentTarget).attr("data-retry-job")},
                 callback: () => this.poll(),
             });
+        });
+        this.$root.find("[data-confirm-job]").on("click", event => {
+            const job = $(event.currentTarget).attr("data-confirm-job");
+            frappe.confirm(
+                __("Confirm that the ticket was physically printed. This will close the incident without printing again."),
+                () => this.resolve_job(job, "confirm_printed")
+            );
+        });
+        this.$root.find("[data-discard-job]").on("click", event => {
+            const job = $(event.currentTarget).attr("data-discard-job");
+            frappe.prompt({
+                fieldname: "reason",
+                fieldtype: "Small Text",
+                label: __("Reason"),
+                reqd: 1,
+            }, values => this.resolve_job(job, "discard", values.reason), __("Discard print job"));
+        });
+    }
+
+    resolve_job(job, action, note = "") {
+        return frappe.call({
+            method: "restaurant_management.printing.resolve_job",
+            type: "POST",
+            args: {job, action, note},
+            callback: () => this.refresh_jobs(),
         });
     }
 }
