@@ -1,0 +1,21 @@
+[mcp_servers.restaurant_management_graphify]
+command = "/home/erpnext/.local/share/uv/tools/graphifyy/bin/graphify-mcp"
+args = ["/home/erpnext/frappe-bench/apps/restaurant_management/graphify-out/graph.json"]
+cwd = "/home/erpnext/frappe-bench/apps/restaurant_management"
+enabled = true
+required = false
+startup_timeout_sec = 15
+tool_timeout_sec = 60
+enabled_tools = [
+  "query_graph",
+  "get_node",
+  "get_neighbors",
+  "get_community",
+  "god_nodes",
+  "graph_stats",
+  "shortest_path",
+]
+default_tools_approval_mode = "auto"
+
+[mcp_servers.restaurant_management_graphify.env]
+GRAPHIFY_QUERY_LOG_DISABLE = "1"

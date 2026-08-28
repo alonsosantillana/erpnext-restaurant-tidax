@@ -1,0 +1,63 @@
+# Graphify output and local state
+graphify-out/
+.graphify_analysis.json
+.graphify_extract.json
+.graphify_labels.json
+
+# Repository and agent-local configuration
+.git/
+.codex/
+
+# Python, Node and build caches
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+build/
+dist/
+
+# Secrets and environment files
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*secret*
+*credentials*
+
+# Frappe sites, generated files and private data
+sites/
+**/sites/
+site_config.json
+common_site_config.json
+private/
+**/private/
+public/files/
+**/public/files/
+
+# Logs, backups, dumps and archives
+logs/
+**/logs/
+*.log
+backups/
+**/backups/
+*.sql
+*.dump
+*.backup
+*.bak
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Other generated context artifacts
+repomix-output.*
+*repomix-output*
