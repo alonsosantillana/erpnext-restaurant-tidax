@@ -26,6 +26,24 @@ from restaurant_management.api import (
 
 
 class TestTableOrder(unittest.TestCase):
+	def test_delivery_fee_invoice_rate_uses_entered_amount(self):
+		fee = frappe._dict(
+			item_code="CO-SER-064",
+			rate=6.5,
+			price_list_rate=10,
+			discount_percentage=35,
+			discount_amount=3.5,
+			margin_rate_or_amount=0,
+		)
+		invoice = frappe._dict(items=[fee])
+
+		apply_delivery_fee_invoice_rate(invoice, "CO-SER-064")
+
+		self.assertEqual(fee.rate, 6.5)
+		self.assertEqual(fee.price_list_rate, 6.5)
+		self.assertEqual(fee.discount_percentage, 0)
+		self.assertEqual(fee.discount_amount, 0)
+
 	def test_restaurant_pos_currency_overrides_customer_default_currency(self):
 		invoice = MagicMock(
 			currency="USD",

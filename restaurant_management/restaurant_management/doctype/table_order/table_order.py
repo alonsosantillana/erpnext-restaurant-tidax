@@ -180,6 +180,22 @@ def enforce_restaurant_pos_invoice_currency(invoice, method=None):
     return invoice
 
 
+def apply_delivery_fee_invoice_rate(invoice, delivery_fee_item):
+    """Keep the user-entered delivery fee as the fiscal line price."""
+    if not delivery_fee_item:
+        return invoice
+
+    for item in invoice.get("items"):
+        if item.item_code != delivery_fee_item:
+            continue
+        item.price_list_rate = flt(item.rate)
+        item.discount_percentage = 0
+        item.discount_amount = 0
+        item.margin_rate_or_amount = 0
+
+    return invoice
+
+
 class TableOrder(Document):
     def validate(self):
         self.validate_service_context()
@@ -763,6 +779,7 @@ class TableOrder(Document):
                     identifier=item["identifier"],
                     item_code=item["item_code"],
                     qty=item["qty"],
+                    price_list_rate=price_list_rate,
                     rate=rate,
                     discount_percentage=discount_percentage,
 
@@ -810,6 +827,9 @@ class TableOrder(Document):
             })
             
         invoice.run_method("set_missing_values")
+        if self.service_type == "Delivery":
+            settings = get_restaurant_settings(order=self)
+            apply_delivery_fee_invoice_rate(invoice, settings.delivery_fee_item)
         apply_restaurant_pos_currency(
             invoice,
             self.pos_profile,

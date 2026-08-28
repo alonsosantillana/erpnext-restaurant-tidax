@@ -393,13 +393,15 @@ class PayForm extends DeskForm {
                             indicator: "orange"
                         });
                     }
-                    order_manage.clear_current_order();
-                    order_manage.check_buttons_status();
-                    order_manage.check_item_editor_status();
-                    
                     this.hide();
-
-                    order_manage.make_orders();
+                    try {
+                        order_manage.clear_current_order();
+                        order_manage.check_buttons_status();
+                        order_manage.check_item_editor_status();
+                        order_manage.make_orders();
+                    } catch (error) {
+                        console.error("Could not clean up the paid order", error);
+                    }
 
                     if (emission_mode !== "Electrónica") {
                         RM.ready();
@@ -420,8 +422,10 @@ class PayForm extends DeskForm {
                                 'doctype': "POS Invoice"
                             },
                             callback: function(values) {
-                                //console.log(values.message.codigo);
                                 resolve(values);
+                            },
+                            error: function(error) {
+                                reject(error);
                             }
                         });
                     }).then(function(values) {
@@ -475,10 +479,17 @@ class PayForm extends DeskForm {
                                         });
                                         //window.open(data.message.enlace_del_pdf);
                                         //this.print_invoice_silent(r.message.invoice_name);
-                                    } else{
-                                        frappe.validated = false;
-                                        frappe.throw(data.message.errors);
+                                    } else {
+                                        frappe.msgprint({
+                                            title: __("Comprobante pendiente de envío"),
+                                            message: data.message.errors || __("Nubefact no confirmó el comprobante electrónico"),
+                                            indicator: "orange"
+                                        });
                                     }
+                                    RM.ready();
+                                },
+                                error: function(error) {
+                                    console.error("Electronic receipt submission failed", error);
                                     RM.ready();
                                 }
                             });
@@ -493,6 +504,14 @@ class PayForm extends DeskForm {
                             queue_invoice_print();
                             // window.open(values.message.enlace_del_pdf);
                         }
+                    }).catch(function(error) {
+                        console.error("Electronic receipt consultation failed", error);
+                        RM.ready();
+                        frappe.msgprint({
+                            title: __("Comprobante pendiente de envío"),
+                            message: __("El comprobante fue creado, pero no pudo enviarse a SUNAT. Puede reintentarlo desde Factura POS."),
+                            indicator: "orange"
+                        });
                     });
                     // this.print_invoice_silent(r.message.invoice_name);
                     // this.print(r.message.invoice_name);
