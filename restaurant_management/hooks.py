@@ -98,6 +98,7 @@ app_include_js = [
     '/assets/restaurant_management/js/drag.js',
     '/assets/restaurant_management/js/RM.helper.js?v=20260722-2',
     '/assets/restaurant_management/js/object-manage.js',
+    '/assets/restaurant_management/js/restaurant_print_indicator.js?v=20260828-2',
 ]
 
 # include js, css files in header of web template
@@ -118,6 +119,7 @@ doctype_js = {
     "Resto Gastos" : "public/js/resto_gastos.js",
     "POS Opening Entry": "public/js/pos_entry_series.js",
     "POS Closing Entry": "public/js/pos_entry_series.js",
+    "POS Invoice": "public/js/pos_invoice_print.js",
 }
 # doctype_js = {{"doctype" : "public/js/doctype.js"}}
 # doctype_list_js = {{"doctype" : "public/js/doctype_list.js"}}

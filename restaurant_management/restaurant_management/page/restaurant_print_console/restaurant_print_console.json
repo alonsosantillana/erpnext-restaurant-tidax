@@ -1,0 +1,17 @@
+{
+ "content": null,
+ "doctype": "Page",
+ "icon": "fa fa-print",
+ "module": "Restaurant Management",
+ "name": "restaurant-print-console",
+ "owner": "Administrator",
+ "page_name": "restaurant-print-console",
+ "roles": [
+  {"role":"System Manager"},
+  {"role":"resto_admin"},
+  {"role":"resto_cajero"}
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Restaurant Print Console"
+}

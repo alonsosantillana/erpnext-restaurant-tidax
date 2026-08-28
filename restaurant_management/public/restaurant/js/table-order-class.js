@@ -933,7 +933,8 @@ class TableOrder {
             method: "restaurant_management.api.print_order_account",
             type: "POST",
             args: {
-                order_name: this.data.name
+                order_name: this.data.name,
+                request_id: frappe.silent_print.make_id()
             },
             callback: r => {
                 if (r.message && r.message.queued) {

@@ -147,31 +147,28 @@ def _get_account_print_configuration(order):
 
 
 @frappe.whitelist(methods=["POST"])
-def print_order_account(order_name):
-    """Validate, render and enqueue one restaurant pre-account print."""
+def print_order_account(order_name, request_id=None):
+    """Queue one durable restaurant pre-account print."""
     _require_authenticated_user()
-
     order = frappe.get_doc("Table Order", order_name)
     order.check_permission("print")
     if order.items_count == 0:
         frappe.throw(_("The order has no dishes to print"))
 
-    configuration = _get_account_print_configuration(order)
-    print_silently = frappe.get_attr(
-        "silent_print.utils.print_format.print_silently"
-    )
-    print_silently(
-        doctype="Table Order",
-        name=order.name,
-        print_format=configuration.print_format,
-        print_type=configuration.print_type,
+    from restaurant_management.printing import enqueue_print
+    from silent_print.utils.service import validate_opaque_id
+
+    request_id = validate_opaque_id(
+        request_id or frappe.generate_hash(length=32), "Account Print Request ID"
     )
 
-    return {
-        "queued": True,
-        "print_format": configuration.print_format,
-        "print_type": configuration.print_type,
-    }
+    return enqueue_print(
+        source_doctype="Table Order",
+        source_name=order.name,
+        route_type="ACCOUNT",
+        company=order.company,
+        event_key="account-{0}".format(request_id),
+    )
 
 
 @frappe.whitelist()

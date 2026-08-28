@@ -31,6 +31,8 @@
   "column_break_print",
   "print_format",
   "print_format_ce",
+  "print_routes_section",
+  "print_routes",
   "order_series_section",
   "order_naming_series",
   "pos_entry_series_section",
@@ -200,6 +202,18 @@
    "fieldtype": "Link",
    "label": "Print Format CE",
    "options": "Print Format"
+  },
+  {
+   "description": "Company-specific durable routing to cashier and kitchen print stations.",
+   "fieldname": "print_routes_section",
+   "fieldtype": "Section Break",
+   "label": "Reliable Ticket Printing"
+  },
+  {
+   "fieldname": "print_routes",
+   "fieldtype": "Table",
+   "label": "Print Routes",
+   "options": "Restaurant Print Route"
   },
   {
    "fieldname": "order_series_section",

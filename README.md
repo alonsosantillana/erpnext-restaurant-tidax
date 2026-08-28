@@ -49,7 +49,19 @@ Configure all four series in `Restaurant Settings` before testing payment:
 
 The payment form requires two independent selections: `Boleta`/`Factura` and `Electrónica`/`Manual`. `dinners` is only the number of diners. The currently supported identity paths require DNI for Boleta and RUC for Factura. Electronic mode invokes the `ovenube_peru` provider after local submission; Manual mode does not.
 
-Current limitation: these four series are global because `Restaurant Settings` is a Single DocType. Per-company series resolution remains pending for multi-company deployments.
+These series are resolved from `Restaurant Company Settings`, so each Company keeps independent fiscal and order numbering.
+
+#### Reliable ticket printing
+
+Printing is company-scoped and durable:
+
+1. Create or review **Restaurant Print Station** for each permanent Windows cashier or kitchen workstation. The Station User must be the user logged into that browser.
+2. In **Restaurant Company Settings > Reliable Ticket Printing**, map `ACCOUNT` and `INVOICE` to that station, a Print Format, a Hardware Print Type and copies. Optional `ORDER` and `KITCHEN` routes can stay disabled until physically qualified.
+3. Keep WebApp Hardware Bridge running on `ws://127.0.0.1:12212` and open `/app/restaurant-print-station` in the permanent browser session. Only one live browser lease may claim a station.
+4. Jobs remain `Pending` while the bridge is offline. They become `Accepted by HWB` only after a correlated acknowledgement. `Ambiguous` jobs require a person to verify the printer before retrying.
+5. PDFs are rendered on demand and are not persisted in the queue. Invoice and account routes remain isolated by Company.
+
+HWB 0.13.0 remains compatible. Test 1.0.1 separately before upgrading because it removes an old Base64 size limitation.
 
 #### Frappe Cloud:
 >Available in your hosting on FrappeCloud [here](https://frappecloud.com/marketplace/apps/restaurant_management)

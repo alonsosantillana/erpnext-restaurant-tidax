@@ -409,6 +409,7 @@ class PayForm extends DeskForm {
                     // TIDAX
                     RM.working("Generating Invoice Electronic");
                     var com = RM.company;
+                    const queue_invoice_print = () => this.print_invoice_silent(r.message.invoice_name);
 
                     new Promise(function(resolve, reject) {
                         frappe.call({
@@ -455,6 +456,7 @@ class PayForm extends DeskForm {
                                                 if (data.message.codigo_hash) {                                                    
                                                     //window.open(data.message.enlace_del_pdf);
                                                     console.log("CE Generado");
+                                                    queue_invoice_print();
                                                 } else{
                                                     frappe.validated = false;
                                                     frappe.throw(data.message.errors);
@@ -478,6 +480,7 @@ class PayForm extends DeskForm {
                             // frappe.model.set_value(cdt, cdn, "codigo_hash_sunat", values.message.codigo_hash);
                             // frappe.model.set_value(cdt, cdn, "enlace_pdf", values.message.enlace_del_pdf);
                             RM.working("Ready");
+                            queue_invoice_print();
                             // window.open(values.message.enlace_del_pdf);
                         }
                     });
@@ -510,32 +513,15 @@ class PayForm extends DeskForm {
     // TIDAX
     print_invoice_silent(invoice_name){
         if (!RM.can_pay) return;
-        var formato_impresion;
-        
-        frappe.call({
-            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
-            args: {
-                filtro: "print_format_ce",
-                invoice: invoice_name
-            },
-            callback: function(r) {
-                if (r.message) {
-                    formato_impresion = r.message[0].value;
-                    frappe.call({
-                        method: 'silent_print.utils.print_format.print_silently',
-                        args: {
-                            doctype: "POS INVOICE",
-                            name: invoice_name,
-                            print_format: formato_impresion,
-                            print_type: "INVOICE"
-                        }
-                    });
+        return frappe.call({
+            method: "restaurant_management.printing.queue_invoice_print",
+            type: "POST",
+            args: {invoice_name},
+            callback: r => {
+                if (r.message && r.message.queued) {
+                    frappe.show_alert({message: __("Electronic receipt queued for printing"), indicator: "green"});
                 }
-                else {
-                    frappe.msgprint("El formato no pudo ser encontrado");
-                }
-            },
-            async: false
+            }
         });
     }
 
