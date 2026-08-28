@@ -451,15 +451,25 @@ class PayForm extends DeskForm {
                                                 'codigo_hash': data.message.codigo_hash,
                                                 'enlace_del_pdf': data.message.enlace_del_pdf
                                             },
-                                            callback: function(data) {
-                                                //console.log(data);
-                                                if (data.message.codigo_hash) {                                                    
-                                                    //window.open(data.message.enlace_del_pdf);
-                                                    console.log("CE Generado");
-                                                    queue_invoice_print();
-                                                } else{
+                                            callback: function(update_response) {
+                                                const result = update_response.message || {};
+                                                if (!result.updated) {
                                                     frappe.validated = false;
-                                                    frappe.throw(data.message.errors);
+                                                    frappe.throw(__("No se pudo guardar la respuesta del comprobante electrónico"));
+                                                }
+
+                                                console.log("CE Generado");
+                                                const print_result = result.print_queue || {};
+                                                if (print_result.queued) {
+                                                    frappe.show_alert({
+                                                        message: __("Electronic receipt queued for printing"),
+                                                        indicator: "green"
+                                                    });
+                                                } else {
+                                                    // Backward-compatible fallback if the server override
+                                                    // is not active yet. The stable event key prevents
+                                                    // duplicate automatic jobs.
+                                                    queue_invoice_print();
                                                 }
                                             }
                                         });

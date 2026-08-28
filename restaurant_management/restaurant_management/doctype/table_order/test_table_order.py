@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 
 from restaurant_management.restaurant_management.doctype.table_order.table_order import (
+	apply_restaurant_pos_currency,
 	apply_pos_tax_inclusion,
 	get_customer_identity,
 	get_voucher_config,
@@ -25,6 +26,35 @@ from restaurant_management.api import (
 
 
 class TestTableOrder(unittest.TestCase):
+	def test_restaurant_pos_currency_overrides_customer_default_currency(self):
+		invoice = MagicMock(
+			currency="USD",
+			conversion_rate=3.348,
+			price_list_currency="PEN",
+			plc_conversion_rate=1,
+		)
+		profile = frappe._dict(company="ADDERA PERU SAC", currency="PEN")
+
+		with (
+			patch.object(frappe.db, "get_value", side_effect=[profile, "PEN"]),
+			patch.object(frappe, "get_cached_value", return_value="PEN"),
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order.get_exchange_rate",
+				return_value=1,
+			),
+		):
+			apply_restaurant_pos_currency(
+				invoice,
+				"Resto",
+				"Resto SOL",
+				"ADDERA PERU SAC",
+			)
+
+		self.assertEqual(invoice.currency, "PEN")
+		self.assertEqual(invoice.conversion_rate, 1)
+		self.assertEqual(invoice.price_list_currency, "PEN")
+		self.assertEqual(invoice.plc_conversion_rate, 1)
+
 	@patch("restaurant_management.api._require_authenticated_user")
 	@patch("restaurant_management.api.frappe.has_permission", return_value=True)
 	@patch("restaurant_management.api.frappe.get_doc")

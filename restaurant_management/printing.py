@@ -217,6 +217,63 @@ def queue_invoice_print(invoice_name, request_id=None):
 	)
 
 
+@frappe.whitelist()
+def update_pos_invoice_ce_and_queue_print(
+	company,
+	invoice,
+	doctype,
+	estado_sunat,
+	cadena_para_codigo_qr,
+	codigo_hash,
+	enlace_del_pdf,
+):
+	"""Persist the electronic result and guarantee its automatic print job.
+
+	The electronic provider commits the accepted fields directly with SQL, so
+	POS Invoice document hooks do not run.  This override keeps that integration
+	intact and creates the idempotent print job in the same server request.
+	"""
+	from ovenube_peru.nubefact_integration.facturacion_electronica import (
+		update_pos_invoice_ce,
+	)
+
+	result = update_pos_invoice_ce(
+		company,
+		invoice,
+		doctype,
+		estado_sunat,
+		cadena_para_codigo_qr,
+		codigo_hash,
+		enlace_del_pdf,
+	)
+	print_result = None
+	accepted = str(estado_sunat or "").strip().lower() in {
+		"aceptado",
+		"accepted",
+	}
+	if doctype == "POS Invoice" and accepted and str(codigo_hash or "").strip():
+		try:
+			print_result = queue_invoice_print(invoice)
+		except Exception:
+			frappe.log_error(
+				title=_("Automatic electronic receipt printing failed"),
+				message=frappe.get_traceback(),
+			)
+			print_result = {
+				"queued": False,
+				"error": _(
+					"The electronic receipt was accepted, but it could not be queued for printing"
+				),
+			}
+
+	return {
+		"updated": True,
+		"provider_result": result,
+		"codigo_hash": codigo_hash,
+		"print_queue": print_result,
+	}
+
+
 @frappe.whitelist(methods=["GET"])
 def get_station_bootstrap():
 	user = _authenticated_user()
@@ -228,7 +285,7 @@ def get_station_bootstrap():
 		"Restaurant Print Station",
 		filters=filters,
 		fields=[
-			"name", "station_name", "company", "lease_seconds", "last_seen",
+			"name", "station_name", "company", "bridge_protocol", "lease_seconds", "last_seen",
 			"hw_bridge_version", "bridge_state", "client_id", "lease_expires_on",
 		],
 		order_by="station_name asc",
@@ -267,9 +324,29 @@ def heartbeat(station, client_id, hw_bridge_version=None, bridge_state=None):
 
 
 @frappe.whitelist(methods=["POST"])
-def disconnect_station(station, client_id):
-	"""Immediately release only the caller's assigned company station lease."""
-	doc = _get_station(station, client_id, require_lease=True)
+def disconnect_station(station, client_id=None, force=False):
+	"""Release the caller's assigned company station lease.
+
+	An explicit forced release is used when the same cashier lost the browser
+	client identifier after logging out or closing the console.  It remains
+	scoped to both the assigned station user and the user's current company.
+	"""
+	if cint(force):
+		doc = _get_station(station)
+		user_company = frappe.defaults.get_user_default(
+			"company", user=frappe.session.user
+		)
+		if not user_company:
+			frappe.throw(
+				_("Set a default Company before disconnecting the print station")
+			)
+		if doc.company != user_company:
+			frappe.throw(
+				_("The print station belongs to another company"),
+				frappe.PermissionError,
+			)
+	else:
+		doc = _get_station(station, client_id, require_lease=True)
 	frappe.db.set_value(
 		"Restaurant Print Station",
 		doc.name,

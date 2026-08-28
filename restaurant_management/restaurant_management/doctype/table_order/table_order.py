@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, today
 from erpnext.stock.get_item_details import get_price_list_rate_for
+from erpnext.setup.utils import get_exchange_rate
 import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
@@ -111,6 +112,72 @@ def apply_pos_tax_inclusion(invoice, tax_inclusive):
     included_in_print_rate = cint(tax_inclusive)
     for tax in invoice.get("taxes"):
         tax.included_in_print_rate = included_in_print_rate
+
+
+def apply_restaurant_pos_currency(invoice, pos_profile, selling_price_list, company):
+    """Keep restaurant totals in the POS Profile currency, not the customer currency."""
+    profile = frappe.db.get_value(
+        "POS Profile",
+        pos_profile,
+        ["company", "currency"],
+        as_dict=True,
+    )
+    if not profile or profile.company != company:
+        frappe.throw(_("El perfil POS no corresponde a la empresa de la orden"))
+
+    company_currency = frappe.get_cached_value("Company", company, "default_currency")
+    price_list_currency = frappe.db.get_value(
+        "Price List", selling_price_list, "currency"
+    )
+    transaction_currency = profile.currency or price_list_currency or company_currency
+
+    if price_list_currency and price_list_currency != transaction_currency:
+        frappe.throw(
+            _("La moneda de la lista de precios debe coincidir con la moneda del perfil POS")
+        )
+
+    conversion_rate = get_exchange_rate(
+        transaction_currency,
+        company_currency,
+        today(),
+        "for_selling",
+    )
+    if not conversion_rate:
+        frappe.throw(
+            _("No existe un tipo de cambio para la moneda del perfil POS")
+        )
+
+    invoice.currency = transaction_currency
+    invoice.conversion_rate = conversion_rate
+    invoice.price_list_currency = price_list_currency or transaction_currency
+    invoice.plc_conversion_rate = 1
+
+
+def enforce_restaurant_pos_invoice_currency(invoice, method=None):
+    """Reapply the restaurant POS currency after ERPNext party defaults run."""
+    if not invoice.get("is_pos") or not invoice.get("pos_profile"):
+        return invoice
+
+    is_restaurant_profile = frappe.db.exists(
+        "Restaurant Company Settings",
+        {"company": invoice.company, "pos_profile": invoice.pos_profile},
+    )
+    if not is_restaurant_profile:
+        return invoice
+
+    apply_restaurant_pos_currency(
+        invoice,
+        invoice.pos_profile,
+        invoice.selling_price_list,
+        invoice.company,
+    )
+    tax_inclusive = frappe.db.get_value(
+        "POS Profile", invoice.pos_profile, "posa_tax_inclusive"
+    )
+    apply_pos_tax_inclusion(invoice, tax_inclusive)
+    invoice.calculate_taxes_and_totals()
+    invoice.set_paid_amount()
+    return invoice
 
 
 class TableOrder(Document):
@@ -530,6 +597,7 @@ class TableOrder(Document):
                 invoice.address_display = fulfillment.address_display_snapshot
                 invoice.contact_mobile = fulfillment.contact_phone
         invoice.validate()
+        enforce_restaurant_pos_invoice_currency(invoice)
         invoice_total = flt(invoice.rounded_total or invoice.grand_total, 2)
         payment_total = flt(
             sum(flt(payment.amount) for payment in invoice.payments),
@@ -742,6 +810,12 @@ class TableOrder(Document):
             })
             
         invoice.run_method("set_missing_values")
+        apply_restaurant_pos_currency(
+            invoice,
+            self.pos_profile,
+            self.selling_price_list,
+            self.company,
+        )
         apply_pos_tax_inclusion(invoice, included_in_print_rate)
         invoice.run_method("calculate_taxes_and_totals")
 
@@ -753,6 +827,7 @@ class TableOrder(Document):
         ))
         invoice._action = "submit"
         invoice.validate()
+        enforce_restaurant_pos_invoice_currency(invoice)
         ##To validate the invoice
 
         return invoice

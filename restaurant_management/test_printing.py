@@ -11,6 +11,7 @@ from restaurant_management.printing import (
 	queue_invoice_print,
 	render_job,
 	resolve_job,
+	update_pos_invoice_ce_and_queue_print,
 )
 from frappe.utils import add_to_date, now_datetime
 
@@ -79,6 +80,48 @@ class TestRestaurantPrinting(FrappeTestCase):
 		self.assertIsNone(values["lease_expires_on"])
 		self.assertEqual(values["bridge_state"], "idle")
 		self.assertEqual(result["company"], station.company)
+
+	def test_forced_disconnect_is_scoped_to_the_users_default_company(self):
+		station = frappe._dict(
+			name="Test Station", company="Test Company", station_user="cashier.com"
+		)
+		with (
+			patch("restaurant_management.printing._get_station", return_value=station) as get_station,
+			patch(
+				"restaurant_management.printing.frappe.defaults.get_user_default",
+				return_value=station.company,
+			),
+			patch("restaurant_management.printing.frappe.db.set_value") as set_value,
+			patch("restaurant_management.printing.frappe.publish_realtime"),
+		):
+			result = disconnect_station(station.name, force=True)
+
+		get_station.assert_called_once_with(station.name)
+		values = set_value.call_args.args[2]
+		self.assertIsNone(values["client_id"])
+		self.assertIsNone(values["lease_expires_on"])
+		self.assertEqual(result["company"], station.company)
+
+	def test_forced_disconnect_rejects_another_company(self):
+		station = frappe._dict(
+			name="Test Station", company="Other Company", station_user="cashier.com"
+		)
+		with (
+			patch("restaurant_management.printing._get_station", return_value=station),
+			patch(
+				"restaurant_management.printing.frappe.defaults.get_user_default",
+				return_value="Test Company",
+			),
+			patch("restaurant_management.printing.frappe.db.set_value") as set_value,
+		):
+			self.assertRaises(
+				frappe.PermissionError,
+				disconnect_station,
+				station.name,
+				force=True,
+			)
+
+		set_value.assert_not_called()
 
 	def test_ambiguous_job_can_be_confirmed_as_printed(self):
 		doc = frappe._dict(name="RPJ-TEST-00002", status="Ambiguous", station="Test Station")
@@ -160,3 +203,51 @@ class TestRestaurantPrinting(FrappeTestCase):
 			event_key="electronic-invoice",
 			coalesce_pending=False,
 		)
+
+	@patch("restaurant_management.printing.queue_invoice_print")
+	@patch(
+		"ovenube_peru.nubefact_integration.facturacion_electronica.update_pos_invoice_ce"
+	)
+	def test_electronic_acceptance_persists_and_queues_once(
+		self, update_pos_invoice_ce, queue_invoice_print
+	):
+		queue_invoice_print.return_value = {
+			"queued": True,
+			"job": "RPJ-TEST-00004",
+		}
+
+		result = update_pos_invoice_ce_and_queue_print(
+			"Test Company",
+			"ACC-PINV-0003",
+			"POS Invoice",
+			"Aceptado",
+			"qr-data",
+			"hash-data",
+			"https://example.test/invoice.pdf",
+		)
+
+		update_pos_invoice_ce.assert_called_once()
+		queue_invoice_print.assert_called_once_with("ACC-PINV-0003")
+		self.assertTrue(result["updated"])
+		self.assertTrue(result["print_queue"]["queued"])
+
+	@patch("restaurant_management.printing.queue_invoice_print")
+	@patch(
+		"ovenube_peru.nubefact_integration.facturacion_electronica.update_pos_invoice_ce"
+	)
+	def test_rejected_electronic_receipt_is_not_queued(
+		self, update_pos_invoice_ce, queue_invoice_print
+	):
+		result = update_pos_invoice_ce_and_queue_print(
+			"Test Company",
+			"ACC-PINV-0004",
+			"POS Invoice",
+			"Rechazado",
+			"",
+			"",
+			"",
+		)
+
+		update_pos_invoice_ce.assert_called_once()
+		queue_invoice_print.assert_not_called()
+		self.assertIsNone(result["print_queue"])

@@ -37,6 +37,7 @@ doc_events = {
         "validate": "restaurant_management.restaurant_management.pos_series.validate_pos_document_series",
     },
     "POS Invoice": {
+        "validate": "restaurant_management.restaurant_management.doctype.table_order.table_order.enforce_restaurant_pos_invoice_currency",
         "on_cancel": "restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip.cancel_tip_for_invoice",
     },
     "Table Order": {
@@ -46,6 +47,11 @@ doc_events = {
 
 after_migrate = "restaurant_management.setup.install.after_migrate"
 after_install = "restaurant_management.setup.install.after_install"
+
+override_whitelisted_methods = {
+    "ovenube_peru.nubefact_integration.facturacion_electronica.update_pos_invoice_ce":
+        "restaurant_management.printing.update_pos_invoice_ce_and_queue_print",
+}
 
 # Includes in <head>
 # ------------------

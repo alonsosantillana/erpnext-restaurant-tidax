@@ -30,6 +30,12 @@ Sitio autorizado: v15.local
 
 ## Suite existente
 
+> **Advertencia histórica:** `v15.local` contiene ahora configuración y datos
+> operativos. No vuelva a ejecutar `run-tests` en este sitio. El inicializador
+> global de pruebas de ERPNext elimina datos maestros, incluidos todos los
+> registros de `Item Price`. Use exclusivamente el procedimiento descrito en
+> [Seguridad de las pruebas](test-safety.md).
+
 Se habilitó allow_tests únicamente en v15.local y se ejecutó run-tests para la app y para Table Order. El runner intentó preparar datos estándar de ERPNext, pero el sitio preexistente carece de nodos raíz como Department "All Departments" y Supplier Group "All Supplier Groups"; produjo errores LinkValidationError antes de ejecutar las pruebas de la app. No se atribuye este error a restaurant_management.
 
 Para aislar la nueva lógica se ejecutó `TestTableOrder` dentro de una consola inicializada de v15.local. Pasaron cinco pruebas: matriz de cuatro combinaciones, selecciones obligatorias, rechazo de combinaciones desconocidas, identidades válidas y rechazo de identidad incompatible.

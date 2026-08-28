@@ -36,13 +36,43 @@ async function get_restaurant_print_station_controller(wrapper) {
 }
 
 function render_restaurant_print_station_error(wrapper, error) {
-    const message = error?.message || error?.exc || String(error || __("Error desconocido"));
+    const message = get_restaurant_print_station_error_message(error);
     console.error("Restaurant Print Station could not start", error);
-    wrapper.page.main.html(`
-        <div class="alert alert-danger">
+    wrapper.page.main.find('[data-role="station-error"]').remove();
+    wrapper.page.main.prepend(`
+        <div class="alert alert-danger" data-role="station-error">
             <strong>${__("No se pudo iniciar la estación de impresión")}</strong><br>
             ${frappe.utils.escape_html(message)}
         </div>`);
+}
+
+function get_restaurant_print_station_error_message(error) {
+    const response = error?.responseJSON || error;
+    const direct_message = response?.message || response?.exc || error?.message || error?.exc;
+    if (typeof direct_message === "string" && direct_message.trim()) {
+        return direct_message;
+    }
+
+    const server_messages = response?._server_messages;
+    if (typeof server_messages === "string") {
+        try {
+            const messages = JSON.parse(server_messages)
+                .map(message => {
+                    try {
+                        const parsed = JSON.parse(message);
+                        return parsed.message || parsed;
+                    } catch {
+                        return message;
+                    }
+                })
+                .filter(Boolean);
+            if (messages.length) return messages.join("\n");
+        } catch {
+            return server_messages;
+        }
+    }
+
+    return __("No se pudo completar la conexión. Puede desconectar la estación y volver a intentarlo.");
 }
 
 class RestaurantPrintStationPage {
@@ -54,6 +84,7 @@ class RestaurantPrintStationPage {
         this.running = false;
         this.processing = false;
         this.station = null;
+        this.legacy_bridge = false;
         this.$root = $('<div class="restaurant-print-station"></div>').appendTo(page.main);
         this.printer = new frappe.silent_print.WebSocketPrinter({
             keep_alive: true,
@@ -93,6 +124,8 @@ class RestaurantPrintStationPage {
                 return;
             }
             this.station = stations[0];
+            this.legacy_bridge = this.station.bridge_protocol !== "WHB 1.x (Acknowledged)";
+            this.page.main.find('[data-role="station-error"]').remove();
             this.$root.find('[data-role="station"]').text(this.station.station_name);
             this.printer.options.url = `${response.message.bridge_url}/printer`;
             this.printer.connect();
@@ -105,7 +138,7 @@ class RestaurantPrintStationPage {
             });
             this.poll();
         } catch (error) {
-            this.running = false;
+            this.stop();
             throw error;
         }
     }
@@ -119,7 +152,13 @@ class RestaurantPrintStationPage {
     }
 
     confirm_disconnect() {
-        if (!this.station || !this.running) return;
+        if (!this.station) {
+            frappe.show_alert({
+                message: __("No se encontró una estación asignada para desconectar"),
+                indicator: "orange",
+            });
+            return;
+        }
         frappe.confirm(
             __("La estación dejará de imprimir y podrá abrirse inmediatamente en otro navegador. ¿Desea desconectarla?"),
             () => this.disconnect()
@@ -128,21 +167,27 @@ class RestaurantPrintStationPage {
 
     async disconnect() {
         const station = this.station;
+        const force = !this.running;
         this.stop();
         try {
             await frappe.call({
                 method: "restaurant_management.printing.disconnect_station",
                 type: "POST",
-                args: {station: station.name, client_id: this.client_id},
+                args: {
+                    station: station.name,
+                    client_id: this.client_id,
+                    force: force ? 1 : 0,
+                },
             });
             station.active = false;
+            sessionStorage.removeItem("restaurant_print_station_client");
+            this.page.main.find('[data-role="station-error"]').remove();
             this.render_state("closed");
             frappe.show_alert({
                 message: __("Estación desconectada"),
                 indicator: "green",
             });
         } catch (error) {
-            await this.start();
             throw error;
         }
     }
@@ -162,7 +207,7 @@ class RestaurantPrintStationPage {
             args: {
                 station: this.station.name,
                 client_id: this.client_id,
-                hw_bridge_version: "0.13.0",
+                hw_bridge_version: this.legacy_bridge ? "0.14.0" : "1.x",
                 bridge_state: this.printer.getState(),
             },
         });
@@ -199,6 +244,16 @@ class RestaurantPrintStationPage {
             await this.acknowledge(job, {success: 1, printer: result.printer, message: result.message});
         } catch (error) {
             const details = error || {};
+            const legacy_delivery = this.legacy_bridge
+                && details.reason_code === "connection_closed"
+                && Number(details.elapsed_ms || 0) >= 750;
+            if (legacy_delivery) {
+                await this.acknowledge(job, {
+                    success: 1,
+                    message: __("Sent to WHB 0.14; the legacy bridge closed after spooling"),
+                });
+                return;
+            }
             if (details.ambiguous || details.sent) {
                 await this.acknowledge(job, {
                     success: 0,
