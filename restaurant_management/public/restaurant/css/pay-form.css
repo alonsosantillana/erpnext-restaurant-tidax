@@ -1,0 +1,172 @@
+.restaurant-payment-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.restaurant-payment-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 0.65fr);
+    align-items: end;
+    gap: 8px;
+}
+
+.restaurant-payment-add {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-height: 34px;
+    white-space: nowrap;
+}
+
+.restaurant-payment-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 132px;
+    overflow-y: auto;
+}
+
+.restaurant-payment-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--control-bg);
+}
+
+.restaurant-payment-row.is-active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.restaurant-payment-row-method {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 6px 8px;
+    color: var(--text-color);
+    text-align: left;
+    text-decoration: none;
+}
+
+.restaurant-payment-row-method:hover,
+.restaurant-payment-row-method:focus {
+    color: var(--text-color);
+    text-decoration: none;
+}
+
+.restaurant-payment-row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.restaurant-payment-remove {
+    flex: 0 0 auto;
+    padding: 6px 9px;
+}
+
+.restaurant-payment-totals {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.restaurant-payment-total {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 9px;
+    border-radius: var(--border-radius);
+    background: var(--subtle-fg);
+}
+
+.restaurant-payment-total span {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.restaurant-payment-total strong {
+    font-size: var(--text-base);
+}
+
+.restaurant-payment-total.is-pending strong {
+    color: var(--orange-600);
+}
+
+.restaurant-payment-total.is-change strong {
+    color: var(--green-600);
+}
+
+.restaurant-payment-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 248px;
+    align-items: start;
+    gap: 16px;
+}
+
+.restaurant-payment-layout > .restaurant-payment-column,
+.restaurant-payment-layout > .restaurant-numpad-column {
+    width: auto !important;
+    min-width: 0;
+    max-width: none !important;
+    padding: 0;
+}
+
+.restaurant-numpad-surface {
+    height: 252px;
+    padding: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--subtle-fg);
+}
+
+.restaurant-numpad .pad-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 5px;
+}
+
+.restaurant-numpad .pad-container .pad-col.pad-btn {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--control-bg);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.restaurant-numpad .pad-container .pad-col.pad-btn:hover {
+    border-color: var(--primary);
+    background: var(--fg-hover-color);
+}
+
+.restaurant-numpad .pad-container .btn-default-Enter {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--white);
+}
+
+.restaurant-numpad .pad-container .btn-default-Enter:hover {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.restaurant-numpad .pad-container .btn-default-Del {
+    color: var(--text-muted);
+}
+
+@media (max-width: 700px) {
+    .restaurant-payment-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .restaurant-numpad-surface {
+        height: 230px;
+    }
+}

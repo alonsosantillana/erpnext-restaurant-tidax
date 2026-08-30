@@ -1,7 +1,45 @@
+function restaurant_payment_amount(value) {
+    const parsed_value = parseFloat(String(value ?? "").replace(",", "."));
+    if (!Number.isFinite(parsed_value) || parsed_value <= 0) return 0;
+    return Math.round((parsed_value + Number.EPSILON) * 100) / 100;
+}
+
+function restaurant_payment_input_value(pad_editing, internal_value, visible_value) {
+    return pad_editing ? internal_value : visible_value;
+}
+
+function restaurant_normalize_payment_allocations(allocations = {}) {
+    return Object.entries(allocations).reduce((normalized, [method, value]) => {
+        const amount = restaurant_payment_amount(value);
+        if (method && amount > 0) normalized[method] = amount;
+        return normalized;
+    }, {});
+}
+
+function restaurant_payment_distribution(payable_amount, allocations = {}) {
+    const payments = restaurant_normalize_payment_allocations(allocations);
+    const payable = restaurant_payment_amount(payable_amount);
+    const paid = restaurant_payment_amount(
+        Object.values(payments).reduce((total, value) => total + value, 0)
+    );
+
+    return {
+        payments,
+        paid,
+        pending: restaurant_payment_amount(payable - paid),
+        change: restaurant_payment_amount(paid - payable)
+    };
+}
+
 class PayForm extends DeskForm {
     button_payment = null;
     num_pad = null;
-    payment_methods = {};
+    payment_allocations = {};
+    payment_method_select = null;
+    payment_amount_input = null;
+    payment_summary_wrapper = null;
+    payment_totals_wrapper = null;
+    active_payment_method = null;
     guest_count = null;
     discount_global_percent = null;
     tip_amount_input = null;
@@ -84,14 +122,25 @@ class PayForm extends DeskForm {
             }
         });
 
-        this.get_field("num_pad").$wrapper.empty().append(
-            `<div style="width: 100% !important; height: 200px !important; padding: 0">
-                ${this.num_pad.html}
-            </div>`
-        );
+        const $numpad_wrapper = this.get_field("num_pad").$wrapper;
+        $numpad_wrapper
+            .empty()
+            .addClass("restaurant-numpad")
+            .append(
+                $("<div>", { class: "restaurant-numpad-surface" })
+                    .append(this.num_pad.html)
+            );
 
-        this.get_field("num_pad").$wrapper.parent().parent().css("max-width", "300px");
-        this.get_field("payment_methods").$wrapper.parent().parent().removeClass("col-sm-6").addClass("col");
+        const $payment_column = this.get_field("payment_methods").$wrapper.parent().parent();
+        const $numpad_column = $numpad_wrapper.parent().parent();
+        $payment_column
+            .removeClass("col col-sm-6")
+            .addClass("restaurant-payment-column");
+        $numpad_column
+            .removeClass("col col-sm-6")
+            .addClass("restaurant-numpad-column")
+            .css("max-width", "");
+        $payment_column.parent().addClass("restaurant-payment-layout");
     }
 
     async reload(){
@@ -104,61 +153,219 @@ class PayForm extends DeskForm {
         this.refresh_payment_button_amount();
     }
 
+
     make_inputs() {
-        let payment_methods = "";
-        let total_con_desc = 0;
-        RM.pos_profile.payments.forEach(mode_of_payment => {
-            this.payment_methods[mode_of_payment.mode_of_payment] = frappe.jshtml({
-                tag: "input",
-                properties: {
-                    type: "text",
-                    class: `input-with-feedback form-control bold`
-                },
-            }).on(["change", "keyup"], () => {
-                this.update_paid_value();
-            }).on("click", (obj) => {
-                this.num_pad.input = obj;
-            }).float();
+        const payment_methods = this.available_payment_methods;
+        const default_method = this.default_payment_method;
+        this.payment_allocations = {};
+        this.active_payment_method = default_method;
 
-            if (mode_of_payment.default === 1) {
-                // TIDAX: Poner el pago total en automatico en el metodo de pago por default
-                // if(this.doc.discount > 0) {
-                //     total_con_desc = this.order.data.amount - this.doc.discount
-                //     this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
-                // }
-                // else if(this.doc.discount_global_percent > 0){
-                //     total_con_desc = this.order.data.amount*(1-(this.doc.discount_global_percent/100));
-                //     this.payment_methods[mode_of_payment.mode_of_payment].val(total_con_desc);
-                // }
-                // else{
-                //     this.payment_methods[mode_of_payment.mode_of_payment].val(this.order.data.amount);
-                // }
-
-                setTimeout(() => {
-                    this.payment_methods[mode_of_payment.mode_of_payment].select();
-                    this.num_pad.input = this.payment_methods[mode_of_payment.mode_of_payment];
-                }, 200);
-            }
-
-            payment_methods += this.form_tag (
-                mode_of_payment.mode_of_payment, this.payment_methods[mode_of_payment.mode_of_payment]
-            );
+        this.payment_method_select = $("<select>", {
+            class: "form-control restaurant-payment-method-select",
+            "aria-label": __("Mode of Payment")
+        });
+        payment_methods.forEach((method) => {
+            this.payment_method_select.append($("<option>", { value: method, text: method }));
+        });
+        this.payment_method_select.on("change", () => {
+            this.select_payment_method(this.payment_method_select.val());
         });
 
+        this.payment_amount_input = frappe.jshtml({
+            tag: "input",
+            properties: {
+                type: "text",
+                class: "input-with-feedback form-control bold restaurant-payment-amount",
+                placeholder: "0.00"
+            },
+        }).on(["change", "keyup"], () => {
+            const value = restaurant_payment_input_value(
+                this.payment_amount_input.pad_editing,
+                this.payment_amount_input.float_val,
+                this.payment_amount_input.JQ().val()
+            );
+            this.set_active_payment_allocation(value);
+        }).on("click", (input) => {
+            this.num_pad.input = input;
+        }).float();
+
+        const $payment_section = $("<div>", { class: "restaurant-payment-editor" });
+        const $editor_grid = $("<div>", { class: "restaurant-payment-editor-grid" });
+        const $method_field = $("<div>", {
+            class: "form-group mb-0 restaurant-payment-method-field"
+        }).append(
+            $("<label>", { class: "control-label", text: __("Mode of Payment") }),
+            $("<div>", { class: "control-input-wrapper" }).append(this.payment_method_select)
+        );
+        const $amount_field = $("<div>", {
+            class: "form-group mb-0 restaurant-payment-amount-field"
+        }).append(
+            $("<label>", { class: "control-label", text: __("Amount") }),
+            $("<div>", { class: "control-input-wrapper" }).append(this.payment_amount_input.html())
+        );
+        const $add_button = $("<button>", {
+            type: "button",
+            class: "btn btn-default restaurant-payment-add"
+        }).append(
+            $("<span>", { class: "fa fa-plus" }),
+            document.createTextNode(" " + __("Add"))
+        ).on("click", () => this.add_next_payment_method());
+
+        this.payment_summary_wrapper = $("<div>", {
+            class: "restaurant-payment-summary",
+            "aria-live": "polite"
+        });
+        this.payment_totals_wrapper = $("<div>", {
+            class: "restaurant-payment-totals",
+            "aria-live": "polite"
+        });
+        $editor_grid.append($method_field, $amount_field, $add_button);
+        $payment_section.append(
+            $editor_grid,
+            this.payment_summary_wrapper,
+            this.payment_totals_wrapper
+        );
+
         const $payment_wrapper = this.get_field("payment_methods").$wrapper;
-        $payment_wrapper.empty().append(payment_methods);
+        $payment_wrapper.empty().append($payment_section);
         this.make_tip_inputs($payment_wrapper);
 
         this.set_guest_count_input();
         this.set_receipt_defaults();
 
-        // this.set_discount_global_percent_input();
-        
+        if (default_method) {
+            this.payment_allocations[default_method] = this.payable_amount;
+            this.select_payment_method(default_method, false);
+            setTimeout(() => {
+                this.payment_amount_input.select();
+                this.num_pad.input = this.payment_amount_input;
+            }, 200);
+        }
         this.update_paid_value();
+    }
 
-        /*RM.pos_profile.payments.forEach(mode_of_payment => {
-            console.log(this.payment_methods[mode_of_payment.mode_of_payment])
-        });*/
+    get available_payment_methods() {
+        return (RM.pos_profile.payments || [])
+            .map((payment_method) => payment_method.mode_of_payment)
+            .filter(Boolean);
+    }
+
+    get default_payment_method() {
+        const configured_default = (RM.pos_profile.payments || []).find(
+            (payment_method) => payment_method.default === 1
+        );
+        return configured_default
+            ? configured_default.mode_of_payment
+            : this.available_payment_methods[0] || null;
+    }
+
+    get payment_distribution() {
+        return restaurant_payment_distribution(this.payable_amount, this.payment_allocations);
+    }
+
+    select_payment_method(method, allocate_pending = true) {
+        if (!this.available_payment_methods.includes(method)) return;
+
+        this.active_payment_method = method;
+        this.payment_method_select.val(method);
+        let allocation_changed = false;
+        if (allocate_pending && !restaurant_payment_amount(this.payment_allocations[method])) {
+            this.payment_allocations[method] = this.payment_distribution.pending;
+            allocation_changed = true;
+        }
+
+        this.payment_amount_input.val(
+            restaurant_payment_amount(this.payment_allocations[method]).toFixed(2),
+            false
+        );
+        if (this.num_pad) this.num_pad.input = this.payment_amount_input;
+        if (allocation_changed) {
+            this.update_paid_value();
+        } else {
+            this.render_payment_allocations();
+            this.render_payment_totals();
+        }
+    }
+
+    set_active_payment_allocation(value) {
+        if (!this.active_payment_method) return;
+        this.payment_allocations[this.active_payment_method] = restaurant_payment_amount(value);
+        this.update_paid_value();
+    }
+
+    add_next_payment_method() {
+        const next_method = this.available_payment_methods.find(
+            (method) => method !== this.active_payment_method
+                && !restaurant_payment_amount(this.payment_allocations[method])
+        );
+        if (!next_method) {
+            frappe.show_alert({
+                message: __("All payment methods are already included"),
+                indicator: "blue"
+            });
+            return;
+        }
+
+        this.select_payment_method(next_method);
+        this.payment_amount_input.select();
+    }
+
+    remove_payment_allocation(method) {
+        delete this.payment_allocations[method];
+        if (this.active_payment_method === method) {
+            this.payment_amount_input.val("0.00", false);
+        }
+        this.update_paid_value();
+    }
+
+    render_payment_allocations() {
+        if (!this.payment_summary_wrapper) return;
+        this.payment_summary_wrapper.empty();
+
+        Object.entries(this.payment_distribution.payments).forEach(([method, amount]) => {
+            const active_class = method === this.active_payment_method ? " is-active" : "";
+            const $row = $("<div>", {
+                class: "restaurant-payment-row" + active_class
+            });
+            const $select = $("<button>", {
+                type: "button",
+                class: "btn btn-link restaurant-payment-row-method"
+            }).append(
+                $("<span>", { class: "restaurant-payment-row-name", text: method }),
+                $("<strong>", { text: RM.format_currency(amount) })
+            ).on("click", () => this.select_payment_method(method, false));
+            const $remove = $("<button>", {
+                type: "button",
+                class: "btn btn-link text-danger restaurant-payment-remove",
+                title: __("Remove payment method"),
+                "aria-label": __("Remove payment method {0}", [method])
+            }).append($("<span>", { class: "fa fa-trash" }))
+                .on("click", () => this.remove_payment_allocation(method));
+
+            this.payment_summary_wrapper.append($row.append($select, $remove));
+        });
+    }
+
+    render_payment_totals() {
+        if (!this.payment_totals_wrapper) return;
+        const distribution = this.payment_distribution;
+        const totals = [
+            [__("Paid"), distribution.paid, "paid"],
+            [__("Pending"), distribution.pending, "pending"],
+            [__("Change"), distribution.change, "change"]
+        ];
+
+        this.payment_totals_wrapper.empty();
+        totals.forEach(([label, amount, modifier]) => {
+            this.payment_totals_wrapper.append(
+                $("<div>", {
+                    class: "restaurant-payment-total is-" + modifier
+                }).append(
+                    $("<span>", { text: label }),
+                    $("<strong>", { text: RM.format_currency(amount) })
+                )
+            );
+        });
     }
 
     make_tip_inputs($payment_wrapper) {
@@ -306,15 +513,7 @@ class PayForm extends DeskForm {
     }
 
     get payments_values() {
-        const payment_values = {};
-        RM.pos_profile.payments.forEach((mode_of_payment) => {
-            let value = this.payment_methods[mode_of_payment.mode_of_payment].float_val;
-            if (value > 0) {
-                payment_values[mode_of_payment.mode_of_payment] = value;
-            }
-        });
-        
-        return payment_values;
+        return this.payment_distribution.payments;
     }
 
     send_payment() {
@@ -530,14 +729,25 @@ class PayForm extends DeskForm {
             }
         });
 
-        this.get_field("num_pad").$wrapper.empty().append(
-            `<div style="width: 100% !important; height: 200px !important; padding: 0">
-                ${this.num_pad.html}
-            </div>`
-        );
+        const $numpad_wrapper = this.get_field("num_pad").$wrapper;
+        $numpad_wrapper
+            .empty()
+            .addClass("restaurant-numpad")
+            .append(
+                $("<div>", { class: "restaurant-numpad-surface" })
+                    .append(this.num_pad.html)
+            );
 
-        this.get_field("num_pad").$wrapper.parent().parent().css("max-width", "300px");
-        this.get_field("payment_methods").$wrapper.parent().parent().removeClass("col-sm-6").addClass("col");
+        const $payment_column = this.get_field("payment_methods").$wrapper.parent().parent();
+        const $numpad_column = $numpad_wrapper.parent().parent();
+        $payment_column
+            .removeClass("col col-sm-6")
+            .addClass("restaurant-payment-column");
+        $numpad_column
+            .removeClass("col col-sm-6")
+            .addClass("restaurant-numpad-column")
+            .css("max-width", "");
+        $payment_column.parent().addClass("restaurant-payment-layout");
     }
     // TIDAX
     print_invoice_silent(invoice_name){
@@ -614,31 +824,22 @@ class PayForm extends DeskForm {
         }
     }
 
-    //TIDAX
     update_paid_value() {
-        let total = 0;
-        setTimeout(() => {
-            Object.keys(this.payment_methods).forEach((payment_method) => {
-                total += flt(this.payment_methods[payment_method].float_val);
-            });
-
-            const payable_amount = this.payable_amount;
-            this.set_value("amount", payable_amount);
-            this.set_value("total_payment", total);
-            this.set_value("change_amount", flt(total - payable_amount, 2));
-            this.refresh_payment_button_amount();
-        }, 0);
+        const distribution = this.payment_distribution;
+        this.set_value("amount", this.payable_amount);
+        this.set_value("total_payment", distribution.paid);
+        this.set_value("change_amount", distribution.change);
+        this.render_payment_allocations();
+        this.render_payment_totals();
+        this.refresh_payment_button_amount();
     }
-    // update_paid_value() {
-    //     let total = 0;
+}
 
-    //     setTimeout(() => {
-    //         Object.keys(this.payment_methods).forEach((payment_method) => {
-    //             total += this.payment_methods[payment_method].float_val;
-    //         });
-
-    //         this.set_value("total_payment", total);
-    //         this.set_value("change_amount", (total - this.order.amount));
-    //     }, 0);
-    // }
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+        restaurant_payment_amount,
+        restaurant_payment_input_value,
+        restaurant_normalize_payment_allocations,
+        restaurant_payment_distribution
+    };
 }

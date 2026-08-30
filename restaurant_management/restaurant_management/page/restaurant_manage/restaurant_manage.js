@@ -82,6 +82,7 @@ RestaurantManage = class RestaurantManage {
 			'css/order-items.css',
 			'css/order-items-container.css',
 			'css/order-manage.css',
+			'css/pay-form.css',
 			'css/process-manage.css',
 			'css/product-list.css',
 			'css/restaurant-object.css',
