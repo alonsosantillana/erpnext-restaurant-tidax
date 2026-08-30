@@ -52,6 +52,10 @@ RestaurantObject = class RestaurantObject {
         if (typeof data.guest_count !== "undefined") {
             this.data.guest_count = data.guest_count;
         }
+        if (typeof data.pre_account_status !== "undefined") {
+            this.data.pre_account_status = data.pre_account_status;
+            this.data.pre_account_requested_at = data.pre_account_requested_at;
+        }
         this.set_orders_count();
 
         // The notification is emitted after the order transaction commits.
@@ -198,13 +202,14 @@ RestaurantObject = class RestaurantObject {
         this.set_data_style(null, null, this.data.data_style);
         const class_type = this.data.type === 'Table' ? '' : 'p-center';
         const class_shape = this.data.shape === 'Round' && this.data.type === "Table" ? 'round-type' : '';
+        const pre_account_class = this.pre_account_css_class;
 
         this.obj = frappe.jshtml({
             caller: this,
             touched: false,
             tag: "div",
             properties: {
-                class: `d-table ${class_type} ${class_shape}`,
+                class: `d-table ${class_type} ${class_shape} ${pre_account_class}`,
                 style: this.style_structure
             },
             content: this.template,
@@ -306,6 +311,16 @@ RestaurantObject = class RestaurantObject {
             text: this.indicator_count
         });
 
+        this.pre_account_indicator = frappe.jshtml({
+            tag: "span",
+            properties: {
+                class: "pre-account-indicator " + (this.pre_account_status ? "" : "hide"),
+                title: this.pre_account_title
+            },
+            content: "<span class=\"fa fa-file-text-o\"></span> {{text}}",
+            text: this.pre_account_label
+        });
+
         this.edit_button = frappe.jshtml({
             tag: "button",
             properties: { class: "btn d-table-btn btn-default btn-flat btn-sm" },
@@ -352,6 +367,7 @@ RestaurantObject = class RestaurantObject {
         <div class="resize-handle-container">
             <div class="resize-handle c ne"></div><div class="resize-handle c nw"></div><div class="resize-handle c sw"></div><div class="resize-handle c se"></div>
 		    <div class="resize-handle b v w"></div><div class="resize-handle b v e"></div><div class="resize-handle b h n"></div><div class="resize-handle b h s"></div>
+            ${this.pre_account_indicator.html()}
             ${this.guest_count_indicator.html()}
             ${this.indicator.html()}
             ${this.description.html()}
@@ -526,6 +542,7 @@ RestaurantObject = class RestaurantObject {
                 counter[table_is_active ? "remove_class" : "add_class"]("hide");
                 counter.css("background-color", RM.can_open_order_manage(this) ? "" : RM.restrictions.color);
             });
+            this.set_pre_account_state();
             return;
         }
 
@@ -538,6 +555,45 @@ RestaurantObject = class RestaurantObject {
         } else {
             this.indicator.add_class("hide");
         }
+    }
+
+    set_pre_account_state() {
+        if (!this.is_table || !this.obj || !this.pre_account_indicator) return;
+
+        this.obj.remove_class("pre-account-requested pre-account-outdated");
+        if (this.pre_account_css_class) {
+            this.obj.add_class(this.pre_account_css_class);
+        }
+        this.pre_account_indicator[this.pre_account_status ? "remove_class" : "add_class"]("hide");
+        this.pre_account_indicator.val(this.pre_account_label);
+        this.pre_account_indicator.prop("title", this.pre_account_title);
+    }
+
+    get pre_account_status() {
+        return this.is_table ? (this.data.pre_account_status || "") : "";
+    }
+
+    get pre_account_css_class() {
+        if (this.pre_account_status === "Requested") return "pre-account-requested";
+        if (this.pre_account_status === "Outdated") return "pre-account-outdated";
+        return "";
+    }
+
+    get pre_account_label() {
+        if (this.pre_account_status === "Requested") return __("Account").toUpperCase();
+        if (this.pre_account_status === "Outdated") return __("Reprint").toUpperCase();
+        return "";
+    }
+
+    get pre_account_title() {
+        if (this.pre_account_status === "Outdated") {
+            return __("Pre-account outdated. Reprint required");
+        }
+        if (this.pre_account_status !== "Requested") return "";
+        const requested_at = this.data.pre_account_requested_at;
+        return requested_at
+            ? __("Pre-account requested at {0}", [requested_at])
+            : __("Pre-account requested");
     }
 
     get indicator_count() {

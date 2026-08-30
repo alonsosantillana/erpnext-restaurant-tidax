@@ -25,6 +25,10 @@
   "total_amount_free",
   "tax",
   "amount",
+  "pre_account_status",
+  "pre_account_requested_at",
+  "pre_account_requested_by",
+  "pre_account_signature",
   "entry_items",
   "amended_from",
   "pos_profile",
@@ -113,6 +117,37 @@
    "fieldname": "amount",
    "fieldtype": "Currency",
    "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pre_account_status",
+   "fieldtype": "Select",
+   "label": "Pre-account Status",
+   "no_copy": 1,
+   "options": "\nRequested\nOutdated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pre_account_requested_at",
+   "fieldtype": "Datetime",
+   "label": "Pre-account Requested At",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "pre_account_requested_by",
+   "fieldtype": "Link",
+   "label": "Pre-account Requested By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pre_account_signature",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Pre-account Signature",
+   "no_copy": 1,
    "read_only": 1
   },
   {

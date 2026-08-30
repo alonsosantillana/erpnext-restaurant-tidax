@@ -22,6 +22,7 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 )
 from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import (
     RestaurantObject,
+    aggregate_pre_account_state,
     elapsed_minutes,
     preparation_performance,
     production_command_batch_key,
@@ -38,6 +39,71 @@ from restaurant_management.restaurant_management.doctype.desk_form.desk_form imp
 
 
 class TestRestaurantObject(FrappeTestCase):
+	def test_pre_account_table_state_requires_every_active_order(self):
+		state = aggregate_pre_account_state([
+			frappe._dict(
+				pre_account_status="Requested",
+				pre_account_requested_at="2026-08-30 10:00:00",
+			),
+			frappe._dict(pre_account_status=None, pre_account_requested_at=None),
+		])
+
+		self.assertIsNone(state["status"])
+
+	def test_pre_account_table_state_uses_latest_fully_requested_account(self):
+		state = aggregate_pre_account_state([
+			frappe._dict(
+				pre_account_status="Requested",
+				pre_account_requested_at="2026-08-30 10:00:00",
+			),
+			frappe._dict(
+				pre_account_status="Requested",
+				pre_account_requested_at="2026-08-30 10:05:00",
+			),
+		])
+
+		self.assertEqual(state, {
+			"status": "Requested",
+			"requested_at": "2026-08-30 10:05:00",
+		})
+
+	def test_pre_account_table_state_prioritizes_outdated_warning(self):
+		state = aggregate_pre_account_state([
+			frappe._dict(
+				pre_account_status="Requested",
+				pre_account_requested_at="2026-08-30 10:00:00",
+			),
+			frappe._dict(
+				pre_account_status="Outdated",
+				pre_account_requested_at="2026-08-30 10:03:00",
+			),
+		])
+
+		self.assertEqual(state["status"], "Outdated")
+
+	@patch(
+		"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_all"
+	)
+	def test_pre_account_table_state_is_scoped_to_table_and_company(self, get_all):
+		get_all.return_value = []
+		table = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "TABLE-ERP-001",
+			"type": "Table",
+			"company": "ERPCLOUD SAC",
+		})
+
+		self.assertEqual(table.pre_account_state, {"status": None, "requested_at": None})
+		get_all.assert_called_once_with(
+			"Table Order",
+			filters={
+				"table": "TABLE-ERP-001",
+				"status": "Attending",
+				"company": "ERPCLOUD SAC",
+			},
+			fields=["pre_account_status", "pre_account_requested_at"],
+		)
+
 	@patch(
 		"restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item.frappe.get_all"
 	)

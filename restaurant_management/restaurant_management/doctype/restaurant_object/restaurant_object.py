@@ -71,6 +71,29 @@ def production_transition_values(entry, next_status, now, user):
     return values
 
 
+def aggregate_pre_account_state(orders):
+    """Summarize active order pre-accounts without persisting table state."""
+    orders = list(orders or [])
+    result = {"status": None, "requested_at": None}
+    if not orders:
+        return result
+
+    statuses = [order.get("pre_account_status") for order in orders]
+    requested_at = [
+        order.get("pre_account_requested_at")
+        for order in orders
+        if order.get("pre_account_requested_at")
+    ]
+    result["requested_at"] = max(requested_at) if requested_at else None
+
+    if "Outdated" in statuses:
+        result["status"] = "Outdated"
+    elif all(status == "Requested" for status in statuses):
+        result["status"] = "Requested"
+
+    return result
+
+
 class RestaurantObject(Document):
     def validate(self):
         self.set_and_validate_company()
@@ -150,8 +173,11 @@ class RestaurantObject(Document):
                 current_user=self.current_user
             )
             if self.type == "Table":
+                pre_account = self.pre_account_state
                 notification["ordered_items_qty"] = self.ordered_items_qty
                 notification["guest_count"] = self.guest_count
+                notification["pre_account_status"] = pre_account["status"]
+                notification["pre_account_requested_at"] = pre_account["requested_at"]
 
             frappe.publish_realtime(self.name, notification, after_commit=True)
 
@@ -243,6 +269,22 @@ class RestaurantObject(Document):
             "status": "Attending",
             "company": self.company,
         })
+
+    @property
+    def pre_account_state(self):
+        if self.type != "Table":
+            return {"status": None, "requested_at": None}
+
+        active_orders = frappe.get_all(
+            "Table Order",
+            filters={
+                "table": self.name,
+                "status": "Attending",
+                "company": self.company,
+            },
+            fields=["pre_account_status", "pre_account_requested_at"],
+        )
+        return aggregate_pre_account_state(active_orders)
 
     @property
     def ordered_items_qty(self):
@@ -805,8 +847,11 @@ class RestaurantObject(Document):
             data[field] = getattr(self, field)
 
         if self.type == "Table":
+            pre_account = self.pre_account_state
             data["ordered_items_qty"] = self.ordered_items_qty
             data["guest_count"] = self.guest_count
+            data["pre_account_status"] = pre_account["status"]
+            data["pre_account_requested_at"] = pre_account["requested_at"]
 
         if self.type == "Production Center":
             data["status_managed"] = self._status_managed

@@ -3,13 +3,16 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
+import hashlib
+import json
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, today
 from erpnext.stock.get_item_details import get_price_list_rate_for
 from erpnext.setup.utils import get_exchange_rate
-import json
 
 from restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage import RestaurantManage
 from restaurant_management.restaurant_management.doctype.order_entry_item.order_entry_item import (
@@ -196,11 +199,78 @@ def apply_delivery_fee_invoice_rate(invoice, delivery_fee_item):
     return invoice
 
 
+PRE_ACCOUNT_REQUESTED = "Requested"
+PRE_ACCOUNT_OUTDATED = "Outdated"
+
+
+def _pre_account_number(value):
+    return format(flt(value), ".6f")
+
+
+def pre_account_signature(order):
+    """Return a stable signature for content that changes a pre-account."""
+    items = []
+    for item in order.get("entry_items") or []:
+        if flt(item.get("qty")) <= 0:
+            continue
+        items.append({
+            "identifier": item.get("identifier") or "",
+            "item_code": item.get("item_code") or "",
+            "qty": _pre_account_number(item.get("qty")),
+            "rate": _pre_account_number(item.get("rate")),
+            "price_list_rate": _pre_account_number(item.get("price_list_rate")),
+            "amount": _pre_account_number(item.get("amount")),
+            "discount_percentage": _pre_account_number(item.get("discount_percentage")),
+            "discount_amount": _pre_account_number(item.get("discount_amount")),
+        })
+
+    items.sort(key=lambda row: (row["identifier"], row["item_code"]))
+    payload = {
+        "items": items,
+        "discount": _pre_account_number(order.get("discount")),
+        "discount_global_percent": _pre_account_number(order.get("discount_global_percent")),
+        "tax": _pre_account_number(order.get("tax")),
+        "amount": _pre_account_number(order.get("amount")),
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
 class TableOrder(Document):
     def validate(self):
         self.validate_service_context()
         self.set_default_customer()
         self.validate_global_discount()
+        self.invalidate_pre_account_if_changed()
+
+    def invalidate_pre_account_if_changed(self):
+        if (
+            self.is_new()
+            or self.status != status_attending
+            or self.pre_account_status != PRE_ACCOUNT_REQUESTED
+            or not self.pre_account_signature
+        ):
+            return
+
+        if self.pre_account_signature != pre_account_signature(self):
+            self.pre_account_status = PRE_ACCOUNT_OUTDATED
+
+    def mark_pre_account_requested(self):
+        if not self.is_dine_in or self.status != status_attending:
+            frappe.throw(_("Only an active dine-in order can request an account"))
+        if not any(flt(item.qty) > 0 for item in self.entry_items):
+            frappe.throw(_("The order has no dishes to print"))
+
+        self.pre_account_status = PRE_ACCOUNT_REQUESTED
+        self.pre_account_requested_at = frappe.utils.now_datetime()
+        self.pre_account_requested_by = frappe.session.user
+        self.pre_account_signature = pre_account_signature(self)
+        self.save()
+        return {
+            "status": self.pre_account_status,
+            "requested_at": self.pre_account_requested_at,
+            "requested_by": self.pre_account_requested_by,
+        }
 
     def validate_service_context(self):
         self.service_type = self.service_type or "Dine In"
@@ -265,7 +335,16 @@ class TableOrder(Document):
 
     def on_update(self):
         previous = self.get_doc_before_save()
-        if previous and (
+        if (
+            previous
+            and self.is_dine_in
+            and (
+                self.has_value_changed("pre_account_status")
+                or self.has_value_changed("pre_account_requested_at")
+            )
+        ):
+            self.synchronize(dict(action="PreAccount"))
+        elif previous and (
             self.has_value_changed("discount")
             or self.has_value_changed("discount_global_percent")
         ):
@@ -1202,6 +1281,8 @@ class TableOrder(Document):
                 service_type=self.service_type or "Dine In",
                 customer_name=self.customer_name,
                 context_label=self.context_label,
+                pre_account_status=self.pre_account_status,
+                pre_account_requested_at=self.pre_account_requested_at,
                 fulfillment=frappe.db.get_value(
                     "Restaurant Fulfillment",
                     {"order": self.name},

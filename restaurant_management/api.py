@@ -152,6 +152,7 @@ def print_order_account(order_name, request_id=None):
     _require_authenticated_user()
     order = frappe.get_doc("Table Order", order_name)
     order.check_permission("print")
+    order.check_permission("write")
     if order.items_count == 0:
         frappe.throw(_("The order has no dishes to print"))
 
@@ -162,13 +163,15 @@ def print_order_account(order_name, request_id=None):
         request_id or frappe.generate_hash(length=32), "Account Print Request ID"
     )
 
-    return enqueue_print(
+    result = enqueue_print(
         source_doctype="Table Order",
         source_name=order.name,
         route_type="ACCOUNT",
         company=order.company,
         event_key="account-{0}".format(request_id),
     )
+    result["pre_account"] = order.mark_pre_account_requested()
+    return result
 
 
 @frappe.whitelist()

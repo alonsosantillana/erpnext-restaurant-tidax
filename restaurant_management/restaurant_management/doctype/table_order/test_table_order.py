@@ -6,15 +6,19 @@ from __future__ import unicode_literals
 import frappe
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 
 from restaurant_management.restaurant_management.doctype.table_order.table_order import (
+	apply_delivery_fee_invoice_rate,
 	apply_restaurant_pos_currency,
 	apply_pos_tax_inclusion,
 	get_customer_identity,
 	get_voucher_config,
 	TableOrder,
+	PRE_ACCOUNT_OUTDATED,
+	PRE_ACCOUNT_REQUESTED,
+	pre_account_signature,
 )
 from restaurant_management.api import (
 	DOCUMENT_METHODS,
@@ -44,6 +48,80 @@ class TestTableOrder(unittest.TestCase):
 		self.assertEqual(fee.discount_percentage, 0)
 		self.assertEqual(fee.discount_amount, 0)
 
+	def pre_account_order(self):
+		return TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-2026-00003",
+			"status": "Attending",
+			"service_type": "Dine In",
+			"discount": 0,
+			"discount_global_percent": 0,
+			"tax": 6.3,
+			"amount": 41.3,
+			"entry_items": [{
+				"doctype": "Order Entry Item",
+				"identifier": "ITEM-1",
+				"item_code": "PLT-001",
+				"qty": 1,
+				"rate": 35,
+				"price_list_rate": 35,
+				"amount": 35,
+				"discount_percentage": 0,
+				"discount_amount": 0,
+				"notes": "No onion",
+				"status": "Sent",
+			}],
+		})
+
+	def test_pre_account_signature_ignores_notes_and_kitchen_status(self):
+		order = self.pre_account_order()
+		signature = pre_account_signature(order)
+
+		order.entry_items[0].notes = "Extra onion"
+		order.entry_items[0].status = "Completed"
+
+		self.assertEqual(pre_account_signature(order), signature)
+
+	def test_pre_account_signature_changes_with_monetary_content(self):
+		order = self.pre_account_order()
+		signature = pre_account_signature(order)
+
+		order.entry_items[0].qty = 2
+
+		self.assertNotEqual(pre_account_signature(order), signature)
+
+	def test_requested_pre_account_becomes_outdated_after_monetary_change(self):
+		order = self.pre_account_order()
+		order.pre_account_status = PRE_ACCOUNT_REQUESTED
+		order.pre_account_signature = pre_account_signature(order)
+
+		with patch.object(order, "is_new", return_value=False):
+			order.entry_items[0].notes = "No salt"
+			order.invalidate_pre_account_if_changed()
+			self.assertEqual(order.pre_account_status, PRE_ACCOUNT_REQUESTED)
+
+			order.entry_items[0].discount_percentage = 10
+			order.invalidate_pre_account_if_changed()
+
+		self.assertEqual(order.pre_account_status, PRE_ACCOUNT_OUTDATED)
+
+	def test_mark_pre_account_records_audit_and_current_signature(self):
+		order = self.pre_account_order()
+		requested_at = frappe.utils.get_datetime("2026-08-30 12:00:00")
+
+		with (
+			patch.object(order, "save") as save,
+			patch.object(frappe.utils, "now_datetime", return_value=requested_at),
+		):
+			result = order.mark_pre_account_requested()
+
+		save.assert_called_once_with()
+		self.assertEqual(order.pre_account_status, PRE_ACCOUNT_REQUESTED)
+		self.assertEqual(order.pre_account_requested_at, requested_at)
+		self.assertEqual(order.pre_account_requested_by, frappe.session.user)
+		self.assertEqual(order.pre_account_signature, pre_account_signature(order))
+		self.assertEqual(result["status"], PRE_ACCOUNT_REQUESTED)
+
 	def test_restaurant_pos_currency_overrides_customer_default_currency(self):
 		invoice = MagicMock(
 			currency="USD",
@@ -59,6 +137,10 @@ class TestTableOrder(unittest.TestCase):
 			patch(
 				"restaurant_management.restaurant_management.doctype.table_order.table_order.get_exchange_rate",
 				return_value=1,
+			),
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order.today",
+				return_value="2026-08-30",
 			),
 		):
 			apply_restaurant_pos_currency(
@@ -215,32 +297,52 @@ class TestTableOrder(unittest.TestCase):
 		self.assertEqual(configuration.print_user, "Administrator")
 		self.assertEqual(configuration.tab_id, "12345")
 
-	@patch("restaurant_management.api._get_account_print_configuration")
-	@patch("restaurant_management.api.frappe.get_attr")
+	@patch("restaurant_management.printing.enqueue_print")
+	@patch("silent_print.utils.service.validate_opaque_id", return_value="request-1")
 	@patch("restaurant_management.api.frappe.get_doc")
-	def test_account_print_is_permission_checked_and_enqueued(
-		self, get_doc, get_attr, get_configuration
+	def test_account_print_is_permission_checked_enqueued_and_marks_order(
+		self, get_doc, validate_request_id, enqueue_print
 	):
-		order = MagicMock(name="OR-2026-00003", items_count=5)
+		order = MagicMock(items_count=5, company="ADDERA PERU SAC")
 		order.name = "OR-2026-00003"
+		order.mark_pre_account_requested.return_value = {
+			"status": PRE_ACCOUNT_REQUESTED,
+		}
 		get_doc.return_value = order
-		get_configuration.return_value = frappe._dict(
-			print_format="Order Account",
-			print_type="ORDER",
-		)
-		print_silently = get_attr.return_value
+		enqueue_print.return_value = {
+			"queued": True,
+			"print_type": "ACCOUNT",
+		}
 
-		result = print_order_account("OR-2026-00003")
+		result = print_order_account(order.name, request_id="request-1")
 
-		order.check_permission.assert_called_once_with("print")
-		get_configuration.assert_called_once_with(order)
-		print_silently.assert_called_once_with(
-			doctype="Table Order",
-			name="OR-2026-00003",
-			print_format="Order Account",
-			print_type="ORDER",
+		order.check_permission.assert_has_calls([call("print"), call("write")])
+		validate_request_id.assert_called_once_with("request-1", "Account Print Request ID")
+		enqueue_print.assert_called_once_with(
+			source_doctype="Table Order",
+			source_name=order.name,
+			route_type="ACCOUNT",
+			company="ADDERA PERU SAC",
+			event_key="account-request-1",
 		)
-		self.assertEqual(result["queued"], True)
+		order.mark_pre_account_requested.assert_called_once_with()
+		self.assertEqual(result["pre_account"]["status"], PRE_ACCOUNT_REQUESTED)
+
+	@patch("restaurant_management.printing.enqueue_print")
+	@patch("silent_print.utils.service.validate_opaque_id", return_value="request-2")
+	@patch("restaurant_management.api.frappe.get_doc")
+	def test_account_print_does_not_mark_order_when_queue_fails(
+		self, get_doc, validate_request_id, enqueue_print
+	):
+		order = MagicMock(items_count=2, company="ADDERA PERU SAC")
+		order.name = "OR-2026-00004"
+		get_doc.return_value = order
+		enqueue_print.side_effect = frappe.ValidationError("Queue unavailable")
+
+		with self.assertRaises(frappe.ValidationError):
+			print_order_account(order.name, request_id="request-2")
+
+		order.mark_pre_account_requested.assert_not_called()
 
 	def test_pos_profile_tax_inclusion_overrides_loaded_tax_rows(self):
 		invoice = frappe._dict(taxes=[

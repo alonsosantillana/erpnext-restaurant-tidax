@@ -243,3 +243,46 @@
     border: var(--default_line);
     width: 36px !important;
 }
+
+
+.restaurant-manage .floor-map .d-table.pre-account-requested {
+    background-color: #b45309 !important;
+    border-color: #78350f;
+    box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.2);
+}
+
+.restaurant-manage .floor-map .d-table.pre-account-outdated {
+    background-color: #b45309 !important;
+    border: 3px solid #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+.restaurant-manage .floor-map .d-table .pre-account-indicator {
+    position: absolute;
+    top: 23px;
+    left: 50%;
+    z-index: 12;
+    min-width: 54px;
+    max-width: calc(100% - 8px);
+    height: 16px;
+    padding: 0 4px;
+    transform: translateX(-50%);
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(17, 24, 39, 0.9);
+    color: var(--white);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.restaurant-manage .floor-map .d-table .pre-account-indicator .fa {
+    margin-right: 2px;
+}
+
+.restaurant-manage.editing .floor-map .d-table .pre-account-indicator {
+    display: none;
+}
