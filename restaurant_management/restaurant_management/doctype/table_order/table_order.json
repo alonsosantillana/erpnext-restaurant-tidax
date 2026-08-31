@@ -85,6 +85,7 @@
    "options": "Customer"
   },
   {
+   "default": "1",
    "fieldname": "guest_count",
    "fieldtype": "Int",
    "label": "Guest Count"

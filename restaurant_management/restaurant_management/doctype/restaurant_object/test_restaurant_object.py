@@ -992,6 +992,8 @@ class TestRestaurantObject(FrappeTestCase):
 		self.assertEqual(result["action"], "Add")
 		self.assertEqual(result["client"], "order-test")
 		self.assertEqual(order_data["table"], table.name)
+		self.assertEqual(order_data["guest_count"], 1)
+		self.assertEqual(order.guest_count, 1)
 		self.assertTrue(frappe.db.exists("Table Order", order_data["name"]))
 		self.assertEqual(
 			order.selling_price_list,

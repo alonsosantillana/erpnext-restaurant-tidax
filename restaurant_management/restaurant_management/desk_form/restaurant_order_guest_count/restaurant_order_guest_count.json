@@ -31,13 +31,14 @@
    "extra_field": 0,
    "fetch_if_empty": 0,
    "fieldname": "guest_count",
-   "fieldtype": "Int",
+   "fieldtype": "Select",
    "hidden": 0,
    "label": "Guest Count",
    "max_length": 0,
    "max_value": 0,
+   "options": "1",
    "read_only": 0,
-   "reqd": 0,
+   "reqd": 1,
    "show_in_filter": 0
   }
  ],

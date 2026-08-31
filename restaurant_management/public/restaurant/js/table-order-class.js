@@ -1125,10 +1125,26 @@ class TableOrder {
                 }
                 if (type === "guest_count") {
                     const current_guest_count = Number.parseInt(this.data.guest_count, 10);
-                    input.set_value(
+                    const table_capacity = Number.parseInt(
+                        this.order_manage.table && this.order_manage.table.data.no_of_seats,
+                        10
+                    );
+                    const selected_guest_count =
                         Number.isFinite(current_guest_count) && current_guest_count > 0
                             ? current_guest_count
-                            : 1
+                            : 1;
+                    const maximum_guest_count = Math.max(
+                        1,
+                        Number.isFinite(table_capacity) && table_capacity > 0 ? table_capacity : 1,
+                        selected_guest_count
+                    );
+                    input.df.options = Array.from(
+                        {length: maximum_guest_count},
+                        (_, index) => String(index + 1)
+                    );
+                    input.set_options(selected_guest_count);
+                    input.set_value(
+                        selected_guest_count
                     );
                 }
                 if (type === "discount") {

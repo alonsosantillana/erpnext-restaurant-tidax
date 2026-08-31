@@ -245,6 +245,7 @@ class RestaurantObject(Document):
         order.selling_price_list = pos_profile.selling_price_list
         order.table = self.name
         order.company = company
+        order.guest_count = 1
 
         order.save()
         response = dict(
