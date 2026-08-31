@@ -20,6 +20,8 @@ class RestaurantCompanySettings(RestaurantSettingsMixin, Document):
                 frappe.throw(frappe._("Station, Print Format and Hardware Print Type are required"))
             if route.copies is None or route.copies < 1:
                 frappe.throw(frappe._("Print route copies must be at least one"))
+            if route.transport_mode == "ESC/POS" and route.document_type not in {"INVOICE", "ACCOUNT"}:
+                frappe.throw(frappe._("ESC/POS transport is currently available only for INVOICE and ACCOUNT routes"))
             station = frappe.db.get_value("Restaurant Print Station", route.station, ["company", "enabled"], as_dict=True)
             if not station or station.company != self.company:
                 frappe.throw(frappe._("Print station {0} must belong to company {1}").format(route.station, self.company))

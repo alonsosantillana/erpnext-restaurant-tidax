@@ -1,9 +1,10 @@
 """Durable, company-scoped restaurant printing.
 
-PDF rendering and Hardware Bridge transport remain owned by ``silent_print``.
-This module owns routing, idempotency and the auditable delivery lifecycle.
+PDF rendering remains available through ``silent_print``; fiscal invoices and pre-accounts may
+use native ESC/POS. This module owns routing and the auditable delivery lifecycle.
 """
 
+from base64 import b64encode
 import hashlib
 import re
 
@@ -13,6 +14,10 @@ from frappe.utils import add_to_date, cint, now_datetime
 
 from restaurant_management.restaurant_management.company_settings import (
 	get_restaurant_settings,
+)
+from restaurant_management.thermal_print import (
+	build_pos_invoice_escpos,
+	build_table_order_account_escpos,
 )
 
 
@@ -173,6 +178,7 @@ def enqueue_print(
 		"source_name": source_name,
 		"print_format": route.print_format,
 		"print_type": route.print_type,
+		"transport_mode": route.transport_mode or "PDF",
 		"copies": max(1, cint(route.copies)),
 		"status": "Pending",
 		"attempt_count": 0,
@@ -419,6 +425,46 @@ def render_job(job, client_id):
 	doc = _get_claimed_job(job, client_id)
 	if doc.status != "Sending":
 		frappe.throw(_("Only Sending jobs can be rendered"))
+
+	if doc.transport_mode == "ESC/POS" and doc.route_type in {"INVOICE", "ACCOUNT"}:
+		source = frappe.get_doc(doc.source_doctype, doc.source_name)
+		company_tax_id = frappe.db.get_value("Company", source.company, "tax_id")
+		if doc.route_type == "INVOICE":
+			tip = frappe.db.get_value(
+				"Restaurant Tip",
+				{
+					"pos_invoice": source.name,
+					"status": ["in", ["Collected", "Settled"]],
+				},
+				["amount", "mode_of_payment"],
+				as_dict=True,
+			)
+			raw = build_pos_invoice_escpos(
+				source,
+				company_tax_id=company_tax_id,
+				tip=tip,
+				copies=max(1, cint(doc.copies)),
+			)
+		else:
+			waiter_user = source.get("cambio_mozo") or source.owner
+			waiter_name = frappe.db.get_value("User", waiter_user, "full_name")
+			raw = build_table_order_account_escpos(
+				source,
+				company_tax_id=company_tax_id,
+				waiter_name=waiter_name,
+				copies=max(1, cint(doc.copies)),
+			)
+		return {
+			"id": doc.name,
+			"job_id": doc.name,
+			"type": doc.print_type,
+			"print_type": doc.print_type,
+			"url": f"{doc.name}.bin",
+			"raw_content": b64encode(raw).decode("ascii"),
+			"qty": 1,
+			"transport_mode": "ESC/POS",
+		}
+
 	create_pdf = frappe.get_attr("silent_print.utils.service.create_pdf")
 	rendered = create_pdf(doc.source_doctype, doc.source_name, doc.print_format)
 	return {
@@ -429,6 +475,7 @@ def render_job(job, client_id):
 		"url": f"{doc.name}.pdf",
 		"file_content": rendered["pdf_base64"],
 		"qty": max(1, cint(doc.copies)),
+		"transport_mode": "PDF",
 	}
 
 

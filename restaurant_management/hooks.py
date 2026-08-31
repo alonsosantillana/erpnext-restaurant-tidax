@@ -15,6 +15,12 @@ app_license = "GPL-3.0-only"
 required_apps = ["erpnext", "ovenube_peru", "silent_print"]
 source_link = "https://github.com/joepa37/restaurant_management"
 
+jinja = {
+    "methods": [
+        "restaurant_management.thermal_print.qr_svg_data_uri",
+    ],
+}
+
 sounds = [
     {"name": "chime", "src": "/assets/frappe/sounds/chime.mp3", "volume": 0.7},
 ]

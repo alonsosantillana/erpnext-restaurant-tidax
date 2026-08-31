@@ -55,6 +55,8 @@ class TestRestaurantPrinting(FrappeTestCase):
 			print_format="Return POS Invoice",
 			print_type="INVOICE",
 			copies=1,
+			route_type="INVOICE",
+			transport_mode="PDF",
 		)
 		get_attr.return_value.return_value = {"pdf_base64": "UERG"}
 
@@ -251,3 +253,74 @@ class TestRestaurantPrinting(FrappeTestCase):
 		update_pos_invoice_ce.assert_called_once()
 		queue_invoice_print.assert_not_called()
 		self.assertIsNone(result["print_queue"])
+
+
+	@patch("restaurant_management.printing.build_pos_invoice_escpos", return_value=b"RAW")
+	@patch("restaurant_management.printing.frappe.db.get_value", return_value=None)
+	@patch("restaurant_management.printing.frappe.get_doc")
+	@patch("restaurant_management.printing._get_claimed_job")
+	def test_invoice_escpos_job_uses_raw_content(
+		self, get_claimed_job, get_doc, get_value, build_escpos
+	):
+		get_claimed_job.return_value = frappe._dict(
+			name="RPJ-TEST-ESC-00001",
+			status="Sending",
+			source_doctype="POS Invoice",
+			source_name="BV-BRE1-000012",
+			print_format="Restaurant POS Invoice 80mm",
+			print_type="INVOICE",
+			route_type="INVOICE",
+			transport_mode="ESC/POS",
+			copies=1,
+		)
+		invoice = frappe._dict(
+			name="BV-BRE1-000012",
+			company="Test Company",
+		)
+		get_doc.return_value = invoice
+
+		payload = render_job("RPJ-TEST-ESC-00001", "browser-1")
+
+		self.assertEqual(payload["url"], "RPJ-TEST-ESC-00001.bin")
+		self.assertEqual(payload["raw_content"], "UkFX")
+		self.assertNotIn("file_content", payload)
+		self.assertEqual(payload["qty"], 1)
+		build_escpos.assert_called_once_with(
+			invoice,
+			company_tax_id=None,
+			tip=None,
+			copies=1,
+		)
+
+	@patch("restaurant_management.printing.build_table_order_account_escpos", return_value=b"ACCOUNT")
+	@patch("restaurant_management.printing.frappe.db.get_value", side_effect=[None, "Mozo Uno"])
+	@patch("restaurant_management.printing.frappe.get_doc")
+	@patch("restaurant_management.printing._get_claimed_job")
+	def test_account_escpos_job_uses_raw_content(
+		self, get_claimed_job, get_doc, get_value, build_account
+	):
+		get_claimed_job.return_value = frappe._dict(
+			name="RPJ-TEST-ESC-00002",
+			status="Sending",
+			source_doctype="Table Order",
+			source_name="OR-ADA-2026-00014",
+			print_format="Order Account",
+			print_type="ACCOUNT",
+			route_type="ACCOUNT",
+			transport_mode="ESC/POS",
+			copies=1,
+		)
+		order = frappe._dict(
+			name="OR-ADA-2026-00014",
+			company="Test Company",
+			owner="waiter.com",
+		)
+		get_doc.return_value = order
+
+		payload = render_job("RPJ-TEST-ESC-00002", "browser-1")
+
+		self.assertEqual(payload["raw_content"], "QUNDT1VOVA==")
+		self.assertEqual(payload["transport_mode"], "ESC/POS")
+		build_account.assert_called_once_with(
+			order, company_tax_id=None, waiter_name="Mozo Uno", copies=1
+		)

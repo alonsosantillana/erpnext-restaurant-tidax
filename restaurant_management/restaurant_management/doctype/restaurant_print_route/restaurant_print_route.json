@@ -4,7 +4,7 @@
  "editable_grid":1,
  "engine":"InnoDB",
  "istable":1,
- "field_order":["enabled","document_type","production_center","station","print_format","print_type","copies","automatic"],
+ "field_order":["enabled","document_type","production_center","station","print_format","print_type","transport_mode","copies","automatic"],
  "fields":[
   {"fieldname":"enabled","fieldtype":"Check","label":"Enabled","default":"1","in_list_view":1},
   {"fieldname":"document_type","fieldtype":"Select","label":"Document Type","options":"INVOICE\nACCOUNT\nORDER\nKITCHEN","reqd":1,"in_list_view":1},
@@ -12,6 +12,7 @@
   {"fieldname":"station","fieldtype":"Link","label":"Station","options":"Restaurant Print Station","reqd":1,"in_list_view":1},
   {"fieldname":"print_format","fieldtype":"Link","label":"Print Format","options":"Print Format","reqd":1,"in_list_view":1},
   {"fieldname":"print_type","fieldtype":"Data","label":"Hardware Print Type","reqd":1,"in_list_view":1},
+  {"fieldname":"transport_mode","fieldtype":"Select","label":"Transport","options":"PDF\nESC/POS","default":"PDF","reqd":1,"in_list_view":1},
   {"fieldname":"copies","fieldtype":"Int","label":"Copies","default":"1","reqd":1},
   {"fieldname":"automatic","fieldtype":"Check","label":"Automatic","default":"0"}
  ],

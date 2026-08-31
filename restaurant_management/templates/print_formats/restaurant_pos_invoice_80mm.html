@@ -1,0 +1,258 @@
+{% macro money(value) -%}
+{{ frappe.utils.fmt_money(value or 0, currency=doc.currency) }}
+{%- endmacro %}
+{% set company_tax_id = frappe.db.get_value("Company", doc.company, "tax_id") %}
+{% set customer_name = doc.customer_boleta_name or doc.customer_name or doc.customer %}
+{% set customer_address = doc.customer_boleta_address or doc.address_display or "" %}
+{% set tip = frappe.db.get_value(
+    "Restaurant Tip",
+    {"pos_invoice": doc.name, "status": ["in", ["Collected", "Settled"]]},
+    ["amount", "mode_of_payment"],
+    as_dict=True
+) %}
+{% set qr_image = qr_svg_data_uri(doc.codigo_qr_sunat) if doc.codigo_qr_sunat else "" %}
+
+<style>
+    @page {
+        size: 80mm 300mm;
+        margin: 0;
+    }
+
+    html, body {
+        width: 80mm;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+    }
+
+    .print-format {
+        box-sizing: border-box;
+        width: 80mm !important;
+        max-width: 80mm !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 2mm 0 !important;
+        color: #000 !important;
+        background: #fff !important;
+        font-family: Arial, "DejaVu Sans", sans-serif !important;
+        font-size: 9pt !important;
+        font-weight: 500;
+        line-height: 1.18 !important;
+    }
+
+    .print-format * {
+        box-sizing: border-box;
+        color: #000 !important;
+    }
+
+    .ticket-page {
+        width: 74mm;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .ticket-center { text-align: center; }
+    .ticket-right { text-align: right; }
+    .ticket-bold { font-weight: 700; }
+    .ticket-company { font-size: 12pt; font-weight: 700; line-height: 1.1; }
+    .ticket-document { font-size: 11pt; font-weight: 700; margin-top: 1.5mm; }
+    .ticket-number { font-size: 10pt; font-weight: 700; }
+    .ticket-small { font-size: 7.8pt; line-height: 1.12; }
+    .ticket-total { font-size: 13pt; font-weight: 700; }
+
+    .ticket-rule {
+        border: 0;
+        border-top: 0.35mm solid #000;
+        margin: 2mm 0;
+    }
+
+    .ticket-rule-thin {
+        border: 0;
+        border-top: 0.2mm dashed #000;
+        margin: 1.5mm 0;
+    }
+
+    .ticket-meta { margin: 0; }
+    .ticket-meta div { margin: 0 0 0.7mm; }
+
+    .ticket-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin: 0;
+    }
+
+    .ticket-table th {
+        padding: 1mm 0.5mm !important;
+        border-bottom: 0.3mm solid #000;
+        background: #fff !important;
+        font-size: 8pt;
+        font-weight: 700;
+        vertical-align: bottom;
+    }
+
+    .ticket-table td {
+        padding: 1.1mm 0.5mm !important;
+        border-bottom: 0.15mm dotted #000;
+        background: #fff !important;
+        vertical-align: top;
+        word-break: break-word;
+    }
+
+    .ticket-item-detail {
+        display: block;
+        margin-top: 0.4mm;
+        font-size: 7.5pt;
+        font-weight: 500;
+    }
+
+    .ticket-summary td {
+        padding: 0.7mm 0 !important;
+        border: 0 !important;
+    }
+
+    .ticket-summary .ticket-grand-total td {
+        padding-top: 1.2mm !important;
+        border-top: 0.35mm solid #000 !important;
+    }
+
+    .ticket-tip {
+        margin: 1.5mm 0;
+        padding: 1.5mm;
+        border: 0.3mm solid #000;
+        font-weight: 700;
+    }
+
+    .ticket-qr {
+        display: block;
+        width: 30mm;
+        height: 30mm;
+        margin: 2mm auto 1mm;
+    }
+
+    @media screen {
+        .print-format {
+            width: 80mm !important;
+            margin: 0 auto !important;
+        }
+    }
+</style>
+
+<div class="ticket-page">
+<div class="ticket-center">
+    <div class="ticket-company">{{ doc.company }}</div>
+    {% if company_tax_id %}<div class="ticket-bold">RUC {{ company_tax_id }}</div>{% endif %}
+    {% if doc.company_address_display %}
+        <div class="ticket-small">{{ doc.company_address_display | replace("<br>", ", ") | replace("<br />", ", ") | striptags }}</div>
+    {% endif %}
+    <div class="ticket-document">{{ doc.tipo_comprobante or _("Comprobante electrónico") }}</div>
+    <div class="ticket-number">{{ doc.name }}</div>
+</div>
+
+<hr class="ticket-rule">
+
+<div class="ticket-meta">
+    <div><span class="ticket-bold">Fecha:</span> {{ doc.get_formatted("posting_date") }} {{ doc.get_formatted("posting_time") }}</div>
+    <div><span class="ticket-bold">Cliente:</span> {{ customer_name }}</div>
+    {% if doc.tax_id %}<div><span class="ticket-bold">Documento:</span> {{ doc.tax_id }}</div>{% endif %}
+    {% if customer_address %}<div><span class="ticket-bold">Dirección:</span> {{ customer_address | replace("<br>", ", ") | replace("<br />", ", ") | striptags }}</div>{% endif %}
+    {% if doc.table_description %}<div><span class="ticket-bold">Mesa:</span> {{ doc.table_description }}</div>{% endif %}
+</div>
+
+<hr class="ticket-rule">
+
+<table class="ticket-table">
+    <thead>
+        <tr>
+            <th style="width: 12%;">Cant.</th>
+            <th style="width: 56%;">Descripción</th>
+            <th class="ticket-right" style="width: 32%;">Importe</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in doc.items %}
+        <tr>
+            <td class="ticket-center">{{ "%g" | format(item.qty) }}</td>
+            <td>
+                <span class="ticket-bold">{{ item.item_name or item.item_code }}</span>
+                {% if item.item_code and item.item_name != item.item_code %}
+                    <span class="ticket-item-detail">{{ item.item_code }}</span>
+                {% endif %}
+                <span class="ticket-item-detail">P. unitario: {{ money(item.rate) }}</span>
+                {% if item.discount_percentage %}
+                    <span class="ticket-item-detail">Descuento: {{ item.discount_percentage }}%</span>
+                {% endif %}
+            </td>
+            <td class="ticket-right ticket-bold">{{ money(item.amount) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<table class="ticket-table ticket-summary">
+    <tbody>
+        <tr>
+            <td>Subtotal</td>
+            <td class="ticket-right">{{ money(doc.net_total) }}</td>
+        </tr>
+        {% if doc.total_taxes_and_charges %}
+        <tr>
+            <td>Impuestos</td>
+            <td class="ticket-right">{{ money(doc.total_taxes_and_charges) }}</td>
+        </tr>
+        {% endif %}
+        {% if doc.discount_amount %}
+        <tr>
+            <td>Descuento</td>
+            <td class="ticket-right">-{{ money(doc.discount_amount) }}</td>
+        </tr>
+        {% endif %}
+        <tr class="ticket-grand-total">
+            <td class="ticket-total">TOTAL</td>
+            <td class="ticket-right ticket-total">{{ money(doc.grand_total) }}</td>
+        </tr>
+    </tbody>
+</table>
+
+{% if doc.payments %}
+<hr class="ticket-rule-thin">
+<div class="ticket-bold">FORMA DE PAGO</div>
+<table class="ticket-table ticket-summary">
+    <tbody>
+        {% for payment in doc.payments if payment.amount %}
+        <tr>
+            <td>{{ payment.mode_of_payment }}</td>
+            <td class="ticket-right">{{ money(payment.amount) }}</td>
+        </tr>
+        {% endfor %}
+        {% if doc.change_amount %}
+        <tr>
+            <td>Vuelto</td>
+            <td class="ticket-right">{{ money(doc.change_amount) }}</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if tip and tip.amount %}
+<div class="ticket-tip">
+    PROPINA NO FISCAL
+    <span style="float: right;">{{ money(tip.amount) }}</span><br>
+    <span class="ticket-small">Cobro: {{ tip.mode_of_payment }}</span>
+</div>
+{% endif %}
+
+{% if qr_image %}
+<img class="ticket-qr" src="{{ qr_image }}" alt="QR SUNAT">
+{% endif %}
+
+<div class="ticket-center ticket-small">
+    {% if doc.estado_sunat %}<div>Estado SUNAT: <span class="ticket-bold">{{ doc.estado_sunat }}</span></div>{% endif %}
+    {% if doc.codigo_hash_sunat %}<div>Hash: {{ doc.codigo_hash_sunat }}</div>{% endif %}
+    <div>Representación impresa del comprobante electrónico.</div>
+</div>
+
+<hr class="ticket-rule">
+<div class="ticket-center ticket-bold">¡GRACIAS POR SU PREFERENCIA!</div>
+</div>
