@@ -9,6 +9,7 @@ from restaurant_management.printing import (
 	_validate_client_id,
 	disconnect_station,
 	queue_invoice_print,
+	queue_order_print,
 	render_job,
 	resolve_job,
 	update_pos_invoice_ce_and_queue_print,
@@ -159,6 +160,31 @@ class TestRestaurantPrinting(FrappeTestCase):
 		from restaurant_management.printing import _authenticated_user
 
 		self.assertRaises(frappe.AuthenticationError, _authenticated_user)
+
+	@patch("restaurant_management.printing.enqueue_print")
+	@patch("restaurant_management.printing.frappe.get_doc")
+	@patch("restaurant_management.printing._authenticated_user")
+	def test_order_print_uses_optional_company_route(
+		self, _authenticated_user, get_doc, enqueue_print
+	):
+		order = Mock()
+		order.name = "OR-ADA-2026-00001"
+		order.company = "ADDERA PERU SAC"
+		get_doc.return_value = order
+		enqueue_print.return_value = {"queued": False, "configured": False}
+
+		result = queue_order_print(order.name, "send-1")
+
+		order.check_permission.assert_called_once_with("read")
+		enqueue_print.assert_called_once_with(
+			"Table Order",
+			order.name,
+			"ORDER",
+			company=order.company,
+			event_key="order-send-1",
+			require_route=False,
+		)
+		self.assertFalse(result["queued"])
 
 	@patch("restaurant_management.printing.enqueue_print")
 	@patch("restaurant_management.printing.frappe.get_doc")

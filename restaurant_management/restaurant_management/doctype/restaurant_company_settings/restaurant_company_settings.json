@@ -57,13 +57,7 @@
   "column_break_events",
   "to_transfer_order",
   "to_change_status_order",
-  "double_click_events_info",
-  "legacy_print_section",
-  "no_imprimir",
-  "mesas_1",
-  "column_break_legacy_print",
-  "mesas_2",
-  "mesas_3"
+  "double_click_events_info"
  ],
  "fields": [
   {
@@ -355,40 +349,6 @@
   {
    "fieldname": "double_click_events_info",
    "fieldtype": "HTML"
-  },
-  {
-   "fieldname": "legacy_print_section",
-   "fieldtype": "Section Break",
-   "label": "Legacy Print Routing"
-  },
-  {
-   "default": "0",
-   "description": "Legacy option used by the existing ticket routing integration.",
-   "fieldname": "no_imprimir",
-   "fieldtype": "Check",
-   "label": "No imprimir"
-  },
-  {
-   "default": "Z",
-   "fieldname": "mesas_1",
-   "fieldtype": "Data",
-   "label": "Mesas 1"
-  },
-  {
-   "fieldname": "column_break_legacy_print",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "Z",
-   "fieldname": "mesas_2",
-   "fieldtype": "Data",
-   "label": "Mesas 2"
-  },
-  {
-   "default": "Z",
-   "fieldname": "mesas_3",
-   "fieldtype": "Data",
-   "label": "Mesas 3"
   }
  ],
  "index_web_pages_for_search": 1,

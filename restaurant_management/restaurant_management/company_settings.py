@@ -92,7 +92,6 @@ def get_restaurant_settings(
     order=None,
     fulfillment=None,
     required=True,
-    allow_legacy=True,
 ):
     company = resolve_restaurant_company(
         company=company,
@@ -112,9 +111,6 @@ def get_restaurant_settings(
     )
     if settings_name:
         return frappe.get_doc(COMPANY_SETTINGS_DOCTYPE, settings_name)
-
-    if allow_legacy and get_legacy_settings_company() == company:
-        return frappe.get_single(LEGACY_SETTINGS_DOCTYPE)
 
     if required:
         frappe.throw(

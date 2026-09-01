@@ -66,20 +66,9 @@ class FoodCommand {
                 },
                 content: this.template
             });
-            //TIDAX: NO MOSTRAR EN PANTALLA DELIVERYS
-            let cadena = this.data.table_description;
-            let inicio = cadena.indexOf("(") + 1;
-            let fin = cadena.indexOf(")");
-            let resultado = cadena.substring(inicio, fin);
-            let m1, m2, m3;
-            //this.usarMesas(resultado);
-            m1 = RM.restrictions.mesas_1;
-            m2 = RM.restrictions.mesas_2;
-            m3 = RM.restrictions.mesas_3;
-            if(!resultado.includes(m1) && !resultado.includes(m2) && !resultado.includes(m3)){
             $(this.process_manage.command_container()).append(
                 this.item.html()
-            );}
+            );
 
             this.rendered = true;
             this.show_notes();
@@ -144,20 +133,9 @@ class FoodCommand {
                 },
                 content: this.template
             });
-            //TIDAX: NO MOSTRAR EN PANTALLA DELIVERYS
-            let cadena = this.data.table_description;
-            let inicio = cadena.indexOf("(") + 1;
-            let fin = cadena.indexOf(")");
-            let resultado = cadena.substring(inicio, fin);
-            let m1, m2, m3;
-            //this.usarMesas(resultado);
-            m1 = RM.restrictions.mesas_1;
-            m2 = RM.restrictions.mesas_2;
-            m3 = RM.restrictions.mesas_3;
-            if(!resultado.includes(m1) && !resultado.includes(m2) && !resultado.includes(m3)){
             $(this.process_manage.command_container()).append(
                 this.item.html()
-            );}
+            );
 
             this.rendered = true;
             this.show_notes();

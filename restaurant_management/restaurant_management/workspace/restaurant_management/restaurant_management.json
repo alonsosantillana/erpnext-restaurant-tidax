@@ -45,7 +45,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Settings",
+   "label": "Configuraci\u00f3n por empresa",
    "link_count": 0,
    "link_to": "Restaurant Company Settings",
    "link_type": "DocType",
@@ -181,7 +181,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Configuraci\u00f3n",
+   "label": "Configuraci\u00f3n por empresa",
    "link_count": 0,
    "link_to": "Restaurant Company Settings",
    "link_type": "DocType",

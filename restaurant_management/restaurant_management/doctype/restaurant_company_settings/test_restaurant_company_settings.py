@@ -4,6 +4,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_settings,
     get_user_restaurant_company,
     resolve_restaurant_company,
 )
@@ -52,6 +53,19 @@ class TestRestaurantCompanySettings(FrappeTestCase):
 
         self.assertEqual(company, "Company A")
         get_value.assert_not_called()
+
+    @patch("restaurant_management.restaurant_management.company_settings.frappe.get_single")
+    @patch(
+        "restaurant_management.restaurant_management.company_settings.frappe.db.get_value",
+        return_value=None,
+    )
+    def test_missing_company_settings_does_not_use_legacy_single(
+        self, get_value, get_single
+    ):
+        settings = get_restaurant_settings(company="Company A", required=False)
+
+        self.assertIsNone(settings)
+        get_single.assert_not_called()
 
     @patch(
         "restaurant_management.restaurant_management.company_settings.frappe.db.get_value"

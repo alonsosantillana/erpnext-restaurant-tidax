@@ -648,7 +648,7 @@ class TableOrder(Document):
         series = settings.get(voucher_config["series_field"])
         if not series:
             frappe.throw(
-                _("Configure la serie {0} en Restaurant Settings").format(
+                _("Configure la serie {0} en Restaurant Company Settings").format(
                     voucher_config["series_field"]
                 )
             )

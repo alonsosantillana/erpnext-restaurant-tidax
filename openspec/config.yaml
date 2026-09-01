@@ -23,7 +23,7 @@ context: |
 
   Componentes actuales:
   - Pagina Restaurant Manage y frontend de salas, mesas, comandas, pagos y cocina.
-  - DocTypes Restaurant Object, Table Order, Order Entry Item y Restaurant Settings.
+  - DocTypes Restaurant Object, Table Order, Order Entry Item y Restaurant Company Settings.
   - Permisos por perfil POS y sala mediante Restaurant Permission y excepciones.
   - Integracion con POS Profile, POS Invoice, Material Request y stock de ERPNext.
   - Integracion TIDAX con ovenube_peru, silent_print y DocTypes/campos externos.

@@ -85,7 +85,7 @@ def _get_account_print_configuration(order):
     settings = get_restaurant_settings(order=order)
     print_format = settings.print_format
     if not print_format:
-        frappe.throw(_("Configure the pre-account Print Format in Restaurant Settings"))
+        frappe.throw(_("Configure the pre-account Print Format in Restaurant Company Settings"))
 
     print_format_data = frappe.db.get_value(
         "Print Format",
@@ -610,7 +610,7 @@ def create_fulfillment_order(
     if delivery_fee:
         delivery_fee_item = settings.delivery_fee_item
         if not delivery_fee_item:
-            frappe.throw(_("Configure the delivery fee Item in Restaurant Settings"))
+            frappe.throw(_("Configure the delivery fee Item in Restaurant Company Settings"))
 
     savepoint = "restaurant_fulfillment_create"
     frappe.db.savepoint(savepoint)

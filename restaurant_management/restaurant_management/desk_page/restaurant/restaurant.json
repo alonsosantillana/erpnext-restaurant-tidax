@@ -39,7 +39,7 @@
  "shortcuts": [
   {
    "icon": "fa fa-gear",
-   "label": "Settings",
+   "label": "Configuración por empresa",
    "link_to": "Restaurant Company Settings",
    "type": "DocType"
   },

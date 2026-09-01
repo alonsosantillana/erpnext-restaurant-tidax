@@ -867,18 +867,7 @@ class TableOrder {
                     message: __("Order sent to production"),
                     indicator: "green"
                 });
-                //this.print_order();
-                let m1, m2, m3, no_imp;
-                m1 = RM.restrictions.mesas_1;
-                m2 = RM.restrictions.mesas_2;
-                m3 = RM.restrictions.mesas_3;
-                no_imp = RM.restrictions.no_imprimir;
-                if((this.order_manage.table.data.description.includes(m1) ||
-                    this.order_manage.table.data.description.includes(m2) ||
-                    this.order_manage.table.data.description.includes(m3)) &&
-                    no_imp == 0){
-                    this.print_order_silent();
-                }
+                this.queue_order_print();
             },
         });
     }
@@ -1001,34 +990,13 @@ class TableOrder {
         }
         this.print_account_silent();// TIDAX   ----> PDF + IMPRIMIR
     }
-    // TIDAX: IMPRESION DE ORDEN
-    print_order_silent(){
-        var formato_impresion;
+    queue_order_print() {
         frappe.call({
-            method: "restaurant_management.restaurant_management.doctype.utils.obtener_res_set",
+            method: "restaurant_management.printing.queue_order_print",
+            type: "POST",
             args: {
-                filtro: "print_format_order",
-                order: this.data.name
-            },
-            callback: function(r) {
-                if (r.message) {
-                    formato_impresion = r.message[0].value;
-                }
-                else {
-                    frappe.msgprint("El formato no pudo ser encontrado");
-                }
-            },
-            async: false
-        });
-
-
-        frappe.call({
-            method: 'silent_print.utils.print_format.print_silently',
-            args: {
-                doctype: "Table Order",
-                name: this.data.name,
-                print_format: formato_impresion,
-                print_type: "ORDER"
+                order_name: this.data.name,
+                request_id: RM.uuid("order-print")
             }
         });
     }

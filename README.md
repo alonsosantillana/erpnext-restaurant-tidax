@@ -34,13 +34,13 @@ ___
 4. `bench --site [site.name] install-app silent_print`
 5. `bench --site [site.name] install-app restaurant_management`
 6. `bench build --app restaurant_management`
-7. Configure Company, POS Profile, POS Opening Entry, Restaurant Settings, Silent Print Settings and the Hardware Bridge.
+7. Configure Company, POS Profile, POS Opening Entry, Restaurant Company Settings, Silent Print Settings and the Hardware Bridge.
 
 Validate first on a disposable site. See `docs/v15-baseline.md` and `docs/v15-qualification.md` for the current support matrix and evidence.
 
 #### Receipt configuration
 
-Configure all four series in `Restaurant Settings` before testing payment:
+Configure all four series in `Restaurant Company Settings` before testing payment:
 
 - `serie_boleta`: electronic Boleta.
 - `serie_factura`: electronic Factura.

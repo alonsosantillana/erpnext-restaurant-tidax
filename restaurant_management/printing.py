@@ -223,6 +223,25 @@ def queue_invoice_print(invoice_name, request_id=None):
 	)
 
 
+@frappe.whitelist(methods=["POST"])
+def queue_order_print(order_name, request_id=None):
+	"""Queue an order through the optional, company-scoped ORDER route."""
+	_authenticated_user()
+	order = frappe.get_doc("Table Order", order_name)
+	order.check_permission("read")
+	request_id = str(request_id or frappe.generate_hash(length=32)).strip()
+	if not CLIENT_ID_PATTERN.fullmatch(request_id):
+		frappe.throw(_("Invalid order print request identifier"), frappe.ValidationError)
+	return enqueue_print(
+		"Table Order",
+		order.name,
+		"ORDER",
+		company=order.company,
+		event_key=f"order-{request_id}",
+		require_route=False,
+	)
+
+
 @frappe.whitelist()
 def update_pos_invoice_ce_and_queue_print(
 	company,
