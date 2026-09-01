@@ -180,6 +180,13 @@ def enforce_restaurant_pos_invoice_currency(invoice, method=None):
     apply_pos_tax_inclusion(invoice, tax_inclusive)
     invoice.calculate_taxes_and_totals()
     invoice.set_paid_amount()
+    grand_total = flt(invoice.rounded_total or invoice.grand_total, 2)
+    base_grand_total = flt(invoice.base_rounded_total or invoice.base_grand_total, 2)
+    invoice.change_amount = flt(max(flt(invoice.paid_amount) - grand_total, 0), 2)
+    invoice.base_change_amount = flt(
+        max(flt(invoice.base_paid_amount) - base_grand_total, 0),
+        2,
+    )
     return invoice
 
 

@@ -57,11 +57,73 @@ class TestThermalPrintHelpers(unittest.TestCase):
 
 		self.assertTrue(raw.startswith(b"\x1b@\x1bt\x02"))
 		self.assertIn(b"BV-BRE1-000012", raw)
+		self.assertIn(b"CANT DESCRIPCION", raw)
+		self.assertIn(b"PU", raw)
 		self.assertIn(b"CEVICHE", raw)
+		self.assertNotIn(b"PLT-001", raw)
 		self.assertIn(b"TOTAL", raw)
-		self.assertIn(b"PROPINA NO FISCAL", raw)
+		self.assertIn(b"PROPINA", raw)
 		self.assertIn(b"\x1d(k", raw)
 		self.assertTrue(raw.endswith(b"\x1dVB\x00"))
+
+	def test_product_columns_use_the_full_48_character_width(self):
+		doc = {
+			"company": "ERPCLOUD SAC",
+			"currency": "PEN",
+			"items": [{
+				"item_code": "PLT-001",
+				"item_name": "CEVICHE",
+				"qty": 2,
+				"rate": 35,
+				"amount": 70,
+			}],
+			"grand_total": 70,
+		}
+
+		raw = build_pos_invoice_escpos(doc)
+		text = raw.decode("cp850", errors="ignore")
+		lines = text.splitlines()
+		header = next(line for line in lines if "DESCRIPCION" in line).rsplit("\x00", 1)[-1]
+		item = next(line for line in lines if "CEVICHE" in line).rsplit("\x00", 1)[-1]
+
+		self.assertEqual(len(header), 48)
+		self.assertEqual(len(item), 48)
+		self.assertNotIn("PLT-001", text)
+
+	def test_discount_does_not_become_change(self):
+		doc = {
+			"company": "ERPCLOUD SAC",
+			"currency": "PEN",
+			"items": [],
+			"net_total": 67.45,
+			"total_taxes_and_charges": 15.85,
+			"discount_amount": 14.70,
+			"grand_total": 83.30,
+			"change_amount": 14.70,
+			"payments": [
+				{"mode_of_payment": "Efectivo", "amount": 3.30},
+				{"mode_of_payment": "BCP SOL", "amount": 80},
+			],
+		}
+
+		raw = build_pos_invoice_escpos(doc)
+
+		self.assertIn(b"Descuento", raw)
+		self.assertNotIn(b"Vuelto", raw)
+
+	def test_real_payment_excess_is_printed_as_change(self):
+		doc = {
+			"company": "ERPCLOUD SAC",
+			"currency": "PEN",
+			"items": [],
+			"grand_total": 83.30,
+			"payments": [{"mode_of_payment": "Efectivo", "amount": 100}],
+		}
+
+		raw = build_pos_invoice_escpos(doc)
+
+		self.assertIn(b"Vuelto", raw)
+		self.assertIn(b"S/. 16.70", raw)
 
 	def test_escpos_repeats_complete_ticket_for_each_copy(self):
 		doc = {
@@ -99,12 +161,20 @@ class TestThermalPrintHelpers(unittest.TestCase):
 		raw = build_table_order_account_escpos(
 			doc, company_tax_id="20547172966", waiter_name="Mozo Uno"
 		)
+		text = raw.decode("cp850", errors="ignore")
+		lines = text.splitlines()
+		header = next(line for line in lines if "DESCRIPCION" in line).rsplit("\x00", 1)[-1]
+		item = next(line for line in lines if "CEVICHE" in line).rsplit("\x00", 1)[-1]
 
 		self.assertIn(b"PRE CUENTA", raw)
 		self.assertIn(b"DOCUMENTO NO FISCAL", raw)
 		self.assertIn(b"Comensales: 2", raw)
 		self.assertIn(b"Mozo: Mozo Uno", raw)
 		self.assertEqual(raw.count(b"CEVICHE"), 1)
+		self.assertIn(b"PU", raw)
+		self.assertNotIn(b"PLT-001", raw)
+		self.assertEqual(len(header), 48)
+		self.assertEqual(len(item), 48)
 		self.assertIn(b"Descuento global", raw)
 		self.assertNotIn(b"1Q0", raw)
 		self.assertTrue(raw.endswith(b"\x1dVB\x00"))

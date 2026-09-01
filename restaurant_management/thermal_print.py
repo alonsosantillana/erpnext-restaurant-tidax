@@ -73,6 +73,18 @@ def _number(value):
 	return str(int(value)) if value.is_integer() else f"{value:g}"
 
 
+def _payment_change_amount(doc):
+	"""Return only the real tender excess, ignoring stale change fields."""
+	payment_total = sum(
+		float(_value(payment, "amount", 0) or 0)
+		for payment in (_value(doc, "payments", []) or [])
+	)
+	grand_total = float(
+		_value(doc, "rounded_total", 0) or _value(doc, "grand_total", 0) or 0
+	)
+	return round(max(payment_total - grand_total, 0), 2)
+
+
 def _wrapped(value, width):
 	text = _clean_text(value)
 	return textwrap.wrap(
@@ -94,11 +106,21 @@ class _EscPosReceipt:
 	def command(self, value):
 		self.data.extend(value)
 
-	def line(self, value="", *, align=0, bold=False, double=False):
+	def line(
+		self,
+		value="",
+		*,
+		align=0,
+		bold=False,
+		double=False,
+		preformatted=False,
+	):
 		self.command(ESC + b"a" + bytes([align]))
 		self.command(ESC + b"E" + bytes([1 if bold else 0]))
 		self.command(GS + b"!" + bytes([0x11 if double else 0]))
-		self.data.extend(_clean_text(value).encode(self.encoding, errors="replace"))
+		text = str(value).replace("\x1b", "").replace("\x1d", "")
+		text = text.rstrip() if preformatted else _clean_text(text)
+		self.data.extend(text.encode(self.encoding, errors="replace"))
 		self.data.extend(b"\n")
 
 	def wrapped(self, value, *, align=0, bold=False, double=False, width=None):
@@ -116,7 +138,11 @@ class _EscPosReceipt:
 		lines = _wrapped(label, available)
 		for index, line in enumerate(lines):
 			right = amount if index == len(lines) - 1 else ""
-			self.line(f"{line:<{available}} {right:>{len(amount)}}", bold=bold)
+			self.line(
+				f"{line:<{available}} {right:>{len(amount)}}",
+				bold=bold,
+				preformatted=True,
+			)
 
 	def qr(self, value):
 		content = _clean_text(value).encode("utf-8")
@@ -141,26 +167,26 @@ class _EscPosReceipt:
 
 
 def _append_item(receipt, item, currency):
-	qty_width, description_width, amount_width = 4, 27, 15
+	qty_width, description_width, unit_width, amount_width = 4, 18, 11, 12
 	name = _value(item, "item_name") or _value(item, "item_code")
 	name_lines = _wrapped(name, description_width)
 	quantity = _number(_value(item, "qty"))
+	unit_price = _money(_value(item, "rate"), currency)
 	amount = _money(_value(item, "amount"), currency)
 	for index, description in enumerate(name_lines):
 		left = quantity if index == 0 else ""
+		unit = unit_price if index == 0 else ""
 		right = amount if index == 0 else ""
 		receipt.line(
-			f"{left:>{qty_width}} {description:<{description_width}} {right:>{amount_width}}",
+			f"{left:>{qty_width}} {description:<{description_width}} {unit:>{unit_width}} {right:>{amount_width}}",
 			bold=index == 0,
+			preformatted=True,
 		)
-	code = _clean_text(_value(item, "item_code"))
 	detail = []
-	if code and code != _clean_text(name):
-		detail.append(code)
-	detail.append(f"P. unitario: {_money(_value(item, 'rate'), currency)}")
 	if float(_value(item, "discount_percentage", 0) or 0):
 		detail.append(f"Descuento: {_number(_value(item, 'discount_percentage'))}%")
-	receipt.wrapped("  " + " | ".join(detail))
+	if detail:
+		receipt.wrapped("  " + " | ".join(detail))
 
 
 def build_pos_invoice_escpos(
@@ -203,7 +229,11 @@ def build_pos_invoice_escpos(
 		if _value(doc, "table_description"):
 			receipt.wrapped(f"Mesa: {_value(doc, 'table_description')}")
 		receipt.separator()
-		receipt.line(f"{'CANT':>4} {'DESCRIPCION':<27} {'IMPORTE':>15}", bold=True)
+		receipt.line(
+			f"{'CANT':>4} {'DESCRIPCION':<18} {'PU':>11} {'IMPORTE':>12}",
+			bold=True,
+			preformatted=True,
+		)
 		receipt.separator()
 		for item in _value(doc, "items", []) or []:
 			_append_item(receipt, item, currency)
@@ -221,11 +251,12 @@ def build_pos_invoice_escpos(
 			receipt.line("FORMA DE PAGO", bold=True)
 			for payment in payments:
 				receipt.pair(_value(payment, "mode_of_payment"), _money(_value(payment, "amount"), currency))
-			if float(_value(doc, "change_amount", 0) or 0):
-				receipt.pair("Vuelto", _money(_value(doc, "change_amount"), currency))
+			change_amount = _payment_change_amount(doc)
+			if change_amount:
+				receipt.pair("Vuelto", _money(change_amount, currency))
 		if tip and float(_value(tip, "amount", 0) or 0):
 			receipt.separator()
-			receipt.pair("PROPINA NO FISCAL", _money(_value(tip, "amount"), currency), bold=True)
+			receipt.pair("PROPINA", _money(_value(tip, "amount"), currency), bold=True)
 			receipt.wrapped(f"Cobro: {_value(tip, 'mode_of_payment')}")
 		if _value(doc, "codigo_qr_sunat"):
 			receipt.qr(_value(doc, "codigo_qr_sunat"))
@@ -317,7 +348,11 @@ def build_table_order_account_escpos(
 		if waiter_name:
 			receipt.wrapped(f"Mozo: {waiter_name}")
 		receipt.separator()
-		receipt.line(f"{'CANT':>4} {'DESCRIPCION':<27} {'IMPORTE':>15}", bold=True)
+		receipt.line(
+			f"{'CANT':>4} {'DESCRIPCION':<18} {'PU':>11} {'IMPORTE':>12}",
+			bold=True,
+			preformatted=True,
+		)
 		receipt.separator()
 		for item in _consolidate_account_items(_value(doc, "entry_items", [])):
 			_append_item(receipt, item, currency)

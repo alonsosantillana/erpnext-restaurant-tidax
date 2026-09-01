@@ -164,9 +164,10 @@
 <table class="ticket-table">
     <thead>
         <tr>
-            <th style="width: 12%;">Cant.</th>
-            <th style="width: 56%;">Descripción</th>
-            <th class="ticket-right" style="width: 32%;">Importe</th>
+            <th style="width: 10%;">CANT</th>
+            <th style="width: 42%;">DESCRIPCIÓN</th>
+            <th class="ticket-right" style="width: 23%;">PU</th>
+            <th class="ticket-right" style="width: 25%;">IMPORTE</th>
         </tr>
     </thead>
     <tbody>
@@ -175,14 +176,11 @@
             <td class="ticket-center">{{ "%g" | format(item.qty) }}</td>
             <td>
                 <span class="ticket-bold">{{ item.item_name or item.item_code }}</span>
-                {% if item.item_code and item.item_name != item.item_code %}
-                    <span class="ticket-item-detail">{{ item.item_code }}</span>
-                {% endif %}
-                <span class="ticket-item-detail">P. unitario: {{ money(item.rate) }}</span>
                 {% if item.discount_percentage %}
                     <span class="ticket-item-detail">Descuento: {{ item.discount_percentage }}%</span>
                 {% endif %}
             </td>
+            <td class="ticket-right">{{ money(item.rate) }}</td>
             <td class="ticket-right ticket-bold">{{ money(item.amount) }}</td>
         </tr>
         {% endfor %}
@@ -215,6 +213,12 @@
 </table>
 
 {% if doc.payments %}
+{% set payment_total = namespace(value=0) %}
+{% for payment in doc.payments if payment.amount %}
+    {% set payment_total.value = payment_total.value + payment.amount %}
+{% endfor %}
+{% set receipt_total = doc.rounded_total or doc.grand_total or 0 %}
+{% set actual_change = payment_total.value - receipt_total %}
 <hr class="ticket-rule-thin">
 <div class="ticket-bold">FORMA DE PAGO</div>
 <table class="ticket-table ticket-summary">
@@ -225,10 +229,10 @@
             <td class="ticket-right">{{ money(payment.amount) }}</td>
         </tr>
         {% endfor %}
-        {% if doc.change_amount %}
+        {% if actual_change > 0.005 %}
         <tr>
             <td>Vuelto</td>
-            <td class="ticket-right">{{ money(doc.change_amount) }}</td>
+            <td class="ticket-right">{{ money(actual_change) }}</td>
         </tr>
         {% endif %}
     </tbody>
@@ -237,7 +241,7 @@
 
 {% if tip and tip.amount %}
 <div class="ticket-tip">
-    PROPINA NO FISCAL
+    PROPINA
     <span style="float: right;">{{ money(tip.amount) }}</span><br>
     <span class="ticket-small">Cobro: {{ tip.mode_of_payment }}</span>
 </div>
