@@ -206,6 +206,20 @@ Delivery Failed,Entrega fallida
 Picked Up,Recogido
 Picked up,Recogido
 New command received,Nueva comanda recibida
+A new dish was added,Se agregó un plato nuevo
+{0} new dishes were added,Se agregaron {0} platos nuevos
+Kitchen sound settings,Configuración de sonido de cocina
+Enable sound,Activar sonido
+Sound,Sonido
+Double bell,Campana doble
+Chime,Timbre
+Strong alert,Alerta fuerte
+Volume (0-100),Volumen (0-100)
+Test sound,Probar sonido
+Sound off,Sonido apagado
+Sound on,Sonido activado
+Activate sound,Activar sonido
+This browser does not support kitchen sounds,Este navegador no admite sonidos de cocina
 {0} new commands received,Se recibieron {0} comandas nuevas
 Price not configured,Precio no configurado
 Item {0} has no price configured in Price List {1},El producto {0} no tiene un precio configurado en la lista de precios {1}

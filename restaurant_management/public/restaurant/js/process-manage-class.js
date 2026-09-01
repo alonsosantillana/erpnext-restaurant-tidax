@@ -8,6 +8,12 @@ ProcessManage = class ProcessManage {
         this.dashboard = null;
         this.command_snapshot_initialized = false;
         this.seen_command_keys = new Set();
+        this.seen_command_item_keys = new Set();
+        this.highlighted_command_keys = new Map();
+        this.sound_context = null;
+        this.sound_unlocked = false;
+        this.sound_attention_shown = false;
+        this.sound_settings = this.load_sound_settings();
         this.loading = false;
         this.transitioning = false;
         this.pending_reload = false;
@@ -56,6 +62,7 @@ ProcessManage = class ProcessManage {
 
     make() {
         this.status = "open";
+        this.unlock_sound(true);
         this.make_dom();
         this.start_reconciliation();
         this.reload();
@@ -63,6 +70,7 @@ ProcessManage = class ProcessManage {
 
     show() {
         this.status = "open";
+        this.unlock_sound(true);
         this.modal.show();
         this.start_reconciliation();
         this.reload();
@@ -142,10 +150,17 @@ ProcessManage = class ProcessManage {
             title: __("Full screen"),
             "aria-pressed": "false"
         }).append($("<span>", { class: "fa fa-expand" }), " ", __("Full screen"));
+        const sound_button = $("<button>", {
+            type: "button",
+            class: "btn btn-default btn-flat production-center-sound",
+            title: __("Kitchen sound settings")
+        });
 
         this.modal.title_container.empty().append(back_button.html(), refresh_button);
-        this.modal.buttons_container.find(".production-center-fullscreen").remove();
-        this.modal.buttons_container.prepend(fullscreen_button);
+        this.modal.buttons_container
+            .find(".production-center-fullscreen, .production-center-sound")
+            .remove();
+        this.modal.buttons_container.prepend(sound_button, fullscreen_button);
         this.modal.container.empty().append(this.template());
 
         this.modal.container
@@ -199,7 +214,201 @@ ProcessManage = class ProcessManage {
 
         refresh_button.on("click", () => this.reload());
         fullscreen_button.on("click", () => this.toggle_fullscreen());
+        sound_button.on("click", () => this.show_sound_settings());
+        this.sound_button = sound_button;
+        this.update_sound_button();
         this.update_active_tab();
+    }
+
+    sound_settings_key() {
+        const company = encodeURIComponent((RM.bootstrap && RM.bootstrap.company) || "default");
+        const center = encodeURIComponent((this.table && this.table.data && this.table.data.name) || "default");
+        return `restaurant_kitchen_sound:${company}:${center}`;
+    }
+
+    load_sound_settings() {
+        const defaults = { enabled: true, sound: "Double bell", volume: 70 };
+        try {
+            const stored = JSON.parse(window.localStorage.getItem(this.sound_settings_key()) || "{}");
+            const settings = Object.assign({}, defaults, stored);
+            if (!["Double bell", "Chime", "Strong alert"].includes(settings.sound)) {
+                settings.sound = defaults.sound;
+            }
+            settings.enabled = Boolean(settings.enabled);
+            settings.volume = Math.max(0, Math.min(100, Number(settings.volume) || 0));
+            return settings;
+        } catch (error) {
+            console.warn("Kitchen sound settings could not be loaded", error);
+            return defaults;
+        }
+    }
+
+    save_sound_settings() {
+        try {
+            window.localStorage.setItem(this.sound_settings_key(), JSON.stringify(this.sound_settings));
+        } catch (error) {
+            console.warn("Kitchen sound settings could not be saved", error);
+        }
+    }
+
+    update_sound_button() {
+        if (!this.sound_button) return;
+        const enabled = this.sound_settings.enabled;
+        const unlocked = this.sound_unlocked && this.sound_context && this.sound_context.state === "running";
+        const label = !enabled
+            ? __("Sound off")
+            : unlocked ? __("Sound on") : __("Activate sound");
+        const icon = !enabled ? "fa-volume-off" : unlocked ? "fa-volume-up" : "fa-bell";
+        this.sound_button
+            .toggleClass("active", enabled && unlocked)
+            .toggleClass("needs-attention", enabled && !unlocked && this.sound_attention_shown)
+            .attr("aria-pressed", enabled && unlocked ? "true" : "false")
+            .empty()
+            .append($("<span>", { class: `fa ${icon}` }), " ", label);
+    }
+
+    unlock_sound(silent = false) {
+        if (!this.sound_settings.enabled) {
+            this.update_sound_button();
+            return Promise.resolve(false);
+        }
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+            if (!silent) {
+                frappe.show_alert({
+                    message: __("This browser does not support kitchen sounds"),
+                    indicator: "orange"
+                });
+            }
+            return Promise.resolve(false);
+        }
+        if (!this.sound_context) this.sound_context = new AudioContext();
+        const resume = this.sound_context.state === "suspended"
+            ? this.sound_context.resume()
+            : Promise.resolve();
+        return resume.then(() => {
+            this.sound_unlocked = this.sound_context.state === "running";
+            if (this.sound_unlocked) this.sound_attention_shown = false;
+            this.update_sound_button();
+            return this.sound_unlocked;
+        }).catch(() => {
+            this.sound_unlocked = false;
+            this.update_sound_button();
+            return false;
+        });
+    }
+
+    show_sound_settings() {
+        const dialog = new frappe.ui.Dialog({
+            title: __("Kitchen sound settings"),
+            fields: [
+                {
+                    fieldname: "enabled",
+                    fieldtype: "Check",
+                    label: __("Enable sound"),
+                    default: this.sound_settings.enabled ? 1 : 0
+                },
+                {
+                    fieldname: "sound",
+                    fieldtype: "Select",
+                    label: __("Sound"),
+                    options: ["Double bell", "Chime", "Strong alert"],
+                    default: this.sound_settings.sound,
+                    depends_on: "eval:doc.enabled"
+                },
+                {
+                    fieldname: "volume",
+                    fieldtype: "Int",
+                    label: __("Volume (0-100)"),
+                    default: this.sound_settings.volume,
+                    depends_on: "eval:doc.enabled"
+                }
+            ],
+            primary_action_label: __("Save"),
+            primary_action: values => {
+                this.apply_sound_settings(values);
+                dialog.hide();
+            },
+            secondary_action_label: __("Test sound"),
+            secondary_action: () => {
+                const values = dialog.get_values();
+                if (!values) return;
+                this.apply_sound_settings(values, true);
+            }
+        });
+        dialog.show();
+    }
+
+    apply_sound_settings(values, test = false) {
+        this.sound_settings = {
+            enabled: Boolean(values.enabled),
+            sound: ["Double bell", "Chime", "Strong alert"].includes(values.sound)
+                ? values.sound
+                : "Double bell",
+            volume: Math.max(0, Math.min(100, Number(values.volume) || 0))
+        };
+        this.save_sound_settings();
+        if (!this.sound_settings.enabled) {
+            this.sound_attention_shown = false;
+            this.update_sound_button();
+            return;
+        }
+        this.unlock_sound().then(unlocked => {
+            if (test && unlocked) this.play_kitchen_sound("new_command", true);
+        });
+    }
+
+    sound_pattern(kind) {
+        if (kind === "new_items") {
+            return [{ frequency: 1046, start: 0, duration: 0.22, type: "sine" }];
+        }
+        if (this.sound_settings.sound === "Chime") {
+            return [
+                { frequency: 988, start: 0, duration: 0.25, type: "sine" },
+                { frequency: 1318, start: 0.18, duration: 0.36, type: "sine" }
+            ];
+        }
+        if (this.sound_settings.sound === "Strong alert") {
+            return [0, 0.22, 0.44].map(start => ({
+                frequency: 740,
+                start,
+                duration: 0.14,
+                type: "square"
+            }));
+        }
+        return [
+            { frequency: 880, start: 0, duration: 0.28, type: "sine" },
+            { frequency: 1175, start: 0.28, duration: 0.42, type: "sine" }
+        ];
+    }
+
+    play_kitchen_sound(kind = "new_command", force = false) {
+        if (!this.sound_settings.enabled || Number(this.sound_settings.volume) <= 0) return false;
+        if (!this.sound_context || this.sound_context.state !== "running") {
+            if (!force) {
+                this.sound_attention_shown = true;
+                this.update_sound_button();
+            }
+            return false;
+        }
+        const context = this.sound_context;
+        const base_time = context.currentTime + 0.02;
+        const volume = Math.max(0.001, Number(this.sound_settings.volume) / 100 * 0.24);
+        this.sound_pattern(kind).forEach(tone => {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            const start = base_time + tone.start;
+            const stop = start + tone.duration;
+            oscillator.type = tone.type;
+            oscillator.frequency.setValueAtTime(tone.frequency, start);
+            gain.gain.setValueAtTime(volume, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, stop);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start(start);
+            oscillator.stop(stop + 0.02);
+        });
+        return true;
     }
 
     template() {
@@ -388,35 +597,55 @@ ProcessManage = class ProcessManage {
     }
 
     notify_new_commands(dashboard) {
-        const keys = (dashboard && dashboard.commands || [])
-            .map(command => command.key)
-            .filter(Boolean);
+        const commands = (dashboard && dashboard.commands) || [];
+        const keys = commands.map(command => command.key).filter(Boolean);
+        const item_entries = [];
+        commands.forEach(command => {
+            (command.items || []).forEach(item => {
+                if (item.identifier) item_entries.push([command.key, item.identifier]);
+            });
+        });
 
         if (!this.command_snapshot_initialized) {
             keys.forEach(key => this.seen_command_keys.add(key));
+            item_entries.forEach(entry => this.seen_command_item_keys.add(entry[1]));
             this.command_snapshot_initialized = true;
             return 0;
         }
 
         const new_keys = keys.filter(key => !this.seen_command_keys.has(key));
+        const new_key_set = new Set(new_keys);
+        const new_item_entries = item_entries.filter(entry => (
+            !new_key_set.has(entry[0]) && !this.seen_command_item_keys.has(entry[1])
+        ));
         keys.forEach(key => this.seen_command_keys.add(key));
-        if (
-            !new_keys.length
-            || !this.is_open()
-            || document.hidden
-            || this.active_view !== "commands"
-        ) {
+        item_entries.forEach(entry => this.seen_command_item_keys.add(entry[1]));
+        if ((!new_keys.length && !new_item_entries.length) || !this.is_open() || document.hidden) {
             return 0;
         }
 
-        frappe.utils.play_sound("chime");
-        frappe.show_alert({
-            message: new_keys.length === 1
-                ? __("New command received")
-                : __("{0} new commands received", [new_keys.length]),
-            indicator: "orange"
-        });
-        return new_keys.length;
+        const highlight_until = Date.now() + 8000;
+        new_keys.forEach(key => this.highlighted_command_keys.set(key, highlight_until));
+        new_item_entries.forEach(entry => this.highlighted_command_keys.set(entry[0], highlight_until));
+
+        if (new_keys.length) {
+            this.play_kitchen_sound("new_command");
+            frappe.show_alert({
+                message: new_keys.length === 1
+                    ? __("New command received")
+                    : __("{0} new commands received", [new_keys.length]),
+                indicator: "orange"
+            });
+        } else {
+            this.play_kitchen_sound("new_items");
+            frappe.show_alert({
+                message: new_item_entries.length === 1
+                    ? __("A new dish was added")
+                    : __("{0} new dishes were added", [new_item_entries.length]),
+                indicator: "orange"
+            });
+        }
+        return new_keys.length + new_item_entries.length;
     }
 
     render_dashboard() {
@@ -524,6 +753,9 @@ ProcessManage = class ProcessManage {
 
     command_card(command, attended) {
         const card = $("<article>", { class: "production-command-card" });
+        const highlighted_until = Number(this.highlighted_command_keys.get(command.key) || 0);
+        if (highlighted_until > Date.now()) card.addClass("production-command-card-new");
+        else this.highlighted_command_keys.delete(command.key);
         const header = $("<header>", { class: "production-command-header" });
         const title = $("<div>").append(
             $("<strong>").text(command.short_name || command.order_name),
