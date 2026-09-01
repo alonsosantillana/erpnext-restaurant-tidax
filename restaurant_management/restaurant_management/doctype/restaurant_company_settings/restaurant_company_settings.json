@@ -25,6 +25,10 @@
   "enable_tips",
   "column_break_tips",
   "tip_payable_account",
+  "expenses_accounting_section",
+  "default_expense_account",
+  "column_break_expenses_accounting",
+  "expense_cost_center",
   "pos_and_print_section",
   "pos_profile",
   "print_format_order",
@@ -35,6 +39,8 @@
   "print_routes",
   "order_series_section",
   "order_naming_series",
+  "column_break_order_series",
+  "expense_naming_series",
   "pos_entry_series_section",
   "pos_opening_series",
   "column_break_pos_entry_series",
@@ -170,6 +176,29 @@
    "options": "Account"
   },
   {
+   "fieldname": "expenses_accounting_section",
+   "fieldtype": "Section Break",
+   "label": "Contabilidad de gastos del restaurante"
+  },
+  {
+   "description": "Cuenta de débito de respaldo cuando el producto no tiene una cuenta de gasto por empresa en Item Default.",
+   "fieldname": "default_expense_account",
+   "fieldtype": "Link",
+   "label": "Cuenta de gasto predeterminada",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_expenses_accounting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Centro de costo para los asientos de Resto Gastos. Si está vacío se usa el centro de costo de la compañía.",
+   "fieldname": "expense_cost_center",
+   "fieldtype": "Link",
+   "label": "Centro de costo de gastos",
+   "options": "Cost Center"
+  },
+  {
    "fieldname": "pos_and_print_section",
    "fieldtype": "Section Break",
    "label": "POS and Print Formats"
@@ -225,6 +254,17 @@
    "fieldname": "order_naming_series",
    "fieldtype": "Data",
    "label": "Table Order Series",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_order_series",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Naming series used by new restaurant expense documents for this company.",
+   "fieldname": "expense_naming_series",
+   "fieldtype": "Data",
+   "label": "Restaurant Expense Series",
    "reqd": 1
   },
   {

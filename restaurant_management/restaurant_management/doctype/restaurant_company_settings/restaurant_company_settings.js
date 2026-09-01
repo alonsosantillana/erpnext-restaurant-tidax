@@ -31,11 +31,23 @@ frappe.ui.form.on("Restaurant Company Settings", {
 				`POS-CLO-${abbr}-.YYYY.-.#####`
 			);
 		}
+		if (!frm.doc.expense_naming_series) {
+			await frm.set_value(
+				"expense_naming_series",
+				`GTO-${abbr}-.YYYY.-.#####`
+			);
+		}
 	},
 
 	setup(frm) {
 		frm.set_query("pos_profile", () => ({
 			filters: { company: frm.doc.company, disabled: 0 },
+		}));
+		frm.set_query("default_expense_account", () => ({
+			filters: { company: frm.doc.company, root_type: "Expense", is_group: 0, disabled: 0 },
+		}));
+		frm.set_query("expense_cost_center", () => ({
+			filters: { company: frm.doc.company, is_group: 0, disabled: 0 },
 		}));
 		frm.set_query("print_format", () => ({
 			filters: { doc_type: "Table Order", disabled: 0 },

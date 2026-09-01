@@ -9,6 +9,7 @@
   "item_gto",
   "gasto_gto",
   "detalle_gto",
+  "expense_account",
   "clm_brk_01",
   "grupo_gto",
   "importe_gto"
@@ -18,8 +19,9 @@
    "fieldname": "item_gto",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Codigo",
-   "options": "Item"
+   "label": "Código",
+   "options": "Item",
+   "reqd": 1
   },
   {
    "fetch_from": "item_gto.item_name",
@@ -34,7 +36,17 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Importe",
-   "options": "Currency"
+   "non_negative": 1,
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Cuenta de gasto",
+   "options": "Account",
+   "read_only": 1
   },
   {
    "fieldname": "clm_brk_01",

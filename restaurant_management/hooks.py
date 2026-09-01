@@ -40,7 +40,22 @@ doc_events = {
     },
     "POS Closing Entry": {
         "autoname": "restaurant_management.restaurant_management.pos_series.autoname_pos_document",
-        "validate": "restaurant_management.restaurant_management.pos_series.validate_pos_document_series",
+        "validate": [
+            "restaurant_management.restaurant_management.pos_series.validate_pos_document_series",
+            "restaurant_management.restaurant_management.pos_closing_expenses.validate_closing_entry",
+        ],
+        "before_submit": [
+            "restaurant_management.restaurant_management.pos_closing_expenses.validate_no_draft_expenses",
+            "restaurant_management.restaurant_management.expense_accounting.validate_expense_accounting_before_closing",
+        ],
+    },
+    "Restaurant Company Settings": {
+        "validate": "restaurant_management.restaurant_management.expense_accounting.validate_company_settings_expense_accounting",
+    },
+    "Resto Gastos": {
+        "validate": "restaurant_management.restaurant_management.expense_accounting.validate_expense_accounts",
+        "on_submit": "restaurant_management.restaurant_management.expense_accounting.create_expense_journal_entry",
+        "on_cancel": "restaurant_management.restaurant_management.expense_accounting.cancel_expense_journal_entry",
     },
     "POS Invoice": {
         "validate": "restaurant_management.restaurant_management.doctype.table_order.table_order.enforce_restaurant_pos_invoice_currency",
@@ -130,7 +145,11 @@ doctype_js = {
     "Material Request" : "public/js/material_request.js",
     "Resto Gastos" : "public/js/resto_gastos.js",
     "POS Opening Entry": "public/js/pos_entry_series.js",
-    "POS Closing Entry": "public/js/pos_entry_series.js",
+    "POS Closing Entry": [
+        "public/js/pos_entry_series.js",
+        "public/js/pos_closing_expenses.js",
+        "public/js/pos_closing_summary.js",
+    ],
     "POS Invoice": "public/js/pos_invoice_print.js",
 }
 # doctype_js = {{"doctype" : "public/js/doctype.js"}}

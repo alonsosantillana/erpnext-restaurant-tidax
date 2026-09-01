@@ -6,8 +6,10 @@ from frappe.tests.utils import FrappeTestCase
 from restaurant_management.restaurant_management.pos_series import (
     autoname_pos_document,
     autoname_table_order,
+    get_company_expense_series,
     get_company_pos_series,
     get_company_table_order_series,
+    get_default_expense_series,
     get_default_pos_series,
     get_default_table_order_series,
     resolve_pos_document_company,
@@ -123,6 +125,29 @@ class TestPOSSeries(FrappeTestCase):
         self.assertEqual(
             get_company_table_order_series("Company A"),
             "OR-ADA-.YYYY.-.#####",
+        )
+        get_settings.assert_called_once_with(company="Company A")
+
+    @patch(
+        "restaurant_management.restaurant_management.pos_series.frappe.db.get_value",
+        return_value="ECS",
+    )
+    def test_default_expense_series_uses_company_abbreviation(self, get_value):
+        self.assertEqual(
+            get_default_expense_series("Company B"),
+            "GTO-ECS-.YYYY.-.#####",
+        )
+
+    @patch(
+        "restaurant_management.restaurant_management.pos_series.get_restaurant_settings"
+    )
+    def test_reads_expense_series_from_company_settings(self, get_settings):
+        get_settings.return_value = frappe._dict(
+            expense_naming_series="GTO-ADA-.YYYY.-.#####"
+        )
+        self.assertEqual(
+            get_company_expense_series("Company A"),
+            "GTO-ADA-.YYYY.-.#####",
         )
         get_settings.assert_called_once_with(company="Company A")
 

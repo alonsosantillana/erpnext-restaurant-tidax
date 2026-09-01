@@ -24,6 +24,7 @@ POS_SERIES_PREFIXES = {
 }
 SERIES_DISPLAY_FIELD = "restaurant_naming_series"
 TABLE_ORDER_SERIES_FIELD = "order_naming_series"
+EXPENSE_SERIES_FIELD = "expense_naming_series"
 
 
 def get_company_series_abbreviation(company):
@@ -47,6 +48,10 @@ def get_default_table_order_series(company):
     return f"OR-{get_company_series_abbreviation(company)}-.YYYY.-.#####"
 
 
+def get_default_expense_series(company):
+    return f"GTO-{get_company_series_abbreviation(company)}-.YYYY.-.#####"
+
+
 def validate_company_pos_series(settings):
     if settings.doctype != COMPANY_SETTINGS_DOCTYPE:
         return
@@ -58,6 +63,13 @@ def validate_company_pos_series(settings):
         settings.set(TABLE_ORDER_SERIES_FIELD, order_series)
     NamingSeries(order_series).validate()
     configured[TABLE_ORDER_SERIES_FIELD] = order_series
+
+    expense_series = cstr(settings.get(EXPENSE_SERIES_FIELD)).strip()
+    if not expense_series:
+        expense_series = get_default_expense_series(settings.company)
+        settings.set(EXPENSE_SERIES_FIELD, expense_series)
+    NamingSeries(expense_series).validate()
+    configured[EXPENSE_SERIES_FIELD] = expense_series
 
     for document_type, fieldname in POS_SERIES_FIELDS.items():
         series = cstr(settings.get(fieldname)).strip()
@@ -73,7 +85,11 @@ def validate_company_pos_series(settings):
         frappe.throw(_("Restaurant document series must be different"))
 
     for series in configured.values():
-        for other_fieldname in [TABLE_ORDER_SERIES_FIELD, *POS_SERIES_FIELDS.values()]:
+        for other_fieldname in [
+            TABLE_ORDER_SERIES_FIELD,
+            EXPENSE_SERIES_FIELD,
+            *POS_SERIES_FIELDS.values(),
+        ]:
             company = frappe.db.get_value(
                 COMPANY_SETTINGS_DOCTYPE,
                 {
@@ -95,6 +111,15 @@ def get_company_table_order_series(company):
     series = cstr(settings.get(TABLE_ORDER_SERIES_FIELD)).strip()
     if not series:
         series = get_default_table_order_series(company)
+    NamingSeries(series).validate()
+    return series
+
+
+def get_company_expense_series(company):
+    settings = get_restaurant_settings(company=company)
+    series = cstr(settings.get(EXPENSE_SERIES_FIELD)).strip()
+    if not series:
+        series = get_default_expense_series(company)
     NamingSeries(series).validate()
     return series
 

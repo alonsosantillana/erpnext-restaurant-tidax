@@ -60,6 +60,38 @@ docs = {
             bold=1,
             no_copy=1,
         ),
+        restaurant_expense_total=dict(
+            label="Total Gastos",
+            fieldtype="Currency",
+            insert_after="total_quantity",
+            options="company:company_currency",
+            read_only=1,
+            bold=1,
+            no_copy=1,
+            default="0",
+        ),
+    ),
+    "POS Closing Entry Detail": dict(
+        restaurant_sales_amount=dict(
+            label="Ventas",
+            fieldtype="Currency",
+            insert_after="opening_amount",
+            options="company:company_currency",
+            read_only=1,
+            in_list_view=1,
+            no_copy=1,
+            default="0",
+        ),
+        restaurant_expense_amount=dict(
+            label="Gastos",
+            fieldtype="Currency",
+            insert_after="restaurant_sales_amount",
+            options="company:company_currency",
+            read_only=1,
+            in_list_view=1,
+            no_copy=1,
+            default="0",
+        ),
     ),
 }
 

@@ -76,7 +76,11 @@ def execute(filters=None):
             COALESCE((
                 SELECT SUM(gasto.gto_total)
                 FROM `tabResto Gastos` gasto
-                WHERE gasto.date_gto = pce.posting_date
+                INNER JOIN `tabPOS Closing Entry` cierre_gasto
+                    ON cierre_gasto.pos_opening_entry = gasto.pos_opening_entry
+                WHERE cierre_gasto.company = pce.company
+                  AND cierre_gasto.posting_date = pce.posting_date
+                  AND cierre_gasto.docstatus = 1
                   AND gasto.docstatus = 1
             ), 0) AS total_gastos
         FROM `tabPOS Closing Entry` pce

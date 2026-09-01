@@ -9,20 +9,80 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
+  "company",
   "date_gto",
+  "pos_opening_entry",
+  "pos_profile",
   "clm_brk_01",
+  "mode_of_payment",
+  "payment_account",
   "gto_total",
+  "accounting_section",
+  "journal_entry",
   "sec_brk_01",
   "gto_detalle",
   "amended_from"
  ],
  "fields": [
   {
+   "default": "Today",
    "fieldname": "date_gto",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Fecha",
    "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Compañía",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pos_opening_entry",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Apertura POS",
+   "options": "POS Opening Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "label": "Perfil POS",
+   "options": "POS Profile",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Modo de pago",
+   "options": "Mode of Payment",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_account",
+   "fieldtype": "Link",
+   "label": "Cuenta de pago",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "accounting_section",
+   "fieldtype": "Section Break",
+   "label": "Contabilidad"
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Asiento contable",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",
@@ -42,6 +102,7 @@
    "default": "0",
    "fieldname": "gto_total",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Total",
    "options": "Currency",
    "read_only": 1
@@ -56,9 +117,10 @@
   },
   {
    "fieldname": "naming_series",
-   "fieldtype": "Select",
-   "label": "Series",
-   "options": "GTO-.YYYY.-"
+   "fieldtype": "Data",
+   "label": "Serie",
+   "no_copy": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -72,6 +134,7 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -81,6 +144,7 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
