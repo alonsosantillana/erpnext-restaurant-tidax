@@ -15,8 +15,7 @@ def validate_expense_accounts(doc, method=None):
 
 	settings = _get_accounting_settings(doc.company)
 	for row in doc.gto_detalle:
-		expense_account = _get_item_expense_account(row.item_gto, doc.company)
-		expense_account = expense_account or settings.default_expense_account
+		expense_account = resolve_expense_account(row.item_gto, doc.company)
 		if not expense_account:
 			frappe.throw(
 				_(
@@ -25,7 +24,6 @@ def validate_expense_accounts(doc, method=None):
 				).format(row.idx, row.item_gto, doc.company),
 				title=_("Expense account required"),
 			)
-		_validate_account(expense_account, doc.company, "Expense")
 		row.expense_account = expense_account
 
 	_validate_account(doc.payment_account, doc.company, "Asset")
@@ -138,6 +136,16 @@ def validate_expense_accounting_before_closing(doc, method=None):
 			),
 			title=_("Expense accounting pending"),
 		)
+
+
+def resolve_expense_account(item_code, company):
+	"""Return the validated item-specific or company fallback expense account."""
+	settings = _get_accounting_settings(company)
+	expense_account = _get_item_expense_account(item_code, company)
+	expense_account = expense_account or settings.default_expense_account
+	if expense_account:
+		_validate_account(expense_account, company, "Expense")
+	return expense_account
 
 
 def _get_accounting_settings(company):

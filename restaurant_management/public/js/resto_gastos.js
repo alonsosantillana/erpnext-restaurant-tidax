@@ -1,5 +1,7 @@
 const EXPENSE_CONTEXT_METHOD =
 	"restaurant_management.restaurant_management.doctype.resto_gastos.resto_gastos.get_opening_context";
+const EXPENSE_ACCOUNT_METHOD =
+	"restaurant_management.restaurant_management.doctype.resto_gastos.resto_gastos.get_expense_account";
 
 frappe.ui.form.on("Resto Gastos", {
 	setup(frm) {
@@ -31,6 +33,7 @@ frappe.ui.form.on("Resto Gastos", {
 		if (frm.doc.pos_opening_entry) {
 			await load_opening_context(frm);
 		}
+		await refresh_expense_accounts(frm);
 	},
 
 	async company(frm) {
@@ -60,6 +63,10 @@ frappe.ui.form.on("Resto Gastos", {
 });
 
 frappe.ui.form.on("Resto Gastos Detalle", {
+	async item_gto(frm, cdt, cdn) {
+		await set_row_expense_account(frm, cdt, cdn);
+	},
+
 	importe_gto(frm) {
 		set_expense_total(frm);
 	},
@@ -102,6 +109,43 @@ async function clear_opening_context(frm, clearOpening = true) {
 	await frm.set_value("pos_profile", null);
 	await frm.set_value("mode_of_payment", null);
 	await frm.set_value("payment_account", null);
+}
+
+async function set_row_expense_account(frm, cdt, cdn) {
+	const row = locals[cdt] && locals[cdt][cdn];
+	if (!row) return;
+	if (!row.item_gto || !frm.doc.company) {
+		await frappe.model.set_value(cdt, cdn, "expense_account", null);
+		return;
+	}
+
+	const item_code = row.item_gto;
+	const company = frm.doc.company;
+	const response = await frappe.call({
+		method: EXPENSE_ACCOUNT_METHOD,
+		args: { item_code, company },
+	});
+	const current_row = locals[cdt] && locals[cdt][cdn];
+	if (
+		current_row
+		&& current_row.item_gto === item_code
+		&& frm.doc.company === company
+	) {
+		await frappe.model.set_value(
+			cdt,
+			cdn,
+			"expense_account",
+			response.message || null
+		);
+	}
+}
+
+async function refresh_expense_accounts(frm) {
+	for (const row of frm.doc.gto_detalle || []) {
+		if (row.item_gto && !row.expense_account) {
+			await set_row_expense_account(frm, row.doctype, row.name);
+		}
+	}
 }
 
 function set_expense_total(frm) {

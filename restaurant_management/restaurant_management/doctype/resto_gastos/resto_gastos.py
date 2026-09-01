@@ -221,6 +221,43 @@ def _validate_payment_account(account_name, company):
 
 
 @frappe.whitelist()
+def get_expense_account(item_code, company):
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+    if not company or not frappe.has_permission("Company", "read", doc=company):
+        frappe.throw(
+            _("Not permitted to use Company {0}").format(company),
+            frappe.PermissionError,
+        )
+
+    item = frappe.db.get_value(
+        "Item",
+        item_code,
+        ["item_group", "disabled"],
+        as_dict=True,
+    )
+    if not item or item.disabled:
+        frappe.throw(_("Select an enabled expense Item"))
+    if item.item_group != EXPENSE_ITEM_GROUP:
+        frappe.throw(_("Item must belong to group {0}").format(EXPENSE_ITEM_GROUP))
+
+    from restaurant_management.restaurant_management.expense_accounting import (
+        resolve_expense_account,
+    )
+
+    expense_account = resolve_expense_account(item_code, company)
+    if not expense_account:
+        frappe.throw(
+            _(
+                "Configure an Expense Account for Item {0} in Item Default "
+                "or set the Default Restaurant Expense Account for company {1}"
+            ).format(item_code, company),
+            title=_("Expense account required"),
+        )
+    return expense_account
+
+
+@frappe.whitelist()
 def get_opening_context(pos_opening_entry):
     if frappe.session.user == "Guest":
         frappe.throw(_("Authentication required"), frappe.AuthenticationError)
