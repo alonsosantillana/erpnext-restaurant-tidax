@@ -14,6 +14,10 @@
   "multiple_pending_order",
   "color",
   "restaurant_permissions_info",
+  "pre_account_colors_section",
+  "pre_account_requested_color",
+  "column_break_pre_account_colors",
+  "pre_account_outdated_color",
   "exceptions_section",
   "restaurant_exceptions",
   "fulfillment_section",
@@ -105,6 +109,29 @@
   {
    "fieldname": "restaurant_permissions_info",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "pre_account_colors_section",
+   "fieldtype": "Section Break",
+   "label": "Pre-account colors"
+  },
+  {
+   "default": "#b45309",
+   "description": "Table color after printing the pre-account.",
+   "fieldname": "pre_account_requested_color",
+   "fieldtype": "Color",
+   "label": "Pre-account requested color"
+  },
+  {
+   "fieldname": "column_break_pre_account_colors",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "#dc2626",
+   "description": "Table color when an issued pre-account must be reprinted.",
+   "fieldname": "pre_account_outdated_color",
+   "fieldtype": "Color",
+   "label": "Pre-account outdated color"
   },
   {
    "fieldname": "exceptions_section",

@@ -239,3 +239,8 @@ Collection Method,Medio de cobro
 Tip collection method,Medio de cobro de la propina
 The tip is collected separately and is not part of the fiscal sale.,La propina se cobra por separado y no forma parte de la venta fiscal.
 Pending Accounting,Pendiente de contabilización
+Pre-account colors,Colores de pre-cuenta
+Pre-account requested color,Color de cuenta solicitada
+Pre-account outdated color,Color de cuenta desactualizada
+Table color after printing the pre-account.,Color de la mesa después de imprimir la pre-cuenta.
+Table color when an issued pre-account must be reprinted.,Color de la mesa cuando una pre-cuenta emitida debe reimprimirse.

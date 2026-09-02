@@ -623,6 +623,7 @@ RestaurantManage = class RestaurantManage {
 		this.#permissions = r.permissions;
 		this.#exceptions = r.exceptions;
 		this.#restrictions = r.restrictions;
+		this.apply_pre_account_colors();
 		this.#lang = r.lang;
 		this.restaurant_permissions = r.pos.restaurant_permissions;
 		this.order_item_editor_form = r.order_item_editor_form;
@@ -635,6 +636,14 @@ RestaurantManage = class RestaurantManage {
 			}
 		}
 		this.ready();
+	}
+
+	apply_pre_account_colors() {
+		const settings = this.restrictions || {};
+		this.wrapper.find(".restaurant-manage").css({
+			"--pre-account-requested-color": settings.pre_account_requested_color || "#b45309",
+			"--pre-account-outdated-color": settings.pre_account_outdated_color || "#dc2626"
+		});
 	}
 
 	get pos_profile() { return this.#pos_profile }

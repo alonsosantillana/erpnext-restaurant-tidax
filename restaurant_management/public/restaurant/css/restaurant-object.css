@@ -1,6 +1,8 @@
 :root{
     --table-border-radius: 7px;
     --table-round-border-radius: 50%;
+    --pre-account-requested-color: #b45309;
+    --pre-account-outdated-color: #dc2626;
 }
 .restaurant-manage .floor-map .d-table {
     text-align: center;
@@ -246,14 +248,14 @@
 
 
 .restaurant-manage .floor-map .d-table.pre-account-requested {
-    background-color: #b45309 !important;
-    border-color: #78350f;
+    background-color: var(--pre-account-requested-color) !important;
+    border-color: var(--pre-account-requested-color);
     box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.2);
 }
 
 .restaurant-manage .floor-map .d-table.pre-account-outdated {
-    background-color: #b45309 !important;
-    border: 3px solid #dc2626;
+    background-color: var(--pre-account-outdated-color) !important;
+    border: 3px solid var(--pre-account-outdated-color);
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
 }
 
