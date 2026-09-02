@@ -4,21 +4,38 @@ erpnext.PointOfSale.RestaurantController = class {
 		this.page = wrapper.page;
 	}
 
-	fetch_opening_entry() {
-		return frappe.call("erpnext.selling.page.point_of_sale.point_of_sale.check_opening_entry", { "user": frappe.session.user });
+	fetch_opening_entry(pos_profile) {
+		return frappe.call(
+			"restaurant_management.restaurant_management.page.restaurant_manage.restaurant_manage.get_restaurant_opening_entry",
+			{ pos_profile: pos_profile || RM.pos_profile.name }
+		);
 	}
 
-	check_opening_entry() {
-		return new Promise(resolve => {
-			this.fetch_opening_entry().then((r) => {
-				if (r.message.length) {
-					// assuming only one opening voucher is available for the current user
-					this.prepare_app_defaults(r.message[0]);
-					resolve();
-				} else {
-					this.create_opening_voucher();
-				}
-			});
+	check_opening_entry(pos_profile) {
+		return this.fetch_opening_entry(pos_profile).then((r) => {
+			const state = r.message || {};
+			this.allow_negative_stock = Boolean(
+				Number(state.allow_negative_stock)
+			);
+			if (state.opening) {
+				this.prepare_app_defaults({
+					...state.opening,
+					can_manage_opening: state.can_manage_opening,
+					owns_opening: state.owns_opening
+				});
+				return true;
+			}
+
+			if (state.can_manage_opening) {
+				this.create_opening_voucher();
+			} else {
+				frappe.msgprint({
+					title: __("Cash register closed"),
+					message: __("Ask a cashier to open the POS before taking orders."),
+					indicator: "orange"
+				});
+			}
+			return false;
 		});
 	}
 
@@ -47,15 +64,15 @@ erpnext.PointOfSale.RestaurantController = class {
 		];
 		const fetch_pos_payment_methods = () => {
 			const pos_profile = dialog.fields_dict.pos_profile.get_value();
-			if (!pos_profile) return;
-			frappe.db.get_doc("POS Profile", pos_profile).then(({ payments }) => {
-				dialog.fields_dict.balance_details.df.data = [];
-				payments.forEach(pay => {
-					const { mode_of_payment } = pay;
-					dialog.fields_dict.balance_details.df.data.push({ mode_of_payment, opening_amount: '0' });
+			if (!pos_profile || pos_profile !== RM.pos_profile.name) return;
+			dialog.fields_dict.balance_details.df.data = [];
+			(RM.pos_profile.payments || []).forEach((pay) => {
+				const { mode_of_payment } = pay;
+				dialog.fields_dict.balance_details.df.data.push({
+					mode_of_payment, opening_amount: "0"
 				});
-				dialog.fields_dict.balance_details.grid.refresh();
 			});
+			dialog.fields_dict.balance_details.grid.refresh();
 		}
 		const fetch_pos_series = () => {
 			const company = dialog.fields_dict.company.get_value();
@@ -70,10 +87,6 @@ erpnext.PointOfSale.RestaurantController = class {
 				dialog.set_value("restaurant_naming_series", response.message);
 			});
 		}
-		const pos_profile_query = {
-			query: 'erpnext.accounts.doctype.pos_profile.pos_profile.pos_profile_query',
-			filters: { company: RM.pos_profile.company }
-		}
 		const dialog = new frappe.ui.Dialog({
 			title: __('Create POS Opening Entry'),
 			static: true,
@@ -87,10 +100,9 @@ erpnext.PointOfSale.RestaurantController = class {
 					fieldname: 'restaurant_naming_series', read_only: 1
 				},
 				{
-					fieldtype: 'Link', label: __('POS Profile'),
-					options: 'POS Profile', fieldname: 'pos_profile', reqd: 1, read_only: 1,
+					fieldtype: 'Data', label: __('POS Profile'),
+					fieldname: 'pos_profile', reqd: 1, read_only: 1,
 					default: RM.pos_profile.name,
-					get_query: () => pos_profile_query,
 					onchange: () => fetch_pos_payment_methods()
 				},
 				{
@@ -118,12 +130,17 @@ erpnext.PointOfSale.RestaurantController = class {
 
 				const method = "erpnext.selling.page.point_of_sale.point_of_sale.create_opening_voucher";
 				const res = await frappe.call({ method, args: { pos_profile, company, balance_details }, freeze:true });
-				!res.exc && me.prepare_app_defaults(res.message);
+				!res.exc && me.prepare_app_defaults({
+					...res.message,
+					can_manage_opening: true,
+					owns_opening: true
+				});
 				dialog.hide();
 			},
 			primary_action_label: __('Submit...')
 		});
 		dialog.show();
+		fetch_pos_payment_methods();
 		fetch_pos_series();
 	}
 
@@ -132,18 +149,23 @@ erpnext.PointOfSale.RestaurantController = class {
 		this.company = data.company;
 		this.pos_profile = data.pos_profile;
 		this.pos_opening_time = data.period_start_date;
+		this.can_manage_opening = Boolean(data.can_manage_opening);
+		this.owns_opening = Boolean(data.owns_opening);
+		if (RM && typeof RM.update_pos_closing_access === "function") {
+			RM.update_pos_closing_access(
+				this.can_manage_opening && this.owns_opening
+			);
+		}
 		this.item_stock_map = {};
 		this.settings = {};
 
-		frappe.db.get_value('Stock Settings', undefined, 'allow_negative_stock').then(({ message }) => {
-			this.allow_negative_stock = flt(message.allow_negative_stock) || false;
-		});
-
-		frappe.db.get_doc("POS Profile", this.pos_profile).then((profile) => {
+		const profile = RM.pos_profile;
+		if (profile && profile.name === this.pos_profile) {
 			Object.assign(this.settings, profile);
-			this.settings.customer_groups = profile.customer_groups.map(group => group.customer_group);
-			//this.make_app();
-		});
+			this.settings.customer_groups = (profile.customer_groups || []).map(
+				(group) => group.customer_group
+			);
+		}
 	}
 
 	set_opening_entry_status() {

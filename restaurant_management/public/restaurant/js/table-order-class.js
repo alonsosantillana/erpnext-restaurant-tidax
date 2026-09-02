@@ -890,7 +890,7 @@ class TableOrder {
     }
 
     async pay() {
-        if (RM.busy || !RM.can_pay) return;
+        if (RM.busy || !RM.can_pay_order(this)) return;
         if (RM.pos_profile == null) {
             frappe.msgprint(RM.not_has_pos_profile_message());
         } else if (RM.pos_profile.payments.length === 0) {

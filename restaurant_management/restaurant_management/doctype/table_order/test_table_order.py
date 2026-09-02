@@ -193,13 +193,13 @@ class TestTableOrder(unittest.TestCase):
 		has_permission.assert_called_once_with("Table Order", "create")
 		table.add_order.assert_not_called()
 
-	def test_make_invoice_requires_effective_pos_invoice_create_permission(self):
+	def test_make_invoice_requires_restaurant_payment_permission(self):
 		order = TableOrder({"doctype": "Table Order", "name": "OR-2026-00008"})
 
 		with (
 			patch(
-				"restaurant_management.restaurant_management.doctype.table_order.table_order.frappe.has_permission",
-				return_value=False,
+				"restaurant_management.restaurant_management.doctype.table_order.table_order.get_restaurant_payment_permissions",
+				return_value=frappe._dict(can_pay=False),
 			),
 			self.assertRaises(frappe.PermissionError),
 		):

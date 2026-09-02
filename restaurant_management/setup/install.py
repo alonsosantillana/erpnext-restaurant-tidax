@@ -6,8 +6,29 @@ from frappe.modules.import_file import import_file_by_path
 
 docs = {
     "POS Profile User": dict(
-        restaurant_permission=dict(label="Restaurant Permission", fieldtype="Button",
-                                   options="Restaurant Permission", insert_after="user", in_list_view=1, read_only=1),
+        allow_restaurant_payment=dict(
+            label="Can Collect Payment",
+            fieldtype="Check",
+            default="0",
+            insert_after="user",
+            in_list_view=1,
+        ),
+        allow_restaurant_payment_for_others=dict(
+            label="Can Collect Other Orders",
+            fieldtype="Check",
+            default="0",
+            insert_after="allow_restaurant_payment",
+            depends_on="eval:doc.allow_restaurant_payment",
+            in_list_view=1,
+        ),
+        restaurant_permission=dict(
+            label="Restaurant Permission",
+            fieldtype="Button",
+            options="Restaurant Permission",
+            insert_after="allow_restaurant_payment_for_others",
+            in_list_view=1,
+            read_only=1,
+        ),
         parent=dict(label="Parent", fieldtype="Data", hidden=1),
         parenttype=dict(label="Parent Type", fieldtype="Data", hidden=1),
         restaurant_permissions=dict(label="Restaurant Permissions", fieldtype="Table",
@@ -97,6 +118,22 @@ docs = {
 
 fields_not_needed = ['parent', 'parenttype', 'restaurant_permissions']
 
+OPERATIONAL_ROLES = (
+    'resto_admin',
+    'resto_cajero',
+    'resto_mozo',
+    'resto_cocina',
+    'resto_delivery',
+)
+
+CUSTOMER_ROLES = (
+    'resto_admin',
+    'resto_cajero',
+    'resto_mozo',
+    'resto_delivery',
+)
+
+
 def after_install():
     sync_app_metadata()
 
@@ -107,6 +144,59 @@ def sync_app_metadata():
     set_custom_fields()
     sync_desk_forms()
     set_custom_scripts()
+    set_operational_role_permissions()
+
+
+def set_operational_role_permissions():
+    from frappe.permissions import add_permission, update_permission_property
+
+    permission_rules = {
+        'Company': {
+            role: ('read',) for role in OPERATIONAL_ROLES
+        },
+        'Customer': {
+            role: ('read', 'select', 'create') for role in CUSTOMER_ROLES
+        },
+        'Address': {
+            role: ('read', 'select', 'create') for role in CUSTOMER_ROLES
+        },
+    }
+
+    for doctype, role_rules in permission_rules.items():
+        for role, permission_types in role_rules.items():
+            if not frappe.db.exists('Role', role):
+                continue
+
+            filters = {
+                'parent': doctype,
+                'role': role,
+                'permlevel': 0,
+                'if_owner': 0,
+            }
+            permission_name = frappe.db.get_value(
+                'Custom DocPerm', filters, 'name'
+            )
+            if not permission_name:
+                add_permission(
+                    doctype,
+                    role,
+                    permlevel=0,
+                    ptype=permission_types[0],
+                )
+                permission_name = frappe.db.get_value(
+                    'Custom DocPerm', filters, 'name'
+                )
+
+            for permission_type in permission_types:
+                if not frappe.db.get_value(
+                    'Custom DocPerm', permission_name, permission_type
+                ):
+                    update_permission_property(
+                        doctype, role, 0, permission_type, 1
+                    )
+
+        frappe.clear_cache(doctype=doctype)
+
 
 def set_custom_fields():
     for doctype, fields in docs.items():
@@ -141,54 +231,106 @@ def sync_desk_forms():
 
 
 def set_custom_scripts():
-    test_script = frappe.get_value("Client Script", "POS Profile-Form")
-    if test_script is None:
-        CS = frappe.new_doc("Client Script")
-        CS.set("name", "POS Profile-Form")
-    else:
-        CS = frappe.get_doc("Client Script", test_script)
+    script_name = frappe.db.get_value(
+        "Client Script",
+        {
+            "dt": "POS Profile",
+            "view": "Form",
+            "script": ["like", "%get_room_permissions%"],
+        },
+        "name",
+    )
+    CS = (
+        frappe.get_doc("Client Script", script_name)
+        if script_name
+        else frappe.new_doc("Client Script")
+    )
 
     CS.set("enabled", 1)
     CS.set("view", "Form")
     CS.set("dt", "POS Profile")
     CS.set("script", """
-frappe.ui.form.on('POS Profile', {
+frappe.ui.form.on("POS Profile", {
     refresh(frm) {
-        //refresh
-	}
+        // Restaurant room access is configured from each saved user row.
+    }
 });
 
-frappe.ui.form.on('POS Profile User', {
-    restaurant_permission(frm, cdt, cdn) {
-        if(cdn.includes('new')){
-            frappe.show_alert(__("Save the record before assigning permissions"));
+frappe.ui.form.on("POS Profile User", {
+    async restaurant_permission(frm, cdt, cdn) {
+        const row = locals[cdt] && locals[cdt][cdn];
+        if (!row || row.__islocal) {
+            frappe.msgprint(__("Save the POS Profile before assigning room permissions"));
             return;
         }
-        
-        new DeskForm({
-            form_name: 'Restaurant Permission Manage',
-            doc_name: cdn,
-            callback: (self) => {
-                self.hide();
-            },
-            title: __(`Room Access`),
-            field_properties: {
-                pos_profile_user: {
-                  value: cdn  
-                },
-                'restaurant_permission.room': {
-                    "get_query": () => {
-                        return {
-                            filters: [
-                            ['type', '=', 'Room'],
-                            ['company', '=', frm.doc.company]
-                            ]
-                        }
-                    }
-                }
-            }
+
+        const method =
+            "restaurant_management.restaurant_management.doctype.restaurant_permission_manage.restaurant_permission_manage";
+        const response = await frappe.call({
+            method: method + ".get_room_permissions",
+            args: { pos_profile_user: cdn },
+            freeze: true,
+            freeze_message: __("Loading room permissions..."),
         });
+        const context = response.message || {};
+        const assignedRooms = context.assigned_rooms || [];
+        const dialog = new frappe.ui.Dialog({
+            title: __("Room Access for {0}", [context.user || ""]),
+            size: "large",
+            fields: [
+                {
+                    fieldname: "rooms",
+                    fieldtype: "MultiCheck",
+                    label: __("Rooms"),
+                    columns: 2,
+                    select_all: 1,
+                    options: (context.rooms || []).map((room) => ({
+                        label: room.description
+                            ? room.description + " (" + room.name + ")"
+                            : room.name,
+                        value: room.name,
+                        checked: assignedRooms.includes(room.name),
+                    })),
+                },
+            ],
+            primary_action_label: __("Save"),
+            async primary_action(values) {
+                await frappe.call({
+                    method: method + ".save_room_permissions",
+                    args: {
+                        pos_profile_user: cdn,
+                        rooms: values.rooms || [],
+                    },
+                    freeze: true,
+                    freeze_message: __("Saving room permissions..."),
+                });
+                dialog.hide();
+                frappe.show_alert({
+                    message: __("Room permissions updated"),
+                    indicator: "green",
+                });
+            },
+        });
+        dialog.show();
     }
 });"""
            )
-    CS.insert() if test_script is None else CS.save()
+    CS.insert() if CS.is_new() else CS.save()
+
+    legacy_scripts = frappe.get_all(
+        "Client Script",
+        filters={
+            "dt": "POS Profile",
+            "view": "Form",
+            "script": ["like", "%new DeskForm%"],
+        },
+        pluck="name",
+    )
+    for legacy_script in legacy_scripts:
+        frappe.db.set_value(
+            "Client Script",
+            legacy_script,
+            "enabled",
+            0,
+            update_modified=False,
+        )

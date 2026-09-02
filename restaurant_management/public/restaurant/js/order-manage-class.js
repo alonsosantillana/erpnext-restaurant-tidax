@@ -726,7 +726,7 @@ class OrderManage extends ObjectManage {
                 }
             } else {
                 this.#components.delete.disable().hide();
-                this.#components.Pay.prop("disabled", !RM.can_pay);
+                this.#components.Pay.prop("disabled", !RM.can_pay_order(this.current_order));
             }
 
             if (RM.check_permissions("order", this.current_order, "write")) {

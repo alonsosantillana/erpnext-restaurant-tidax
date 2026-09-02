@@ -238,17 +238,10 @@ RestaurantManage = class RestaurantManage {
 		this.pos_profile_description = frappe.jshtml({
 			tag: "span",
 			properties: {
-				class: 'pos-profile'
+				class: "pos-profile"
 			},
-			content: '{{text}}' + this.close_pos_button.html(),
-			text: 'POS Profile'
-		}).on("click", () => {
-			frappe.confirm(
-				'Close the POS?',
-				function () {
-					self.close_pos();
-				},
-			);
+			content: "{{text}}" + this.close_pos_button.html(),
+			text: "POS Profile"
 		});
 
 		this.transfer_notice_text = frappe.jshtml({
@@ -479,9 +472,24 @@ RestaurantManage = class RestaurantManage {
 		this.fulfillment_board.show(fulfillment_type);
 	}
 
+	update_pos_closing_access(can_close) {
+		this.can_close_pos = Boolean(can_close);
+		if (!this.close_pos_button) return;
+		this.close_pos_button[this.can_close_pos ? "show" : "hide"]();
+	}
+
 	close_pos() {
 		this.working("Checking opening entries...");
-		RM.pos.check_opening_entry(RM.pos_profile.name).then(() => {
+		RM.pos.check_opening_entry(RM.pos_profile.name).then((has_opening) => {
+			if (!has_opening) {
+				RM.ready();
+				return;
+			}
+			if (!this.pos.can_manage_opening || !this.pos.owns_opening) {
+				RM.ready();
+				frappe.msgprint(__("Only the cashier who opened this POS session can close it."));
+				return;
+			}
 			RM.ready();
 			const voucher = frappe.model.get_new_doc('POS Closing Entry');
 			voucher.pos_profile = this.pos.pos_profile;
@@ -1063,11 +1071,18 @@ RestaurantManage = class RestaurantManage {
 	}
 
 	get can_pay() {
-		return this.check_permissions("invoice", null, "create");
+		return Boolean(this.permissions && this.permissions.can_pay);
+	}
+
+	can_pay_order(order) {
+		if (!this.can_pay || !order || !order.data) return false;
+		if (this.permissions.can_pay_other_orders) return true;
+		const waiter = order.data.cambio_mozo || order.data.owner;
+		return waiter === frappe.session.user;
 	}
 
 	can_open_order_manage(table) {
-		if (frappe.session.user === "Administrator" || this.can_pay) return true;
+		if (frappe.session.user === "Administrator" || this.permissions.can_pay_other_orders) return true;
 
 		if (table.data.current_user !== frappe.session.user && table.data.orders_count > 0) {
 			if (this.restrictions.restricted_to_owner_table) {

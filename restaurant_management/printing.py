@@ -10,9 +10,11 @@ import re
 
 import frappe
 from frappe import _
+from frappe.permissions import has_permission
 from frappe.utils import add_to_date, cint, now_datetime
 
 from restaurant_management.restaurant_management.company_settings import (
+	get_restaurant_payment_permissions,
 	get_restaurant_settings,
 )
 from restaurant_management.thermal_print import (
@@ -209,7 +211,24 @@ def queue_invoice_print(invoice_name, request_id=None):
 	"""Queue an invoice after issue or as an explicit, idempotent manual reprint."""
 	_authenticated_user()
 	invoice = frappe.get_doc("POS Invoice", invoice_name)
-	invoice.check_permission("print")
+	# Keep this check silent: a configured restaurant user may be authorized by
+	# the scoped fallback below. The default check would append misleading
+	# permission messages to an otherwise successful response.
+	if not has_permission(
+		"POS Invoice", "print", invoice, raise_exception=False
+	):
+		order = frappe.db.get_value(
+			"Table Order",
+			{"link_invoice": invoice.name},
+			["pos_profile", "owner", "cambio_mozo"],
+			as_dict=True,
+		)
+		payment_permissions = get_restaurant_payment_permissions(
+			order.pos_profile if order else None,
+			order_owner=(order.cambio_mozo or order.owner) if order else None,
+		)
+		if not payment_permissions.can_pay:
+			frappe.throw(_("Not permitted to print this invoice"), frappe.PermissionError)
 	event_key = "electronic-invoice"
 	if request_id:
 		request_id = str(request_id).strip()
@@ -241,6 +260,78 @@ def queue_order_print(order_name, request_id=None):
 		require_route=False,
 	)
 
+
+
+@frappe.whitelist(methods=["POST"])
+def process_pos_invoice_electronic(invoice_name):
+	"""Consult or submit one restaurant invoice, persist the result, and queue printing."""
+	_authenticated_user()
+	invoice = frappe.get_doc("POS Invoice", invoice_name)
+	order = frappe.db.get_value(
+		"Table Order",
+		{"link_invoice": invoice.name},
+		["pos_profile", "owner", "cambio_mozo"],
+		as_dict=True,
+	)
+	direct_access = has_permission(
+		"POS Invoice", "write", invoice, raise_exception=False
+	)
+	if not direct_access:
+		payment_permissions = get_restaurant_payment_permissions(
+			order.pos_profile if order else invoice.pos_profile,
+			order_owner=(order.cambio_mozo or order.owner) if order else invoice.owner,
+		)
+		if not payment_permissions.can_pay:
+			frappe.throw(
+				_("Not permitted to process this electronic invoice"),
+				frappe.PermissionError,
+			)
+
+	from ovenube_peru.nubefact_integration.facturacion_electronica import (
+		consult_document,
+		send_document,
+	)
+
+	provider_result = consult_document(
+		invoice.company, invoice.name, "POS Invoice"
+	) or {}
+	classification = str(
+		provider_result.get("nubefact_classification") or ""
+	).strip().lower()
+	provider_code = str(provider_result.get("codigo") or "").strip()
+	if classification == "not_found" or provider_code == "24":
+		provider_result = send_document(
+			invoice.company, invoice.name, "POS Invoice"
+		) or {}
+
+	codigo_hash = str(provider_result.get("codigo_hash") or "").strip()
+	if not codigo_hash:
+		return {
+			"processed": False,
+			"invoice": invoice.name,
+			"provider_result": provider_result,
+			"message": (
+				provider_result.get("errors")
+				or provider_result.get("nubefact_safe_message")
+				or _("Nubefact did not confirm the electronic receipt")
+			),
+		}
+
+	update_result = update_pos_invoice_ce_and_queue_print(
+		invoice.company,
+		invoice.name,
+		"POS Invoice",
+		"Aceptado",
+		provider_result.get("cadena_para_codigo_qr") or "",
+		codigo_hash,
+		provider_result.get("enlace_del_pdf") or "",
+	)
+	return {
+		"processed": True,
+		"invoice": invoice.name,
+		"provider_result": provider_result,
+		"print_queue": update_result.get("print_queue"),
+	}
 
 @frappe.whitelist()
 def update_pos_invoice_ce_and_queue_print(

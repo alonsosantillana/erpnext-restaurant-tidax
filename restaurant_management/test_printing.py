@@ -187,20 +187,56 @@ class TestRestaurantPrinting(FrappeTestCase):
 		self.assertFalse(result["queued"])
 
 	@patch("restaurant_management.printing.enqueue_print")
+	@patch("restaurant_management.printing.get_restaurant_payment_permissions")
+	@patch("restaurant_management.printing.has_permission")
+	@patch("restaurant_management.printing.frappe.db.get_value")
+	@patch("restaurant_management.printing.frappe.get_doc")
+	@patch("restaurant_management.printing._authenticated_user")
+	def test_configured_waiter_can_queue_own_invoice(
+		self, _authenticated_user, get_doc, get_value, has_permission, payment_permissions, enqueue_print
+	):
+		invoice = Mock()
+		invoice.name = "ACC-PINV-WAITER-1"
+		invoice.company = "Test Company"
+		has_permission.return_value = False
+		get_doc.return_value = invoice
+		get_value.return_value = frappe._dict(
+			pos_profile="POS Restaurant",
+			owner="waiter@example.com",
+			cambio_mozo=None,
+		)
+		payment_permissions.return_value = frappe._dict(can_pay=True)
+		enqueue_print.return_value = {"queued": True}
+
+		result = queue_invoice_print(invoice.name)
+
+		self.assertTrue(result["queued"])
+		has_permission.assert_called_once_with(
+			"POS Invoice", "print", invoice, raise_exception=False
+		)
+		payment_permissions.assert_called_once_with(
+			"POS Restaurant", order_owner="waiter@example.com"
+		)
+
+	@patch("restaurant_management.printing.enqueue_print")
+	@patch("restaurant_management.printing.has_permission")
 	@patch("restaurant_management.printing.frappe.get_doc")
 	@patch("restaurant_management.printing._authenticated_user")
 	def test_manual_invoice_print_uses_request_specific_event(
-		self, _authenticated_user, get_doc, enqueue_print
+		self, _authenticated_user, get_doc, has_permission, enqueue_print
 	):
 		invoice = Mock()
 		invoice.name = "ACC-PINV-0001"
 		invoice.company = "Test Company"
 		get_doc.return_value = invoice
+		has_permission.return_value = True
 		enqueue_print.return_value = {"queued": True}
 
 		queue_invoice_print(invoice.name, "manual-request-1")
 
-		invoice.check_permission.assert_called_once_with("print")
+		has_permission.assert_called_once_with(
+			"POS Invoice", "print", invoice, raise_exception=False
+		)
 		enqueue_print.assert_called_once_with(
 			"POS Invoice",
 			invoice.name,
@@ -211,15 +247,17 @@ class TestRestaurantPrinting(FrappeTestCase):
 		)
 
 	@patch("restaurant_management.printing.enqueue_print")
+	@patch("restaurant_management.printing.has_permission")
 	@patch("restaurant_management.printing.frappe.get_doc")
 	@patch("restaurant_management.printing._authenticated_user")
 	def test_automatic_invoice_print_keeps_stable_event(
-		self, _authenticated_user, get_doc, enqueue_print
+		self, _authenticated_user, get_doc, has_permission, enqueue_print
 	):
 		invoice = Mock()
 		invoice.name = "ACC-PINV-0002"
 		invoice.company = "Test Company"
 		get_doc.return_value = invoice
+		has_permission.return_value = True
 
 		queue_invoice_print(invoice.name)
 
@@ -339,7 +377,7 @@ class TestRestaurantPrinting(FrappeTestCase):
 		order = frappe._dict(
 			name="OR-ADA-2026-00014",
 			company="Test Company",
-			owner="waiter.com",
+			owner="waiter@example.com",
 		)
 		get_doc.return_value = order
 

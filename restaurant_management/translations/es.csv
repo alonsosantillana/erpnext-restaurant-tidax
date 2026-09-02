@@ -244,3 +244,23 @@ Pre-account requested color,Color de cuenta solicitada
 Pre-account outdated color,Color de cuenta desactualizada
 Table color after printing the pre-account.,Color de la mesa después de imprimir la pre-cuenta.
 Table color when an issued pre-account must be reprinted.,Color de la mesa cuando una pre-cuenta emitida debe reimprimirse.
+Room Access for {0},Acceso a ambientes para {0}
+Rooms,Ambientes
+Loading room permissions...,Cargando permisos de ambientes...
+Saving room permissions...,Guardando permisos de ambientes...
+Room permissions updated,Permisos de ambientes actualizados
+Save the POS Profile before assigning room permissions,Guarde el perfil POS antes de asignar permisos de ambientes
+POS Profile User {0} was not found,No se encontró el usuario del perfil POS {0}
+Rooms must be a list,Los ambientes deben ser una lista
+Rooms do not belong to company {0}: {1},Los ambientes no pertenecen a la empresa {0}: {1}
+Cash register closed,Caja cerrada
+Ask a cashier to open the POS before taking orders.,Solicite a un cajero abrir el POS antes de tomar pedidos.
+Only the cashier who opened this POS session can close it.,Solo el cajero que abrió esta sesión POS puede cerrarla.
+POS Profile {0} is not assigned to the current user,El perfil POS {0} no está asignado al usuario actual
+Can Collect Payment,Puede cobrar
+Can Collect Other Orders,Puede cobrar órdenes de otros mozos
+Not permitted to print this invoice,No tiene permiso para imprimir este comprobante
+Not permitted to process this electronic invoice,No tiene permiso para procesar este comprobante electrónico
+Nubefact did not confirm the electronic receipt,Nubefact no confirmó el comprobante electrónico
+Electronic receipt generated,Comprobante electrónico generado
+Electronic receipt queued for printing,Comprobante electrónico enviado a la cola de impresión

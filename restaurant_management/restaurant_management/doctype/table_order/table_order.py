@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 
 import hashlib
 import json
+from types import MethodType
 
 import frappe
 from frappe import _
@@ -25,6 +26,7 @@ from restaurant_management.restaurant_management.doctype.restaurant_tip.restaura
 )
 from restaurant_management.restaurant_management.company_settings import (
     get_restaurant_settings,
+    get_restaurant_payment_permissions,
 )
 status_attending = "Attending"
 
@@ -188,6 +190,31 @@ def enforce_restaurant_pos_invoice_currency(invoice, method=None):
         2,
     )
     return invoice
+
+
+def validate_restaurant_pos_opening_entry(invoice):
+    """Validate an active opening without requiring accounting read access.
+
+    ERPNext POS validation uses a permission-aware query for POS Opening Entry.
+    Restaurant waiters share the cashier opening and do not need general access
+    to that accounting document, so this flow performs the same server-side
+    existence check.
+    """
+    opening_exists = frappe.db.exists(
+        "POS Opening Entry",
+        {
+            "pos_profile": invoice.pos_profile,
+            "status": "Open",
+            "docstatus": 1,
+        },
+    )
+    if not opening_exists:
+        frappe.throw(
+            title=_("POS Opening Entry Missing"),
+            msg=_("No open POS Opening Entry found for POS Profile {0}.").format(
+                frappe.bold(invoice.pos_profile)
+            ),
+        )
 
 
 def apply_delivery_fee_invoice_rate(invoice, delivery_fee_item):
@@ -591,10 +618,11 @@ class TableOrder(Document):
         tip_amount=0,
         tip_mode_of_payment=None,
     ):
-        # Restaurant roles do not implicitly grant accounting permissions. The
-        # effective ERPNext permission is authoritative and also supports users
-        # configured without one of the obsolete Role Profile names.
-        if not frappe.has_permission("POS Invoice", "create"):
+        payment_permissions = get_restaurant_payment_permissions(
+            self.pos_profile,
+            order_owner=self.get("cambio_mozo") or self.owner,
+        )
+        if not payment_permissions.can_pay:
             frappe.throw(
                 _("No tiene permisos suficientes para generar el comprobante"),
                 frappe.PermissionError,
@@ -709,6 +737,8 @@ class TableOrder(Document):
             frappe.throw(
                 _("Los medios de pago deben sumar {0}").format(invoice_total)
             )
+        if not payment_permissions.has_direct_invoice_permission:
+            invoice.flags.ignore_permissions = True
         invoice.save()
         tip = create_tip_record(self, invoice, tip_context)
         invoice.submit()
@@ -816,6 +846,10 @@ class TableOrder(Document):
 
     def get_invoice(self, entry_items=None, make=False):
         invoice = frappe.new_doc("POS Invoice")
+        invoice.validate_pos_opening_entry = MethodType(
+            validate_restaurant_pos_opening_entry,
+            invoice,
+        )
         self.transfer_order_values(invoice)
 
         invoice.items = []

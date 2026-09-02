@@ -30,10 +30,12 @@ frappe.ui.form.on("Resto Gastos", {
 		if (frm.is_new() && !frm.doc.company) {
 			await frm.set_value("company", frappe.defaults.get_user_default("Company"));
 		}
-		if (frm.doc.pos_opening_entry) {
+		if (frm.doc.docstatus === 0 && frm.doc.pos_opening_entry) {
 			await load_opening_context(frm);
 		}
-		await refresh_expense_accounts(frm);
+		if (frm.doc.docstatus === 0) {
+			await refresh_expense_accounts(frm);
+		}
 	},
 
 	async company(frm) {
@@ -43,6 +45,9 @@ frappe.ui.form.on("Resto Gastos", {
 	},
 
 	async pos_opening_entry(frm) {
+		if (frm.doc.docstatus !== 0) {
+			return;
+		}
 		if (!frm.doc.pos_opening_entry) {
 			await clear_opening_context(frm, false);
 			return;

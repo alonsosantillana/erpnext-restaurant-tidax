@@ -408,7 +408,8 @@ RestaurantObject = class RestaurantObject {
             }
 
             const open = () => {
-                RM.pos.check_opening_entry(RM.pos_profile.name).then(() => {
+                RM.pos.check_opening_entry(RM.pos_profile.name).then((has_opening) => {
+                    if (!has_opening) return;
                     setTimeout(() => {
                         if (this.order_manage == null) {
                             this.order_manage = new OrderManage({

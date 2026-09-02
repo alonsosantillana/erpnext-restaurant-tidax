@@ -2,22 +2,92 @@ from __future__ import unicode_literals
 
 import frappe
 from frappe import _
+from frappe.utils import cint
 from erpnext.stock.get_item_details import get_pos_profile
 
 
 COMPANY_SETTINGS_DOCTYPE = "Restaurant Company Settings"
 LEGACY_SETTINGS_DOCTYPE = "Restaurant Settings"
+PAYMENT_MANAGER_ROLES = {
+    "System Manager",
+    "Accounts Manager",
+    "resto_admin",
+    "resto_cajero",
+}
+CONFIGURABLE_PAYMENT_ROLES = {"Mozo", "resto_mozo", "resto_delivery"}
+
+
+def get_restaurant_payment_permissions(pos_profile, user=None, order_owner=None):
+    """Return profile-scoped restaurant payment capabilities for a user."""
+    user = user or frappe.session.user
+    if not user or user == "Guest" or not pos_profile:
+        return frappe._dict(can_pay=False, can_pay_other_orders=False)
+
+    roles = set(frappe.get_roles(user))
+    has_direct_permission = bool(
+        frappe.has_permission("POS Invoice", "create", user=user)
+    )
+    is_payment_manager = bool(roles.intersection(PAYMENT_MANAGER_ROLES))
+    can_pay = has_direct_permission or is_payment_manager
+    can_pay_other_orders = can_pay
+
+    if not can_pay and roles.intersection(CONFIGURABLE_PAYMENT_ROLES):
+        profile_user_meta = frappe.get_meta("POS Profile User")
+        if not all(
+            profile_user_meta.has_field(fieldname)
+            for fieldname in (
+                "allow_restaurant_payment",
+                "allow_restaurant_payment_for_others",
+            )
+        ):
+            return frappe._dict(
+                can_pay=False,
+                can_pay_other_orders=False,
+                has_direct_invoice_permission=has_direct_permission,
+            )
+
+        profile_user = frappe.db.get_value(
+            "POS Profile User",
+            {
+                "parenttype": "POS Profile",
+                "parent": pos_profile,
+                "user": user,
+            },
+            [
+                "allow_restaurant_payment",
+                "allow_restaurant_payment_for_others",
+            ],
+            as_dict=True,
+        )
+        can_pay = bool(profile_user and cint(profile_user.allow_restaurant_payment))
+        can_pay_other_orders = bool(
+            can_pay
+            and cint(profile_user.allow_restaurant_payment_for_others)
+        )
+
+    if order_owner and order_owner != user and not can_pay_other_orders:
+        can_pay = False
+
+    return frappe._dict(
+        can_pay=can_pay,
+        can_pay_other_orders=can_pay_other_orders,
+        has_direct_invoice_permission=has_direct_permission,
+    )
 
 
 def get_user_restaurant_company(user=None):
-    """Return the active Company or the user's default Company permission."""
+    """Return the Company explicitly assigned to the restaurant user."""
     user = user or frappe.session.user
-    company = frappe.defaults.get_user_default("company", user=user)
-    if company:
-        return company
-
     if not user or user == "Guest":
         return None
+
+    company = frappe.db.get_value(
+        "DefaultValue",
+        {"parent": user, "defkey": "company"},
+        "defvalue",
+    )
+    if company:
+        return company
 
     return frappe.db.get_value(
         "User Permission",
@@ -221,6 +291,9 @@ class RestaurantSettingsMixin:
         profile = frappe.db.get_value(
             "User", frappe.session.user, "role_profile_name"
         )
+        payment_permissions = get_restaurant_payment_permissions(
+            self.get_current_pos_profile_name()
+        )
         return dict(
             company=self.settings_company,
             pos=self.pos_profile_data(),
@@ -239,6 +312,8 @@ class RestaurantSettingsMixin:
                     "Restaurant Object",
                     {"type": "Room", "company": self.settings_company},
                 ),
+                can_pay=payment_permissions.can_pay,
+                can_pay_other_orders=payment_permissions.can_pay_other_orders,
             ),
             restrictions=self,
             exceptions=[

@@ -200,6 +200,65 @@ def get_settings_data():
     return settings.settings_data()
 
 
+@frappe.whitelist()
+def get_restaurant_opening_entry(pos_profile):
+    """Return the active opening for the restaurant POS Profile.
+
+    Restaurant orders are shared by the users assigned to the same POS Profile,
+    while ERPNext's standard POS endpoint only looks for an opening owned by the
+    current user. Waiters must therefore reuse the cashier's active opening
+    instead of being prompted to create a second cash session.
+    """
+    company = get_active_restaurant_company()
+    assigned_profile = get_pos_profile(company, user=frappe.session.user)
+    if not assigned_profile or assigned_profile.name != pos_profile:
+        frappe.throw(
+            _("POS Profile {0} is not assigned to the current user").format(
+                pos_profile
+            ),
+            frappe.PermissionError,
+        )
+
+    openings = frappe.get_all(
+        "POS Opening Entry",
+        filters={
+            "company": company,
+            "pos_profile": pos_profile,
+            "status": "Open",
+            "docstatus": 1,
+        },
+        fields=[
+            "name",
+            "company",
+            "pos_profile",
+            "period_start_date",
+            "user",
+        ],
+        order_by="period_start_date desc",
+        limit_page_length=20,
+    )
+    own_opening = next(
+        (opening for opening in openings if opening.user == frappe.session.user),
+        None,
+    )
+    opening = own_opening or (openings[0] if openings else None)
+    can_manage_opening = bool(
+        {"System Manager", "Accounts Manager", "resto_admin", "resto_cajero"}
+        & set(frappe.get_roles())
+    )
+
+    return {
+        "allow_negative_stock": frappe.db.get_single_value(
+            "Stock Settings", "allow_negative_stock"
+        ),
+        "opening": opening,
+        "can_manage_opening": can_manage_opening,
+        "owns_opening": bool(
+            opening and opening.user == frappe.session.user
+        ),
+    }
+
+
 def pos_profile_data():
     settings = get_restaurant_settings()
     return settings.pos_profile_data()

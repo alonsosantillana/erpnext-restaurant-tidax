@@ -496,10 +496,10 @@ class PayForm extends DeskForm {
             content: `<span style="font-size: 25px; font-weight: 400">{{text}}</span>`,
             text: this.payment_button_label
         }).on("click", () => {
-            if (!RM.can_pay) return;
+            if (!RM.can_pay_order(this.order)) return;
             this.button_payment.disable().val(__("Paying"));
             this.send_payment();
-        }, !RM.restrictions.to_pay ? DOUBLE_CLICK : null).prop("disabled", !RM.can_pay);
+        }, !RM.restrictions.to_pay ? DOUBLE_CLICK : null).prop("disabled", !RM.can_pay_order(this.order));
     }
 
     get payment_button_label() {
@@ -523,7 +523,7 @@ class PayForm extends DeskForm {
 
     reset_payment_button() {
         RM.ready();
-        if (!RM.can_pay) {
+        if (!RM.can_pay_order(this.order)) {
             this.button_payment.disable();
             return;
         }
@@ -532,7 +532,7 @@ class PayForm extends DeskForm {
     }
 
     #send_payment() {
-        if (!RM.can_pay) return;
+        if (!RM.can_pay_order(this.order)) return;
         const order_manage = this.order.order_manage;
         const voucher_type = this.get_value("voucher_type");
         const emission_mode = this.get_value("emission_mode");
@@ -607,113 +607,44 @@ class PayForm extends DeskForm {
                         return;
                     }
 
-                    // TIDAX
+                    // Electronic issuance is orchestrated on the server so consultation,
+                    // submission, persistence, and printing cannot be interrupted between requests.
                     RM.working("Generating Invoice Electronic");
-                    var com = RM.company;
-                    const queue_invoice_print = () => this.print_invoice_silent(r.message.invoice_name);
-
-                    new Promise(function(resolve, reject) {
-                        frappe.call({
-                            method: "ovenube_peru.nubefact_integration.facturacion_electronica.consult_document",
-                            args: {
-                                'company': com,
-                                'invoice': r.message.invoice_name,
-                                'doctype': "POS Invoice"
-                            },
-                            callback: function(values) {
-                                resolve(values);
-                            },
-                            error: function(error) {
-                                reject(error);
-                            }
-                        });
-                    }).then(function(values) {
-                        if (values.message.codigo == "24"){
-                            frappe.call({
-                                method: "ovenube_peru.nubefact_integration.facturacion_electronica.send_document",
-                                args: {
-                                    'company': com,
-                                    'invoice': r.message.invoice_name,
-                                    'doctype': "POS Invoice"
-                                },
-                                callback: function(data) {
-                                    if (data.message.codigo_hash) {
-                                        RM.working("Sinchronizing Invoice Electronic");
-                                        let estado = (data.message.codigo_hash != "") ? ("Aceptado") : ("Rechazado");
-
-                                        frappe.call({
-                                            method: "ovenube_peru.nubefact_integration.facturacion_electronica.update_pos_invoice_ce",
-                                            args: {
-                                                'company': com,
-                                                'invoice': r.message.invoice_name,
-                                                'doctype': "POS Invoice",
-                                                'estado_sunat': estado,
-                                                //'sunat_descripcion': data.message.sunat_descripcion,
-                                                'cadena_para_codigo_qr': data.message.cadena_para_codigo_qr,
-                                                //'codigo_de_barras': data.message.codigo_de_barras,
-                                                'codigo_hash': data.message.codigo_hash,
-                                                'enlace_del_pdf': data.message.enlace_del_pdf
-                                            },
-                                            callback: function(update_response) {
-                                                const result = update_response.message || {};
-                                                if (!result.updated) {
-                                                    frappe.validated = false;
-                                                    frappe.throw(__("No se pudo guardar la respuesta del comprobante electrónico"));
-                                                }
-
-                                                console.log("CE Generado");
-                                                const print_result = result.print_queue || {};
-                                                if (print_result.queued) {
-                                                    frappe.show_alert({
-                                                        message: __("Electronic receipt queued for printing"),
-                                                        indicator: "green"
-                                                    });
-                                                } else {
-                                                    // Backward-compatible fallback if the server override
-                                                    // is not active yet. The stable event key prevents
-                                                    // duplicate automatic jobs.
-                                                    queue_invoice_print();
-                                                }
-                                            }
-                                        });
-                                        //window.open(data.message.enlace_del_pdf);
-                                        //this.print_invoice_silent(r.message.invoice_name);
-                                    } else {
-                                        frappe.msgprint({
-                                            title: __("Comprobante pendiente de envío"),
-                                            message: data.message.errors || __("Nubefact no confirmó el comprobante electrónico"),
-                                            indicator: "orange"
-                                        });
-                                    }
-                                    RM.ready();
-                                },
-                                error: function(error) {
-                                    console.error("Electronic receipt submission failed", error);
-                                    RM.ready();
+                    frappe.call({
+                        method: "restaurant_management.printing.process_pos_invoice_electronic",
+                        args: {
+                            invoice_name: r.message.invoice_name
+                        },
+                        callback: function(response) {
+                            try {
+                                const result = response.message || {};
+                                if (!result.processed) {
+                                    frappe.msgprint({
+                                        title: __("Comprobante pendiente de envío"),
+                                        message: result.message || __(
+                                            "Nubefact no confirmó el comprobante electrónico"
+                                        ),
+                                        indicator: "orange"
+                                    });
+                                    return;
                                 }
-                            });
-                        } else {
-                            // frappe.model.set_value(cdt, cdn, "estado_sunat", (values.message.codigo_hash != "") ? ("Aceptado") : ("Rechazado"));
-                            // frappe.model.set_value(cdt, cdn, "respuesta_sunat", values.message.sunat_descripcion);
-                            // frappe.model.set_value(cdt, cdn, "codigo_qr_sunat", values.message.cadena_para_codigo_qr);
-                            // frappe.model.set_value(cdt, cdn, "codigo_barras_sunat", values.message.codigo_de_barras);
-                            // frappe.model.set_value(cdt, cdn, "codigo_hash_sunat", values.message.codigo_hash);
-                            // frappe.model.set_value(cdt, cdn, "enlace_pdf", values.message.enlace_del_pdf);
-                            RM.working("Ready");
-                            queue_invoice_print();
-                            // window.open(values.message.enlace_del_pdf);
+
+                                const print_result = result.print_queue || {};
+                                frappe.show_alert({
+                                    message: print_result.queued
+                                        ? __("Electronic receipt queued for printing")
+                                        : __("Electronic receipt generated"),
+                                    indicator: "green"
+                                });
+                            } finally {
+                                RM.ready();
+                            }
+                        },
+                        error: function(error) {
+                            console.error("Electronic receipt processing failed", error);
+                            RM.ready();
                         }
-                    }).catch(function(error) {
-                        console.error("Electronic receipt consultation failed", error);
-                        RM.ready();
-                        frappe.msgprint({
-                            title: __("Comprobante pendiente de envío"),
-                            message: __("El comprobante fue creado, pero no pudo enviarse a SUNAT. Puede reintentarlo desde Factura POS."),
-                            indicator: "orange"
-                        });
                     });
-                    // this.print_invoice_silent(r.message.invoice_name);
-                    // this.print(r.message.invoice_name);
                 } else {
                     this.reset_payment_button();
                 }
@@ -751,7 +682,7 @@ class PayForm extends DeskForm {
     }
     // TIDAX
     print_invoice_silent(invoice_name){
-        if (!RM.can_pay) return;
+        if (!RM.can_pay_order(this.order)) return;
         return frappe.call({
             method: "restaurant_management.printing.queue_invoice_print",
             type: "POST",
@@ -765,7 +696,7 @@ class PayForm extends DeskForm {
     }
 
     print(invoice_name) {
-        if (!RM.can_pay) return;
+        if (!RM.can_pay_order(this.order)) return;
         //TIDAX
         var formato_impresion;
         frappe.call({
