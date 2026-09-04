@@ -57,7 +57,13 @@ doc_events = {
         "on_submit": "restaurant_management.restaurant_management.expense_accounting.create_expense_journal_entry",
         "on_cancel": "restaurant_management.restaurant_management.expense_accounting.cancel_expense_journal_entry",
     },
+    "Material Request": {
+        "validate": "restaurant_management.restaurant_management.production.validate_restaurant_production_material_request",
+        "on_submit": "restaurant_management.restaurant_management.production.claim_restaurant_production_sources",
+        "on_cancel": "restaurant_management.restaurant_management.production.release_restaurant_production_sources",
+    },
     "POS Invoice": {
+        "before_validate": "restaurant_management.restaurant_management.pos_closing.assign_restaurant_pos_opening",
         "validate": "restaurant_management.restaurant_management.doctype.table_order.table_order.enforce_restaurant_pos_invoice_currency",
         "on_cancel": "restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip.cancel_tip_for_invoice",
     },
@@ -72,6 +78,13 @@ after_install = "restaurant_management.setup.install.after_install"
 override_whitelisted_methods = {
     "ovenube_peru.nubefact_integration.facturacion_electronica.update_pos_invoice_ce":
         "restaurant_management.printing.update_pos_invoice_ce_and_queue_print",
+    "erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry.get_pos_invoices":
+        "restaurant_management.restaurant_management.pos_closing.get_pos_invoices",
+}
+
+override_doctype_class = {
+    "POS Closing Entry":
+        "restaurant_management.restaurant_management.pos_closing.RestaurantPOSClosingEntry",
 }
 
 # Includes in <head>

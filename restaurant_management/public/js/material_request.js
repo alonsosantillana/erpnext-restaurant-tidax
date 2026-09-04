@@ -1,147 +1,211 @@
+const RESTAURANT_PRODUCTION_METHOD =
+	"restaurant_management.restaurant_management.production";
+
 frappe.ui.form.on("Material Request", {
-    refresh: function(frm, cdt, cdn){
-		if(frm.doc.docstatus === 0) {
-			frm.add_custom_button(__("Resto"), function() {
-				frm.events.get_items_from_pos_invoice(frm, cdt, cdn);
-                //alert("LOGICA RESTO");
-			}, __("Get Items From"));
-			//frm.page.set_inner_btn_group_as_primary(__("Make"));
+	refresh(frm) {
+		if (frm.doc.docstatus === 0) {
+			frm.add_custom_button(
+				__("Consumos de Resto"),
+				() => open_restaurant_production_dialog(frm),
+				__("Get Items From")
+			);
+		}
+
+		if (frm.doc.docstatus === 1 && frm.doc.restaurant_production) {
+			frm.remove_custom_button(__("Work Order"), __("Create"));
+			frm.add_custom_button(
+				__("Órdenes de producción Resto"),
+				() => create_restaurant_work_orders(frm),
+				__("Create")
+			);
 		}
 	},
 
-    get_items_from_pos_invoice: function(frm) {
-		erpnext.utils.map_current_doc({
-			method: "restaurant_management.restaurant_management.doctype.utils.make_material_request", //ANALIZAR
-			source_doctype: "POS Invoice",
-			target: frm,
-			setters: {
-				customer: frm.doc.customer || undefined,
-				posting_date: undefined,
-			},
-			get_query_filters: {
-				docstatus: 1,
-				//status: ["not in", ["Closed", "On Hold"]],
-				//per_delivered: ["<", 99.99],
-				company: frm.doc.company
-			}
-		});
+	clear_item_no_manufacturing(frm) {
+		show_material_preview(frm.__restaurant_production_preview || { materials: [] });
 	},
-
-	// clear_item_no_manufacturing: function(frm, cdt, cdn) {
-	// 	// Obtén la lista de elementos de la tabla secundaria
-	// 	const items = frm.doc.items || [];
-	
-	// 	// Inicializa una lista para almacenar los elementos que cumplen con la condición
-	// 	const itemsCumplenCondicion = [];
-	
-	// 	// Contador para llevar un seguimiento de las llamadas a la API
-	// 	let apiCallCounter = 0;
-	
-	// 	// Función para actualizar el formulario después de que se completen todas las llamadas a la API
-	// 	function actualizarFormulario() {
-	// 		// Actualiza el campo 'items' con los elementos que cumplen con la condición
-	// 		frm.set_value('items', itemsCumplenCondicion);
-	
-	// 		// Recarga el formulario para reflejar los cambios
-	// 		frm.refresh();
-	// 	}
-	
-	// 	// Recorre los elementos de la tabla secundaria
-	// 	for (let i = 0; i < items.length; i++) {
-	// 		const item = items[i];
-	
-	// 		// Accede al campo 'item_code' en tu tabla secundaria
-	// 		const itemCode = item.item_code;
-	
-	// 		// Realiza una llamada a la API de Frappe para obtener la información de la tabla maestra 'Items'
-	// 		frappe.call({
-	// 			method: "frappe.client.get",
-	// 			args: {
-	// 				doctype: "Item",
-	// 				name: itemCode
-	// 			},
-	// 			callback: (r) => {
-	// 				// Verifica si 'default_bom' no está vacío y guarda el registro si cumple con la condición
-	// 				const defaultBom = r.message.default_bom;
-	// 				if (defaultBom) {
-	// 					itemsCumplenCondicion.push(item);
-	// 				}
-	
-	// 				// Incrementa el contador de llamadas a la API
-	// 				apiCallCounter++;
-	
-	// 				// Si se han completado todas las llamadas a la API, actualiza el formulario
-	// 				if (apiCallCounter === items.length) {
-	// 					actualizarFormulario();
-	// 				}
-	// 			}
-	// 		});
-	// 	}
-	// },
-
-	clear_item_no_manufacturing: function(frm, cdt, cdn) {
-    // Obtén la lista de elementos de la tabla secundaria
-    const items = frm.doc.items || [];
-
-    // Inicializa un diccionario para almacenar la suma de 'qty' por 'item_code'
-    const qtyPorItemCode = {};
-
-    // Contador para llevar un seguimiento de las llamadas a la API
-    let apiCallCounter = 0;
-
-    // Función para actualizar el formulario después de que se completen todas las llamadas a la API
-    function actualizarFormulario() {
-        // Convierte el diccionario en una lista para actualizar el campo 'items'
-        const itemsActualizados = Object.values(qtyPorItemCode);
-
-        // Actualiza el campo 'items' con los elementos que cumplen con la condición y la suma de 'qty'
-        frm.set_value('items', itemsActualizados);
-
-        // Recarga el formulario para reflejar los cambios
-        frm.refresh();
-    }
-
-    // Recorre los elementos de la tabla secundaria
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-
-        // Accede al campo 'item_code' en tu tabla secundaria
-        const itemCode = item.item_code;
-
-        // Realiza una llamada a la API de Frappe para obtener la información de la tabla maestra 'Items'
-        frappe.call({
-            method: "frappe.client.get",
-            args: {
-                doctype: "Item",
-                name: itemCode
-            },
-            callback: (r) => {
-                // Verifica si 'default_bom' no está vacío y guarda el registro si cumple con la condición
-                const defaultBom = r.message.default_bom;
-                if (defaultBom) {
-                    // Verifica si ya existe una entrada para 'item_code' en el diccionario
-                    if (qtyPorItemCode[itemCode]) {
-                        // Si existe, suma 'qty' al valor existente
-                        qtyPorItemCode[itemCode].qty += item.qty;
-						qtyPorItemCode[itemCode].pos_invoice += "/" + item.pos_invoice;
-						
-                    } else {
-                        // Si no existe, agrega una nueva entrada en el diccionario
-                        qtyPorItemCode[itemCode] = { ...item };
-						//qtyPorItemCode[itemCode].pos_invoice += item.pos_invoice;
-                    }
-                }
-
-                // Incrementa el contador de llamadas a la API
-                apiCallCounter++;
-
-                // Si se han completado todas las llamadas a la API, actualiza el formulario
-                if (apiCallCounter === items.length) {
-                    actualizarFormulario();
-                }
-            }
-        });
-    }
-},
-
 });
+
+async function open_restaurant_production_dialog(frm) {
+	if (!frm.doc.company) {
+		frappe.msgprint(__("Seleccione primero la compañía."));
+		return;
+	}
+
+	const defaultsResponse = await frappe.call({
+		method: RESTAURANT_PRODUCTION_METHOD + ".get_restaurant_production_defaults",
+		args: { company: frm.doc.company },
+		freeze: true,
+		freeze_message: __("Validando configuración de producción..."),
+	});
+	const defaults = defaultsResponse.message || {};
+	const start = frappe.datetime.get_today() + " 00:00:00";
+	const end = frappe.datetime.now_datetime();
+	const dialog = new frappe.ui.Dialog({
+		title: __("Traer productos vendidos"),
+		fields: [
+			{
+				fieldname: "company",
+				fieldtype: "Link",
+				options: "Company",
+				label: __("Compañía"),
+				default: frm.doc.company,
+				reqd: 1,
+				read_only: 1,
+			},
+			{
+				fieldname: "pos_profile",
+				fieldtype: "Link",
+				options: "POS Profile",
+				label: __("Perfil POS"),
+				default: defaults.pos_profile,
+				reqd: 1,
+				get_query: () => ({ filters: { company: frm.doc.company, disabled: 0 } }),
+			},
+			{ fieldname: "period_column", fieldtype: "Column Break" },
+			{
+				fieldname: "from_datetime",
+				fieldtype: "Datetime",
+				label: __("Desde"),
+				default: start,
+				reqd: 1,
+			},
+			{
+				fieldname: "to_datetime",
+				fieldtype: "Datetime",
+				label: __("Hasta"),
+				default: end,
+				reqd: 1,
+			},
+		],
+		primary_action_label: __("Traer y agrupar"),
+		async primary_action(values) {
+			const response = await frappe.call({
+				method: RESTAURANT_PRODUCTION_METHOD + ".get_restaurant_production_preview",
+				args: values,
+				freeze: true,
+				freeze_message: __("Consolidando productos y explotando BOM..."),
+			});
+			const preview = response.message || {};
+			if (!(preview.production_items || []).length) {
+				if ((preview.skipped_items || []).length) {
+					show_material_preview(preview);
+				} else {
+					frappe.msgprint(__("No hay productos vendidos pendientes de producción en el período seleccionado. Solo se incluyen Facturas POS enviadas con actualización de inventario."));
+				}
+				return;
+			}
+			await apply_restaurant_production(frm, values, preview);
+			dialog.hide();
+			show_material_preview(preview);
+		},
+	});
+	dialog.show();
+}
+
+async function apply_restaurant_production(frm, values, preview) {
+	await frm.set_value("material_request_type", "Manufacture");
+	await frm.set_value("schedule_date", frappe.datetime.get_today());
+	await frm.set_value("set_warehouse", preview.finished_goods_warehouse);
+	await frm.set_value("restaurant_production", 1);
+	await frm.set_value("restaurant_pos_profile", values.pos_profile);
+	await frm.set_value("restaurant_from_datetime", preview.from_datetime);
+	await frm.set_value("restaurant_to_datetime", preview.to_datetime);
+	await frm.set_value("restaurant_raw_material_warehouse", preview.raw_material_warehouse);
+	await frm.set_value("restaurant_wip_warehouse", preview.wip_warehouse);
+
+	frm.clear_table("items");
+	(preview.production_items || []).forEach((item) => {
+		const row = frm.add_child("items");
+		Object.assign(row, {
+			item_code: item.item_code,
+			item_name: item.item_name,
+			description: item.description,
+			qty: item.qty,
+			stock_qty: item.qty,
+			uom: item.uom,
+			stock_uom: item.stock_uom,
+			conversion_factor: item.conversion_factor,
+			warehouse: item.warehouse,
+			schedule_date: frappe.datetime.get_today(),
+			bom_no: item.bom_no,
+			pos_invoice: item.pos_invoice,
+		});
+	});
+
+	frm.clear_table("restaurant_production_sources");
+	(preview.sources || []).forEach((source) => {
+		const row = frm.add_child("restaurant_production_sources");
+		Object.assign(row, source);
+	});
+
+	frm.__restaurant_production_preview = preview;
+	frm.refresh_fields();
+	frm.dirty();
+}
+
+function show_material_preview(preview) {
+	const materials = preview.materials || [];
+	const skippedItems = preview.skipped_items || [];
+	if (!materials.length && !skippedItems.length) {
+		frappe.msgprint(__("Primero use Get Items From > Consumos de Resto."));
+		return;
+	}
+
+	const materialRows = materials.map((item) => {
+		const shortage = flt(item.shortage_qty);
+		const shortageClass = shortage > 0 ? "text-danger" : "text-success";
+		return `<tr>
+			<td>${frappe.utils.escape_html(item.item_code)}</td>
+			<td>${frappe.utils.escape_html(item.item_name || "")}</td>
+			<td class="text-right">${format_number(item.required_qty)}</td>
+			<td class="text-right">${format_number(item.available_qty)}</td>
+			<td class="text-right ${shortageClass}">${format_number(shortage)}</td>
+			<td>${frappe.utils.escape_html(item.stock_uom || "")}</td>
+		</tr>`;
+	}).join("");
+	const materialSection = materials.length
+		? `<h6>${__("Materia prima requerida")}</h6>
+			<div class="table-responsive"><table class="table table-bordered table-sm">
+			<thead><tr><th>${__("Código")}</th><th>${__("Materia prima")}</th><th>${__("Requerido")}</th><th>${__("Disponible")}</th><th>${__("Faltante")}</th><th>${__("UOM")}</th></tr></thead>
+			<tbody>${materialRows}</tbody></table></div>`
+		: "";
+
+	const skippedRows = skippedItems.map((item) => `<tr>
+		<td>${frappe.utils.escape_html(item.item_code)}</td>
+		<td>${frappe.utils.escape_html(item.item_name || "")}</td>
+		<td class="text-right">${format_number(item.qty)}</td>
+		<td>${frappe.utils.escape_html(item.reason || "")}</td>
+	</tr>`).join("");
+	const skippedSection = skippedItems.length
+		? `<h6 class="text-muted">${__("Productos omitidos")}</h6>
+			<p class="text-muted">${__("No se marcarán como procesados. Si configura un BOM activo y predeterminado, podrán incluirse posteriormente.")}</p>
+			<div class="table-responsive"><table class="table table-bordered table-sm">
+			<thead><tr><th>${__("Código")}</th><th>${__("Producto")}</th><th>${__("Cantidad")}</th><th>${__("Motivo")}</th></tr></thead>
+			<tbody>${skippedRows}</tbody></table></div>`
+		: "";
+
+	frappe.msgprint({
+		title: __("Vista previa de producción"),
+		wide: true,
+		message: `<p>${__("Solo los productos vendidos con un BOM activo y predeterminado se incluyen en la solicitud. El consumo real se ejecutará desde las Órdenes de Producción.")}</p>
+			${materialSection}${skippedSection}`,
+	});
+}
+
+async function create_restaurant_work_orders(frm) {
+	const response = await frappe.call({
+		method: RESTAURANT_PRODUCTION_METHOD + ".create_restaurant_work_orders",
+		args: { material_request: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Creando órdenes de producción..."),
+	});
+	const workOrders = (response.message || {}).work_orders || [];
+	if (!workOrders.length) {
+		frappe.msgprint(__("Todos los productos de esta solicitud ya tienen Orden de Producción."));
+		return;
+	}
+	const links = workOrders.map((name) => `<a href="/app/work-order/${encodeURIComponent(name)}">${frappe.utils.escape_html(name)}</a>`);
+	frappe.msgprint(__("Órdenes de Producción creadas: {0}", [links.join(", ")]));
+	frm.reload_doc();
+}

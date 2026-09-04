@@ -345,18 +345,26 @@ class OrderItem {
     check_status() {
         if (this.form_editor) {
             const fields = this.form_editor.get_fields();
+            const pos_profile = RM.pos_profile;
 
             Object.entries(fields).forEach(([field_name, field]) => {
                 const enabled = (this.enabled_form_fields_status[this.data.status] || []).includes(field_name);
+                let read_only = !enabled;
 
-                this.form_editor.set_field_property(field_name, "read_only", !enabled);
+                if (field_name === "qty") {
+                    read_only = !this.is_enabled_to_edit;
+                } else if (field_name === "discount_percentage") {
+                    read_only = !this.is_enabled_to_edit || !pos_profile.allow_discount_change;
+                } else if (field_name === "rate") {
+                    read_only = !this.is_enabled_to_edit || !pos_profile.allow_rate_change;
+                }
+
+                // Refreshing an unchanged Frappe control replaces unsaved text
+                // with the last server value. Only refresh when the state changes.
+                if (Boolean(cint(field.df.read_only)) !== Boolean(read_only)) {
+                    this.form_editor.set_field_property(field_name, "read_only", read_only);
+                }
             });
-
-            const pos_profile = RM.pos_profile;
-
-            this.form_editor.set_field_property("qty", "read_only", !this.is_enabled_to_edit);
-            this.form_editor.set_field_property("discount_percentage", "read_only", !this.is_enabled_to_edit || !pos_profile.allow_discount_change);
-            this.form_editor.set_field_property("rate", "read_only", !this.is_enabled_to_edit || !pos_profile.allow_rate_change);
         }
     }
 
@@ -423,14 +431,22 @@ class OrderItemEditor extends DeskForm {
             update(field);
         });
 
-        this.get_input("notes").css("height", "100px");
+        const notes_field = this.get_field("notes");
+        this.get_input("notes").css({
+            height: "50px",
+            minHeight: "50px"
+        });
         this.save_details_button = $("<button>", {
             type: "button",
             class: "btn btn-primary btn-sm"
         }).append($("<span>", { class: "fa fa-save" }), " ", __("Save changes"));
-        this.body.append(
-            $("<div>", { class: "order-item-editor-actions" }).append(this.save_details_button)
-        );
+        const actions = $("<div>", { class: "order-item-editor-actions" })
+            .append(this.save_details_button);
+        if (notes_field && notes_field.$wrapper) {
+            notes_field.$wrapper.after(actions);
+        } else {
+            this.body.prepend(actions);
+        }
         this.save_details_button.on("click", event => {
             event.preventDefault();
             event.stopPropagation();

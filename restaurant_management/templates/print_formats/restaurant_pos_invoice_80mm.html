@@ -193,7 +193,21 @@
             <td>Subtotal</td>
             <td class="ticket-right">{{ money(doc.net_total) }}</td>
         </tr>
-        {% if doc.total_taxes_and_charges %}
+        {% set printed_taxes = namespace(count=0) %}
+        {% for tax in doc.taxes or [] %}
+        {% set tax_amount = tax.tax_amount_after_discount_amount if tax.tax_amount_after_discount_amount is not none else tax.tax_amount %}
+        {% if tax_amount %}
+        <tr>
+            <td>
+                {{ tax.description or tax.account_head or "Impuesto" }}
+                {% if tax.rate %}({{ "%g" | format(tax.rate) }}%){% endif %}
+            </td>
+            <td class="ticket-right">{{ money(tax_amount) }}</td>
+        </tr>
+        {% set printed_taxes.count = printed_taxes.count + 1 %}
+        {% endif %}
+        {% endfor %}
+        {% if doc.total_taxes_and_charges and printed_taxes.count == 0 %}
         <tr>
             <td>Impuestos</td>
             <td class="ticket-right">{{ money(doc.total_taxes_and_charges) }}</td>

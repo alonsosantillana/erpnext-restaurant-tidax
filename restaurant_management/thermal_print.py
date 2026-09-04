@@ -85,6 +85,28 @@ def _payment_change_amount(doc):
 	return round(max(payment_total - grand_total, 0), 2)
 
 
+def _tax_details(doc):
+	"""Return printable tax rows using the amounts after invoice discounts."""
+	details = []
+	for tax in (_value(doc, "taxes", []) or []):
+		amount = _value(tax, "tax_amount_after_discount_amount")
+		if amount is None:
+			amount = _value(tax, "tax_amount", 0)
+		try:
+			amount = float(amount or 0)
+		except (TypeError, ValueError):
+			amount = 0
+		if not amount:
+			continue
+
+		label = _value(tax, "description") or _value(tax, "account_head") or "Impuesto"
+		rate = float(_value(tax, "rate", 0) or 0)
+		if rate:
+			label = f"{label} ({_number(rate)}%)"
+		details.append((label, amount))
+	return details
+
+
 def _wrapped(value, width):
 	text = _clean_text(value)
 	return textwrap.wrap(
@@ -239,7 +261,11 @@ def build_pos_invoice_escpos(
 			_append_item(receipt, item, currency)
 			receipt.line("." * columns)
 		receipt.pair("Subtotal", _money(_value(doc, "net_total"), currency))
-		if float(_value(doc, "total_taxes_and_charges", 0) or 0):
+		tax_details = _tax_details(doc)
+		if tax_details:
+			for label, amount in tax_details:
+				receipt.pair(label, _money(amount, currency))
+		elif float(_value(doc, "total_taxes_and_charges", 0) or 0):
 			receipt.pair("Impuestos", _money(_value(doc, "total_taxes_and_charges"), currency))
 		if float(_value(doc, "discount_amount", 0) or 0):
 			receipt.pair("Descuento", "-" + _money(_value(doc, "discount_amount"), currency))

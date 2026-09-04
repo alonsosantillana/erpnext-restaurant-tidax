@@ -41,6 +41,20 @@ class TestThermalPrintHelpers(unittest.TestCase):
 			}],
 			"net_total": 59.32,
 			"total_taxes_and_charges": 10.68,
+			"taxes": [
+				{
+					"description": "IGV",
+					"rate": 10.5,
+					"tax_amount": 12.00,
+					"tax_amount_after_discount_amount": 6.04,
+				},
+				{
+					"description": "RC",
+					"rate": 13,
+					"tax_amount": 8.00,
+					"tax_amount_after_discount_amount": 4.64,
+				},
+			],
 			"discount_amount": 0,
 			"grand_total": 70,
 			"payments": [{"mode_of_payment": "Efectivo", "amount": 70}],
@@ -62,6 +76,11 @@ class TestThermalPrintHelpers(unittest.TestCase):
 		self.assertIn(b"CEVICHE", raw)
 		self.assertNotIn(b"PLT-001", raw)
 		self.assertIn(b"TOTAL", raw)
+		self.assertIn(b"IGV (10.5%)", raw)
+		self.assertIn(b"S/. 6.04", raw)
+		self.assertIn(b"RC (13%)", raw)
+		self.assertIn(b"S/. 4.64", raw)
+		self.assertNotIn(b"Impuestos", raw)
 		self.assertIn(b"PROPINA", raw)
 		self.assertIn(b"\x1d(k", raw)
 		self.assertTrue(raw.endswith(b"\x1dVB\x00"))

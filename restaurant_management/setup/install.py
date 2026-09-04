@@ -38,8 +38,22 @@ docs = {
         posa_tax_inclusive=dict(
             label="Tax Inclusive", fieldtype="Check", insert_after="tax_category", default="1")
     ),
+    "POS Invoice": dict(
+        restaurant_pos_opening_entry=dict(
+            label="Restaurant POS Opening Entry", fieldtype="Link", options="POS Opening Entry",
+            insert_after="pos_profile", read_only=1, hidden=1, no_copy=1, search_index=1,
+        ),
+    ),
     "POS Invoice Item": dict(
         identifier=dict(label="Identifier", fieldtype="Data"),
+        restaurant_material_request=dict(
+            label="Restaurant Material Request", fieldtype="Link", options="Material Request",
+            insert_after="identifier", read_only=1, hidden=1, no_copy=1,
+        ),
+        restaurant_material_request_item=dict(
+            label="Restaurant Material Request Item", fieldtype="Data",
+            insert_after="restaurant_material_request", read_only=1, hidden=1, no_copy=1,
+        ),
     ),
     "Sales Invoice Item": dict(
         identifier=dict(label="Identifier", fieldtype="Data"),
@@ -100,6 +114,7 @@ docs = {
             options="company:company_currency",
             read_only=1,
             in_list_view=1,
+            columns=1,
             no_copy=1,
             default="0",
         ),
@@ -110,8 +125,52 @@ docs = {
             options="company:company_currency",
             read_only=1,
             in_list_view=1,
+            columns=1,
             no_copy=1,
             default="0",
+        ),
+    ),
+    "Material Request": dict(
+        restaurant_production_section=dict(
+            label="Producción de restaurante", fieldtype="Section Break",
+            insert_after="set_warehouse", collapsible=1,
+        ),
+        restaurant_production=dict(
+            label="Solicitud de producción Resto", fieldtype="Check",
+            insert_after="restaurant_production_section", default="0", read_only=1, no_copy=1,
+        ),
+        restaurant_pos_profile=dict(
+            label="Perfil POS de origen", fieldtype="Link", options="POS Profile",
+            insert_after="restaurant_production", read_only=1, no_copy=1,
+        ),
+        restaurant_from_datetime=dict(
+            label="Consumos desde", fieldtype="Datetime", insert_after="restaurant_pos_profile",
+            read_only=1, no_copy=1,
+        ),
+        restaurant_to_datetime=dict(
+            label="Consumos hasta", fieldtype="Datetime", insert_after="restaurant_from_datetime",
+            read_only=1, no_copy=1,
+        ),
+        restaurant_raw_material_warehouse=dict(
+            label="Almacén de materia prima", fieldtype="Link", options="Warehouse",
+            insert_after="restaurant_to_datetime", read_only=1, no_copy=1,
+        ),
+        restaurant_wip_warehouse=dict(
+            label="Almacén en proceso", fieldtype="Link", options="Warehouse",
+            insert_after="restaurant_raw_material_warehouse", read_only=1, no_copy=1,
+        ),
+        restaurant_production_sources=dict(
+            label="Líneas de venta incluidas", fieldtype="Table", options="Restaurant Production Source",
+            insert_after="restaurant_wip_warehouse", read_only=1, no_copy=1,
+        ),
+    ),
+    "Material Request Item": dict(
+        pos_invoice=dict(
+            label="POS Invoice", fieldtype="Small Text", insert_after="project", read_only=1,
+        ),
+        pos_invoice_item=dict(
+            label="POS Invoice Item", fieldtype="Data", insert_after="pos_invoice",
+            read_only=1, hidden=1, no_copy=1,
         ),
     ),
 }
@@ -142,9 +201,50 @@ def after_migrate():
 
 def sync_app_metadata():
     set_custom_fields()
+    frappe.clear_cache(doctype="POS Invoice")
+    from restaurant_management.restaurant_management.pos_closing import (
+        backfill_open_restaurant_pos_invoices,
+    )
+
+    backfill_open_restaurant_pos_invoices()
+    set_pos_closing_grid_properties()
     sync_desk_forms()
     set_custom_scripts()
     set_operational_role_permissions()
+
+
+def set_pos_closing_grid_properties():
+    values = {
+        "doctype_or_field": "DocField",
+        "doc_type": "POS Closing Entry Detail",
+        "field_name": "closing_amount",
+        "property": "label",
+        "value": "Monto de cierre",
+        "property_type": "Data",
+        "is_system_generated": 1,
+    }
+    property_setter_name = frappe.db.exists(
+        "Property Setter",
+        {
+            "doc_type": values["doc_type"],
+            "field_name": values["field_name"],
+            "property": values["property"],
+        },
+    )
+    property_setter = (
+        frappe.get_doc("Property Setter", property_setter_name)
+        if property_setter_name
+        else frappe.new_doc("Property Setter")
+    )
+    if not property_setter_name or any(
+        property_setter.get(key) != value for key, value in values.items()
+    ):
+        property_setter.update(values)
+        property_setter.flags.ignore_permissions = True
+        property_setter.flags.ignore_version = True
+        property_setter.save() if property_setter_name else property_setter.insert()
+
+    frappe.clear_cache(doctype="POS Closing Entry Detail")
 
 
 def set_operational_role_permissions():

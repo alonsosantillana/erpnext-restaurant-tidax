@@ -200,21 +200,16 @@ def validate_restaurant_pos_opening_entry(invoice):
     to that accounting document, so this flow performs the same server-side
     existence check.
     """
-    opening_exists = frappe.db.exists(
-        "POS Opening Entry",
-        {
-            "pos_profile": invoice.pos_profile,
-            "status": "Open",
-            "docstatus": 1,
-        },
+    from restaurant_management.restaurant_management.pos_closing import (
+        get_active_restaurant_opening,
     )
-    if not opening_exists:
-        frappe.throw(
-            title=_("POS Opening Entry Missing"),
-            msg=_("No open POS Opening Entry found for POS Profile {0}.").format(
-                frappe.bold(invoice.pos_profile)
-            ),
-        )
+
+    opening = get_active_restaurant_opening(
+        invoice.pos_profile,
+        user=frappe.session.user,
+        throw=True,
+    )
+    invoice.restaurant_pos_opening_entry = opening.name
 
 
 def apply_delivery_fee_invoice_rate(invoice, delivery_fee_item):
@@ -843,6 +838,13 @@ class TableOrder(Document):
         to_doc.table = self.table
         if to_doc.doctype == "Table Order":
             to_doc.service_type = self.service_type
+        elif to_doc.doctype == "POS Invoice":
+            settings = get_restaurant_settings(order=self)
+            update_stock = settings.get("update_stock_on_invoice")
+            to_doc.update_stock = cint(1 if update_stock is None else update_stock)
+            to_doc.set_warehouse = frappe.db.get_value(
+                "POS Profile", self.pos_profile, "warehouse"
+            )
 
     def get_invoice(self, entry_items=None, make=False):
         invoice = frappe.new_doc("POS Invoice")

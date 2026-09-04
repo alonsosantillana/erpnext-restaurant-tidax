@@ -327,13 +327,19 @@ class RestaurantSettingsMixin:
 
     def pos_profile_data(self):
         pos_profile_name = self.get_current_pos_profile_name()
+        pos_profile = (
+            frappe.get_doc("POS Profile", pos_profile_name)
+            if pos_profile_name
+            else None
+        )
+        if pos_profile:
+            update_stock = self.get("update_stock_on_invoice")
+            pos_profile.update_stock = cint(
+                1 if update_stock is None else update_stock
+            )
         return dict(
             has_pos=pos_profile_name is not None,
-            pos=(
-                frappe.get_doc("POS Profile", pos_profile_name)
-                if pos_profile_name
-                else None
-            ),
+            pos=pos_profile,
         )
 
     def get_order_item_editor_form(self):

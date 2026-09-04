@@ -33,6 +33,12 @@
   "default_expense_account",
   "column_break_expenses_accounting",
   "expense_cost_center",
+  "production_section",
+  "update_stock_on_invoice",
+  "raw_material_warehouse",
+  "column_break_production",
+  "wip_warehouse",
+  "finished_goods_warehouse",
   "pos_and_print_section",
   "pos_profile",
   "print_format_order",
@@ -218,6 +224,43 @@
    "fieldtype": "Link",
    "label": "Centro de costo de gastos",
    "options": "Cost Center"
+  },
+  {
+   "fieldname": "production_section",
+   "fieldtype": "Section Break",
+   "label": "Producción de productos"
+  },
+  {
+   "default": "1",
+   "description": "Al activarlo, las Facturas POS descuentan el producto terminado del almacén. Solo las ventas que actualizan inventario se incluyen en la consolidación de producción.",
+   "fieldname": "update_stock_on_invoice",
+   "fieldtype": "Check",
+   "label": "Actualizar inventario al facturar"
+  },
+  {
+   "description": "Almacén desde el que las órdenes de producción consumirán los componentes del BOM.",
+   "fieldname": "raw_material_warehouse",
+   "fieldtype": "Link",
+   "label": "Almacén de materia prima",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "column_break_production",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Almacén temporal usado durante la fabricación.",
+   "fieldname": "wip_warehouse",
+   "fieldtype": "Link",
+   "label": "Almacén en proceso",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Almacén al que ingresan los productos terminados.",
+   "fieldname": "finished_goods_warehouse",
+   "fieldtype": "Link",
+   "label": "Almacén de producto terminado",
+   "options": "Warehouse"
   },
   {
    "fieldname": "pos_and_print_section",

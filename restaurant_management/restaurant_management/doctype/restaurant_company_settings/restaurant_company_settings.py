@@ -6,12 +6,16 @@ from frappe.model.document import Document
 from restaurant_management.restaurant_management.company_settings import (
     RestaurantSettingsMixin,
 )
+from restaurant_management.restaurant_management.production import (
+    validate_company_production_settings,
+)
 
 
 class RestaurantCompanySettings(RestaurantSettingsMixin, Document):
     def validate(self):
         self.validate_restaurant_settings()
         self.validate_print_routes()
+        validate_company_production_settings(self)
 
     def validate_print_routes(self):
         enabled_keys = set()

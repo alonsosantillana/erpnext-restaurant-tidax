@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "creation": "2026-09-02 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "pos_invoice",
+  "pos_invoice_item",
+  "item_code",
+  "qty",
+  "stock_uom",
+  "posting_datetime"
+ ],
+ "fields": [
+  {
+   "fieldname": "pos_invoice",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Factura POS",
+   "options": "POS Invoice",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "pos_invoice_item",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Línea de Factura POS",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plato",
+   "options": "Item",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Cantidad",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "stock_uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Unidad",
+   "options": "UOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "posting_datetime",
+   "fieldtype": "Datetime",
+   "label": "Fecha de venta",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "Restaurant Production Source",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

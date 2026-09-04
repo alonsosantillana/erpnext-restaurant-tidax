@@ -49,6 +49,13 @@ frappe.ui.form.on("Restaurant Company Settings", {
 		frm.set_query("expense_cost_center", () => ({
 			filters: { company: frm.doc.company, is_group: 0, disabled: 0 },
 		}));
+		["raw_material_warehouse", "wip_warehouse", "finished_goods_warehouse"].forEach(
+			(fieldname) => {
+				frm.set_query(fieldname, () => ({
+					filters: { company: frm.doc.company, is_group: 0, disabled: 0 },
+				}));
+			}
+		);
 		frm.set_query("print_format", () => ({
 			filters: { doc_type: "Table Order", disabled: 0 },
 		}));

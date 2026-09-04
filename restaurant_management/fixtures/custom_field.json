@@ -4,6 +4,7 @@
     "dt": "Material Request",
     "fieldname": "clear_item_no_manufacturing",
     "fieldtype": "Button",
+    "hidden": 1,
     "insert_after": "set_warehouse",
     "label": "Platos a producir y agrupacion",
     "name": "Material Request-clear_item_no_manufacturing",
