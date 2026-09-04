@@ -1,99 +1,78 @@
 # Copyright (c) 2024, Quantum Bit Core and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
-from datetime import date
-from erpnext.setup.doctype import company
-from frappe import _
 import frappe
-import os
+
 
 def execute(filters=None):
+	filters = frappe._dict(filters or {})
 	return get_columns(filters), get_data(filters)
 
+
 def get_data(filters):
-	# print (f"\n\n\n{filters}\n\n\n")
-	company = filters.get('company')
-	from_d = str(filters.get('report_date_from'))
-	to_d = str(filters.get('report_date_to'))
-	mozo = filters.get('user_mozo')
+	filters = frappe._dict(filters or {})
+	filters.invoice_status = "Consolidated"
+	filters.empty_value = ""
+	conditions = [
+		"invoice.company = %(company)s",
+		"invoice.posting_date BETWEEN %(report_date_from)s AND %(report_date_to)s",
+		"invoice.docstatus = 1",
+		"table_order.docstatus = 1",
+		"invoice_item.docstatus = 1",
+		"invoice.status = %(invoice_status)s",
+		"invoice.is_return = 0",
+		"invoice_item.qty > 0",
+	]
+	if filters.get("user_mozo"):
+		conditions.append(
+			"COALESCE(NULLIF(table_order.cambio_mozo, %(empty_value)s), table_order.owner) = %(user_mozo)s"
+		)
 
-	if(mozo):
-		data = frappe.db.sql("""
-					SELECT
-						DATE(`tabTable Order`.`creation`) AS fecha, 
-						`tabTable Order`.`owner` AS mozo,
-						`tabUser`.`full_name` AS nombre,
-						`tabOrder Entry Item`.`item_group` AS grupo_platos,
-						`tabOrder Entry Item`.`item_code` AS codigo_platos,
-						`tabOrder Entry Item`.`item_name` AS nombre_platos,
-						SUM(`tabOrder Entry Item`.`qty`) AS qty_platos_atendidos
-					FROM
-						`tabTable Order`
-					LEFT JOIN
-						`tabOrder Entry Item` ON `tabTable Order`.`name` = `tabOrder Entry Item`.`parent`
-					LEFT JOIN
-						`tabUser` ON `tabUser`.`name` = %s
-					LEFT JOIN
-						`tabPOS Invoice` ON `tabPOS Invoice`.`name` = `tabTable Order`.`link_invoice`
-					WHERE
-						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
-					    AND `tabTable Order`.`owner` = %s
-						AND `tabTable Order`.`docstatus` = 1
-					    AND `tabPOS Invoice`.`status` = 'Consolidated'
-					GROUP BY
-					    DATE(`tabTable Order`.`creation`),				    
-						`tabTable Order`.`owner`,
-					    `tabOrder Entry Item`.`item_group`,
-						`tabOrder Entry Item`.`item_code`,
-					    `tabOrder Entry Item`.`item_name`              
-					HAVING
-						qty_platos_atendidos > 0;
-				""", (mozo, from_d, to_d, mozo), as_dict=True)
-		return data
-	else:
-		data = frappe.db.sql("""
-					SELECT
-						DATE(`tabTable Order`.`creation`) AS fecha, 
-						`tabTable Order`.`owner` AS mozo,
-						`tabUser`.`full_name` AS nombre,
-						`tabOrder Entry Item`.`item_group` AS grupo_platos,
-						`tabOrder Entry Item`.`item_code` AS codigo_platos,
-						`tabOrder Entry Item`.`item_name` AS nombre_platos,
-						SUM(`tabOrder Entry Item`.`qty`) AS qty_platos_atendidos
-					FROM
-						`tabTable Order`
-					LEFT JOIN
-						`tabOrder Entry Item` ON `tabTable Order`.`name` = `tabOrder Entry Item`.`parent`
-					LEFT JOIN
-						`tabUser` ON `tabUser`.`name` = `tabTable Order`.`owner`
-					LEFT JOIN
-						`tabPOS Invoice` ON `tabPOS Invoice`.`name` = `tabTable Order`.`link_invoice`
-					WHERE
-						DATE(`tabTable Order`.`creation`) BETWEEN %s AND %s
-						AND `tabTable Order`.`docstatus` = 1
-					    AND `tabPOS Invoice`.`status` = 'Consolidated'
-					GROUP BY	
-					    DATE(`tabTable Order`.`creation`),				    
-						`tabTable Order`.`owner`,
-					    `tabOrder Entry Item`.`item_group`,
-						`tabOrder Entry Item`.`item_code`,
-					    `tabOrder Entry Item`.`item_name`           
-					HAVING
-						qty_platos_atendidos > 0;
-				""", (from_d, to_d), as_dict=True)
+	return frappe.db.sql(
+		f"""
+			SELECT
+				invoice.posting_date AS fecha,
+				COALESCE(NULLIF(table_order.cambio_mozo, %(empty_value)s), table_order.owner) AS mozo,
+				user.full_name AS nombre,
+				invoice_item.item_group AS grupo_platos,
+				invoice_item.item_code AS codigo_platos,
+				invoice_item.item_name AS nombre_platos,
+				SUM(invoice_item.qty) AS qty_platos_atendidos
+			FROM `tabTable Order` AS table_order
+			INNER JOIN `tabPOS Invoice` AS invoice
+				ON invoice.name = table_order.link_invoice
+			INNER JOIN `tabPOS Invoice Item` AS invoice_item
+				ON invoice_item.parent = invoice.name
+			LEFT JOIN `tabUser` AS user
+				ON user.name = COALESCE(
+					NULLIF(table_order.cambio_mozo, %(empty_value)s), table_order.owner
+				)
+			WHERE {" AND ".join(conditions)}
+			GROUP BY
+				invoice.posting_date,
+				COALESCE(NULLIF(table_order.cambio_mozo, %(empty_value)s), table_order.owner),
+				user.full_name,
+				invoice_item.item_group,
+				invoice_item.item_code,
+				invoice_item.item_name
+			ORDER BY
+				invoice.posting_date,
+				user.full_name,
+				invoice_item.item_group,
+				invoice_item.item_name
+		""",
+		filters,
+		as_dict=True,
+	)
 
-		return data
 
 def get_columns(filters=None):
-    columns = [
+	return [
 		"Fecha:Date:100",
-        "Mozo:Data:200",
-        "Nombre:Data:200",
-        "Grupo Platos:Data:200",
-        "Codigo Platos:Data:100",
-        "Nombre Platos:Data:200",
-		"QTY Platos Atendidos:Data:100"
-    ]
-
-    return columns
+		"Mozo:Data:200",
+		"Nombre:Data:200",
+		"Grupo Platos:Data:200",
+		"Codigo Platos:Data:100",
+		"Nombre Platos:Data:200",
+		"QTY Platos Atendidos:Float:100",
+	]

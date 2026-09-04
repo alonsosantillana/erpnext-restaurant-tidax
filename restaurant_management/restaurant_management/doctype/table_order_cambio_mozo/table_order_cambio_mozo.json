@@ -1,22 +1,116 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "format:CM-{YYYY}-{#####}",
  "creation": "2024-03-21 19:02:05.341302",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "company",
   "orden_fecha",
+  "filters_section",
+  "room",
+  "mozo_origen",
+  "column_break_filters",
+  "nuevo_mozo",
+  "cargar_ordenes",
+  "summary",
+  "orders_section",
   "orden_item",
-  "amended_from",
-  "resultado"
+  "result_section",
+  "transferred_count",
+  "resultado",
+  "amended_from"
  ],
  "fields": [
   {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Compañía",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "orden_fecha",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Fecha de las órdenes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filtros y destino"
+  },
+  {
+   "description": "Opcional. Solo se muestran ambientes permitidos para el usuario.",
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Ambiente",
+   "options": "Restaurant Object"
+  },
+  {
+   "description": "Opcional. Filtra las órdenes por su mozo actual.",
+   "fieldname": "mozo_origen",
+   "fieldtype": "Link",
+   "label": "Mozo actual",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_filters",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Usuario que recibirá las órdenes seleccionadas.",
+   "fieldname": "nuevo_mozo",
+   "fieldtype": "Link",
+   "label": "Nuevo mozo",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.docstatus == 0",
+   "fieldname": "cargar_ordenes",
+   "fieldtype": "Button",
+   "label": "Cargar órdenes activas"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "orders_section",
+   "fieldtype": "Section Break",
+   "label": "Órdenes activas"
+  },
+  {
    "fieldname": "orden_item",
    "fieldtype": "Table",
-   "options": "Table Order Cambio Mozo Detalle"
+   "label": "Órdenes a reasignar",
+   "options": "Table Order Cambio Mozo Detalle",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.docstatus == 1",
+   "fieldname": "result_section",
+   "fieldtype": "Section Break",
+   "label": "Resultado"
+  },
+  {
+   "fieldname": "transferred_count",
+   "fieldtype": "Int",
+   "label": "Órdenes reasignadas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resultado",
+   "fieldtype": "Small Text",
+   "label": "Resultado",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",
@@ -26,25 +120,11 @@
    "options": "Table Order Cambio Mozo",
    "print_hide": 1,
    "read_only": 1
-  },
-  {
-   "fieldname": "orden_fecha",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Fecha de Orden",
-   "reqd": 1
-  },
-  {
-   "fieldname": "resultado",
-   "fieldtype": "Data",
-   "label": "Resultado",
-   "read_only": 1
   }
  ],
- "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-03-22 01:50:58.705297",
+ "modified": "2026-09-04 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order Cambio Mozo",
@@ -60,10 +140,10 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
-   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -76,8 +156,7 @@
    "submit": 1,
    "write": 1
   },
-{
-   "cancel": 1,
+  {
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -91,7 +170,6 @@
    "write": 1
   },
   {
-   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -104,8 +182,7 @@
    "submit": 1,
    "write": 1
   },
-{
-   "cancel": 1,
+  {
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -119,7 +196,9 @@
    "write": 1
   }
  ],
+ "search_fields": "company,nuevo_mozo,resultado",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
