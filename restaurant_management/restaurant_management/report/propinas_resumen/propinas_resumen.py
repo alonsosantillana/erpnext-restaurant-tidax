@@ -128,7 +128,12 @@ def execute(filters=None):
             tip.cancellation_reason AS motivo_correccion,
             tip.cancelled_by AS anulada_por,
             tip.cancelled_on AS anulada_el,
-            tip.collection_journal_entry AS asiento_contable
+            tip.collection_journal_entry AS asiento_contable,
+            tip.settlement_journal_entry AS asiento_pago,
+            tip.settlement_mode_of_payment AS medio_pago_mozo,
+            tip.settlement_account AS cuenta_pago,
+            tip.settled_by AS pagada_por,
+            tip.settled_on AS pagada_el
         FROM `tabRestaurant Tip` tip
         LEFT JOIN `tabUser` user ON user.name = tip.waiter
         LEFT JOIN `tabPOS Invoice` invoice ON invoice.name = tip.pos_invoice
@@ -171,14 +176,29 @@ def execute(filters=None):
         {"fieldname": "motivo_correccion", "label": _("Motivo de anulación / corrección"), "fieldtype": "Data", "width": 220},
         {"fieldname": "anulada_por", "label": _("Anulada por"), "fieldtype": "Link", "options": "User", "width": 180},
         {"fieldname": "anulada_el", "label": _("Anulada el"), "fieldtype": "Datetime", "width": 155},
+        {"fieldname": "medio_pago_mozo", "label": _("Medio de pago al mozo"), "fieldtype": "Link", "options": "Mode of Payment", "width": 165},
+        {"fieldname": "cuenta_pago", "label": _("Cuenta de pago"), "fieldtype": "Link", "options": "Account", "width": 210},
+        {"fieldname": "pagada_por", "label": _("Pagada por"), "fieldtype": "Link", "options": "User", "width": 180},
+        {"fieldname": "pagada_el", "label": _("Pagada el"), "fieldtype": "Datetime", "width": 155},
     ]
-    if frappe.has_permission("Journal Entry", "read"):
-        columns.append({
+    can_read_journal_entry = frappe.has_permission("Journal Entry", "read")
+    if can_read_journal_entry:
+        columns.extend([{
             "fieldname": "asiento_contable",
-            "label": _("Asiento contable"),
+            "label": _("Asiento de cobro"),
             "fieldtype": "Link",
             "options": "Journal Entry",
             "width": 190,
-        })
+        }, {
+            "fieldname": "asiento_pago",
+            "label": _("Asiento de pago"),
+            "fieldtype": "Link",
+            "options": "Journal Entry",
+            "width": 190,
+        }])
+    else:
+        for row in data:
+            row.pop("asiento_contable", None)
+            row.pop("asiento_pago", None)
     return columns, data
 

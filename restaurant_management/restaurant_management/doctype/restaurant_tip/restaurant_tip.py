@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import cint, flt, now_datetime, nowtime, today
+from frappe.utils import cint, flt, getdate, now_datetime, nowtime, today
 
 
 TIP_MANAGEMENT_ROLES = {
@@ -191,7 +191,9 @@ def _get_tip_cash_session(tip):
         """
         SELECT
             COALESCE(invoice.restaurant_pos_opening_entry, closing.pos_opening_entry) AS opening_entry,
-            COALESCE(opening.pos_closing_entry, closing.name) AS closing_entry
+            COALESCE(opening.pos_closing_entry, closing.name) AS closing_entry,
+            opening.user AS cashier,
+            closing.period_end_date AS closing_time
         FROM `tabPOS Invoice` invoice
         LEFT JOIN `tabPOS Opening Entry` opening
             ON opening.name = invoice.restaurant_pos_opening_entry
@@ -255,6 +257,250 @@ def _get_locked_tip(tip_name):
         tip_name,
     )
     return frappe.get_doc("Restaurant Tip", tip_name)
+
+
+
+def _normalize_tip_names(tip_names):
+    if isinstance(tip_names, str):
+        tip_names = frappe.parse_json(tip_names)
+    if not isinstance(tip_names, (list, tuple)):
+        frappe.throw(_("Seleccione una o más propinas"))
+
+    names = sorted({str(name).strip() for name in tip_names if str(name).strip()})
+    if not names:
+        frappe.throw(_("Seleccione una o más propinas"))
+    if len(names) > 200:
+        frappe.throw(_("Puede liquidar como máximo 200 propinas por operación"))
+    return names
+
+
+def _get_locked_tips(tip_names):
+    placeholders = ", ".join(["%s"] * len(tip_names))
+    locked = frappe.db.sql(
+        "SELECT name FROM `tabRestaurant Tip` "
+        f"WHERE name IN ({placeholders}) ORDER BY name FOR UPDATE",
+        tuple(tip_names),
+        as_dict=True,
+    )
+    locked_names = {row.name for row in locked}
+    missing = [name for name in tip_names if name not in locked_names]
+    if missing:
+        frappe.throw(
+            _("No existen las propinas: {0}").format(", ".join(missing)),
+            frappe.DoesNotExistError,
+        )
+    return [frappe.get_doc("Restaurant Tip", name) for name in tip_names]
+
+
+def _get_mode_of_payment_account(mode_of_payment, company):
+    mode_of_payment = str(mode_of_payment or "").strip()
+    if not mode_of_payment:
+        frappe.throw(_("Seleccione el medio con el que se pagará al mozo"))
+
+    if not frappe.db.exists("Mode of Payment", mode_of_payment):
+        frappe.throw(_("No existe el modo de pago {0}").format(mode_of_payment))
+
+    account = frappe.db.get_value(
+        "Mode of Payment Account",
+        {
+            "parent": mode_of_payment,
+            "parenttype": "Mode of Payment",
+            "company": company,
+        },
+        "default_account",
+    )
+    if not account:
+        frappe.throw(
+            _("Configure una cuenta para el modo de pago {0} y la empresa {1}").format(
+                mode_of_payment, company
+            )
+        )
+    _validate_account(
+        account,
+        company,
+        expected_root_type="Asset",
+        label=_("Cuenta de pago"),
+    )
+    return account
+
+
+def _validate_tip_settlement(tips, posting_date):
+    first = tips[0]
+    dimensions = {
+        "company": first.company,
+        "waiter": first.waiter,
+        "liability_account": first.liability_account,
+    }
+    sessions = []
+    for tip in tips:
+        if tip.status != "Collected" or tip.get("settlement_journal_entry"):
+            frappe.throw(
+                _("La propina {0} no está pendiente de pago al mozo").format(tip.name)
+            )
+        for fieldname, expected in dimensions.items():
+            if tip.get(fieldname) != expected:
+                frappe.throw(
+                    _("Todas las propinas deben pertenecer al mismo mozo, empresa y cuenta por pagar")
+                )
+        if not tip.collection_journal_entry:
+            frappe.throw(
+                _("La propina {0} no tiene asiento de recepción").format(tip.name)
+            )
+        if frappe.db.get_value(
+            "Journal Entry", tip.collection_journal_entry, "docstatus"
+        ) != 1:
+            frappe.throw(
+                _("El asiento de recepción {0} no está enviado").format(
+                    tip.collection_journal_entry
+                )
+            )
+        session = _get_tip_cash_session(tip)
+        if not session.get("closing_entry"):
+            frappe.throw(
+                _("La propina {0} todavía no pertenece a un cierre POS enviado").format(tip.name)
+            )
+        sessions.append(session)
+
+    closing_entries = {session.closing_entry for session in sessions}
+    if len(closing_entries) != 1:
+        frappe.throw(_("Todas las propinas deben pertenecer al mismo cierre POS"))
+
+    closing_time = sessions[0].get("closing_time")
+    if closing_time and getdate(posting_date) < getdate(closing_time):
+        frappe.throw(_("La fecha de pago no puede ser anterior al cierre POS"))
+
+    roles = set(frappe.get_roles())
+    if not roles.intersection(TIP_MANAGEMENT_ROLES):
+        frappe.throw(
+            _("Solo un cajero o administrador del restaurante puede pagar propinas"),
+            frappe.PermissionError,
+        )
+    if not frappe.has_permission("Company", "read", doc=first.company):
+        frappe.throw(
+            _("No tiene permiso para gestionar propinas de la empresa {0}").format(first.company),
+            frappe.PermissionError,
+        )
+    if not roles.intersection(TIP_ADMIN_ROLES):
+        cashiers = {session.get("cashier") for session in sessions}
+        if cashiers != {frappe.session.user}:
+            frappe.throw(
+                _("El cajero solo puede pagar propinas de sus propios cierres POS"),
+                frappe.PermissionError,
+            )
+
+    _validate_account(
+        first.liability_account,
+        first.company,
+        expected_root_type="Liability",
+        label=_("Cuenta de propinas por pagar"),
+    )
+    return frappe._dict(
+        company=first.company,
+        waiter=first.waiter,
+        liability_account=first.liability_account,
+        closing_entry=sessions[0].closing_entry,
+        total=flt(sum(flt(tip.amount) for tip in tips), 2),
+    )
+
+
+@frappe.whitelist(methods=["POST"])
+def settle_restaurant_tips(tip_names, mode_of_payment, posting_date=None):
+    names = _normalize_tip_names(tip_names)
+    posting_date = posting_date or today()
+
+    savepoint = "settle_restaurant_tips"
+    frappe.db.savepoint(savepoint)
+    try:
+        tips = _get_locked_tips(names)
+        context = _validate_tip_settlement(tips, posting_date)
+        payment_account = _get_mode_of_payment_account(
+            mode_of_payment, context.company
+        )
+
+        journal_entry = frappe.new_doc("Journal Entry")
+        journal_entry.company = context.company
+        journal_entry.posting_date = posting_date
+        journal_entry.voucher_type = "Journal Entry"
+        journal_entry.user_remark = _(
+            "Pago consolidado de {0} propina(s) al mozo {1}; cierre POS {2}"
+        ).format(len(tips), context.waiter, context.closing_entry)
+        for tip in tips:
+            journal_entry.append(
+                "accounts",
+                {
+                    "account": context.liability_account,
+                    "debit_in_account_currency": tip.amount,
+                    "credit_in_account_currency": 0,
+                    "reference_type": "Journal Entry",
+                    "reference_name": tip.collection_journal_entry,
+                    "user_remark": _("Propina {0} / comprobante {1}").format(
+                        tip.name, tip.pos_invoice
+                    ),
+                },
+            )
+        journal_entry.append(
+            "accounts",
+            {
+                "account": payment_account,
+                "debit_in_account_currency": 0,
+                "credit_in_account_currency": context.total,
+            },
+        )
+        journal_entry.flags.ignore_permissions = True
+        journal_entry.insert()
+        journal_entry.submit()
+
+        settled_on = now_datetime()
+        for tip in tips:
+            frappe.db.set_value(
+                "Restaurant Tip",
+                tip.name,
+                {
+                    "status": "Settled",
+                    "settlement_journal_entry": journal_entry.name,
+                    "settlement_mode_of_payment": mode_of_payment,
+                    "settlement_account": payment_account,
+                    "settled_by": frappe.session.user,
+                    "settled_on": settled_on,
+                },
+                update_modified=True,
+            )
+    except Exception:
+        frappe.db.rollback(save_point=savepoint)
+        raise
+
+    return {
+        "journal_entry": journal_entry.name,
+        "waiter": context.waiter,
+        "closing_entry": context.closing_entry,
+        "tip_count": len(tips),
+        "total": context.total,
+    }
+
+
+def restore_tips_for_cancelled_settlement(doc, method=None):
+    tip_names = frappe.get_all(
+        "Restaurant Tip",
+        filters={
+            "settlement_journal_entry": doc.name,
+            "status": "Settled",
+        },
+        pluck="name",
+    )
+    for tip_name in tip_names:
+        frappe.db.set_value(
+            "Restaurant Tip",
+            tip_name,
+            {
+                "status": "Collected",
+                "settlement_journal_entry": None,
+                "settlement_mode_of_payment": None,
+                "settlement_account": None,
+                "settled_by": None,
+                "settled_on": None,
+            },
+            update_modified=True,
+        )
 
 
 def _cancel_tip_document(tip, reason):

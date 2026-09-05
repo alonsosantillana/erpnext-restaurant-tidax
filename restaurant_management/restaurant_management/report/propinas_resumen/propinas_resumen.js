@@ -6,6 +6,11 @@ frappe.query_reports["Propinas Resumen"] = {
 	"onload": function(report) {
 		if (!can_manage_tips()) return;
 
+		report.page.add_inner_button(__("Pagar al mozo"), () => {
+			const rows = get_selected_tips_for_settlement(report);
+			if (rows) show_settle_tips_dialog(rows, report);
+		}, __("Acciones"));
+
 		report.page.add_inner_button(__("Anular propina"), () => {
 			const row = get_selected_tip(report);
 			if (row) show_cancel_tip_dialog(row, report);
@@ -85,6 +90,79 @@ function get_selected_tip(report) {
 		return null;
 	}
 	return rows[0];
+}
+
+
+function get_selected_tips_for_settlement(report) {
+	const rows = report.get_checked_items().filter((row) => row.name);
+	if (!rows.length) {
+		frappe.msgprint(__("Seleccione al menos una propina pendiente de pago."));
+		return null;
+	}
+	if (rows.some((row) => row.estado !== "Collected")) {
+		frappe.msgprint(__("Solo puede pagar propinas con estado Collected."));
+		return null;
+	}
+	const waiters = new Set(rows.map((row) => row.mozo));
+	const closings = new Set(rows.map((row) => row.cierre_pos));
+	if (waiters.size !== 1 || closings.size !== 1 || !rows[0].cierre_pos) {
+		frappe.msgprint(__("Seleccione propinas de un solo mozo y un mismo cierre POS."));
+		return null;
+	}
+	return rows;
+}
+
+function show_settle_tips_dialog(rows, report) {
+	const total = rows.reduce((sum, row) => sum + flt(row.propinas), 0);
+	const dialog = new frappe.ui.Dialog({
+		title: __("Pagar propinas al mozo"),
+		fields: [
+			{
+				fieldname: "summary",
+				fieldtype: "HTML",
+				options: `<div class="alert alert-info">
+					<div><strong>${__("Mozo")}:</strong> ${frappe.utils.escape_html(rows[0].nombre || rows[0].mozo)}</div>
+					<div><strong>${__("Cierre POS")}:</strong> ${frappe.utils.escape_html(rows[0].cierre_pos)}</div>
+					<div><strong>${__("Propinas")}:</strong> ${rows.length}</div>
+					<div><strong>${__("Total a pagar")}:</strong> ${format_currency(total)}</div>
+				</div>`
+			},
+			{
+				fieldname: "posting_date",
+				label: __("Fecha de pago"),
+				fieldtype: "Date",
+				default: frappe.datetime.get_today(),
+				reqd: 1
+			},
+			{
+				fieldname: "mode_of_payment",
+				label: __("Medio de pago al mozo"),
+				fieldtype: "Link",
+				options: "Mode of Payment",
+				reqd: 1
+			}
+		],
+		primary_action_label: __("Registrar pago consolidado"),
+		primary_action: async (values) => {
+			const response = await frappe.call({
+				method: "restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip.settle_restaurant_tips",
+				args: {
+					tip_names: rows.map((row) => row.name),
+					mode_of_payment: values.mode_of_payment,
+					posting_date: values.posting_date
+				},
+				freeze: true,
+				freeze_message: __("Registrando pago de propinas...")
+			});
+			dialog.hide();
+			frappe.msgprint(__("Se registró el asiento consolidado {0} por {1}.", [
+				response.message.journal_entry,
+				format_currency(response.message.total)
+			]));
+			report.refresh();
+		}
+	});
+	dialog.show();
 }
 
 function show_cancel_tip_dialog(row, report) {

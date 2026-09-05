@@ -23,6 +23,13 @@
   "status",
   "collection_journal_entry",
   "error_message",
+  "settlement_section",
+  "settlement_journal_entry",
+  "settlement_mode_of_payment",
+  "settlement_account",
+  "column_break_settlement",
+  "settled_by",
+  "settled_on",
   "correction_section",
   "corrects_tip",
   "replaced_by",
@@ -156,6 +163,54 @@
    "fieldname": "error_message",
    "fieldtype": "Small Text",
    "label": "Accounting Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_section",
+   "fieldtype": "Section Break",
+   "label": "Pago al mozo"
+  },
+  {
+   "fieldname": "settlement_journal_entry",
+   "fieldtype": "Link",
+   "label": "Asiento de pago consolidado",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Medio de pago al mozo",
+   "no_copy": 1,
+   "options": "Mode of Payment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_account",
+   "fieldtype": "Link",
+   "label": "Cuenta de pago",
+   "no_copy": 1,
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_settlement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "settled_by",
+   "fieldtype": "Link",
+   "label": "Pagada por",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settled_on",
+   "fieldtype": "Datetime",
+   "label": "Pagada el",
+   "no_copy": 1,
    "read_only": 1
   },
   {

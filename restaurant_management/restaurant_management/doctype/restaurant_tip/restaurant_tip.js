@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Restaurant Tip", {
 	refresh(frm) {
-		if (frm.is_new() || frm.doc.status === "Cancelled" || !can_manage_restaurant_tip()) {
+		if (frm.is_new() || ["Cancelled", "Settled"].includes(frm.doc.status) || !can_manage_restaurant_tip()) {
 			return;
 		}
 

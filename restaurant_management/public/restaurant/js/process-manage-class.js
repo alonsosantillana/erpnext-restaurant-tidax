@@ -791,7 +791,7 @@ ProcessManage = class ProcessManage {
                 row.append(
                     $("<button>", {
                         type: "button",
-                        class: "btn btn-xs btn-default production-item-action"
+                        class: `btn btn-xs btn-default production-item-action ${this.item_action_class(item.next_status)}`
                     })
                         .data("command-key", command.key)
                         .data("item-identifier", item.identifier)
@@ -897,6 +897,10 @@ ProcessManage = class ProcessManage {
             Delivered: __("Mark dish as delivered")
         };
         return (single_item ? item_labels : command_labels)[next_status] || __("Advance");
+    }
+
+    item_action_class(next_status) {
+        return next_status === "Completed" ? "production-action-complete" : "";
     }
 
     pending_action_label(next_status) {

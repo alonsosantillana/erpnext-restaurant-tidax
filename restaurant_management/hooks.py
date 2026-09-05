@@ -57,6 +57,9 @@ doc_events = {
         "on_submit": "restaurant_management.restaurant_management.expense_accounting.create_expense_journal_entry",
         "on_cancel": "restaurant_management.restaurant_management.expense_accounting.cancel_expense_journal_entry",
     },
+    "Journal Entry": {
+        "on_cancel": "restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip.restore_tips_for_cancelled_settlement",
+    },
     "Material Request": {
         "validate": "restaurant_management.restaurant_management.production.validate_restaurant_production_material_request",
         "on_submit": "restaurant_management.restaurant_management.production.claim_restaurant_production_sources",
@@ -88,6 +91,8 @@ override_whitelisted_methods = {
 override_doctype_class = {
     "POS Closing Entry":
         "restaurant_management.restaurant_management.pos_closing.RestaurantPOSClosingEntry",
+    "POS Invoice Merge Log":
+        "restaurant_management.restaurant_management.pos_invoice_merge.RestaurantPOSInvoiceMergeLog",
 }
 
 # Includes in <head>
@@ -125,6 +130,10 @@ fixtures = [
                 "Material Request-clear_item_no_manufacturing",
                 "Material Request Item-pos_invoice",
                 "Material Request Item-pos_invoice_item",
+                "POS Invoice-restaurant_electronic_status",
+                "POS Invoice-restaurant_electronic_attempts",
+                "POS Invoice-restaurant_electronic_last_attempt",
+                "POS Invoice-restaurant_electronic_last_error",
             ],
         ]],
     }
@@ -250,6 +259,9 @@ scheduler_events = {
 # 		"{app_name}.tasks.monthly"
 # 	]
     "cron": {
+        "*/5 * * * *": [
+            "restaurant_management.electronic_invoice.enqueue_pending_pos_invoice_electronic"
+        ],
         "0 3 * * *":[
             "restaurant_management.restaurant_management.doctype.utils.update_estado_platos"
         ]

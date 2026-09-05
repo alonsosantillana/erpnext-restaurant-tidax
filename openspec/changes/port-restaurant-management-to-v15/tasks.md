@@ -104,7 +104,7 @@
 - [x] 5.5 Make POS Invoice submission and Table Order linkage atomic without direct `docstatus` writes or partial commits.
 - [ ] 5.6 Implement and test line discount, global discount, mixed gratuity and total gratuity cases.
 - [x] 5.7 Validate the currently approved DNI and RUC identity paths without treating unknown or empty identity as factura by default.
-- [ ] 5.8 Make electronic submission idempotent and persist a recoverable state for provider timeout or rejection.
+- [x] 5.8 Make electronic submission idempotent and persist a recoverable state for provider timeout or rejection.
 - [ ] 5.9 Ensure electronic invoicing logs and errors exclude credentials and minimize personal/tax data.
 - [ ] 5.10 Integrate `silent_print` with WebApp Hardware Bridge for comandas, boletas and facturas, isolating failures from sale completion and supporting retry without duplication.
 - [ ] 5.11 Add integration tests for boleta, factura, discounts, gratuity, multiple payments, stock failure, SUNAT success/failure/retry and print failure.

@@ -749,6 +749,17 @@ class TableOrder(Document):
         self.save()
         self.submit()
 
+        electronic_submission = None
+        if emission_mode == "Electrónica":
+            from restaurant_management.electronic_invoice import (
+                enqueue_pos_invoice_electronic,
+            )
+
+            electronic_submission = enqueue_pos_invoice_electronic(
+                invoice.name,
+                enqueue_after_commit=True,
+            )
+
         if not self.is_dine_in:
             fulfillment = frappe.db.get_value(
                 "Restaurant Fulfillment",
@@ -784,6 +795,7 @@ class TableOrder(Document):
             tip_name=tip.name if tip else None,
             tip_amount=tip.amount if tip else 0,
             tip_status=tip.status if tip else None,
+            electronic_submission=electronic_submission,
         )
 
     def transfer(self, table, client):

@@ -607,44 +607,12 @@ class PayForm extends DeskForm {
                         return;
                     }
 
-                    // Electronic issuance is orchestrated on the server so consultation,
-                    // submission, persistence, and printing cannot be interrupted between requests.
-                    RM.working("Generating Invoice Electronic");
-                    frappe.call({
-                        method: "restaurant_management.printing.process_pos_invoice_electronic",
-                        args: {
-                            invoice_name: r.message.invoice_name
-                        },
-                        callback: function(response) {
-                            try {
-                                const result = response.message || {};
-                                if (!result.processed) {
-                                    frappe.msgprint({
-                                        title: __("Comprobante pendiente de envío"),
-                                        message: result.message || __(
-                                            "Nubefact no confirmó el comprobante electrónico"
-                                        ),
-                                        indicator: "orange"
-                                    });
-                                    return;
-                                }
-
-                                const print_result = result.print_queue || {};
-                                frappe.show_alert({
-                                    message: print_result.queued
-                                        ? __("Electronic receipt queued for printing")
-                                        : __("Electronic receipt generated"),
-                                    indicator: "green"
-                                });
-                            } finally {
-                                RM.ready();
-                            }
-                        },
-                        error: function(error) {
-                            console.error("Electronic receipt processing failed", error);
-                            RM.ready();
-                        }
+                    frappe.show_alert({
+                        message: __("Comprobante creado; emisión electrónica en proceso"),
+                        indicator: "blue"
                     });
+                    this.poll_electronic_invoice(r.message.invoice_name);
+                    RM.ready();
                 } else {
                     this.reset_payment_button();
                 }
@@ -680,6 +648,47 @@ class PayForm extends DeskForm {
             .css("max-width", "");
         $payment_column.parent().addClass("restaurant-payment-layout");
     }
+    poll_electronic_invoice(invoice_name, remaining_attempts = 15) {
+        if (!invoice_name || remaining_attempts <= 0) {
+            frappe.show_alert({
+                message: __("La emisión electrónica continúa en segundo plano"),
+                indicator: "orange"
+            });
+            return;
+        }
+
+        setTimeout(() => {
+            frappe.call({
+                method: "restaurant_management.electronic_invoice.get_pos_invoice_electronic_status",
+                args: { invoice_name },
+                callback: (response) => {
+                    const result = response.message || {};
+                    if (result.processed || result.status === "Accepted") {
+                        frappe.show_alert({
+                            message: __("Comprobante electrónico aceptado"),
+                            indicator: "green"
+                        });
+                        return;
+                    }
+                    if (["Retry Required", "Rejected"].includes(result.status)) {
+                        frappe.msgprint({
+                            title: __("Comprobante pendiente de envío"),
+                            message: result.message || __(
+                                "La venta está guardada y el envío electrónico se reintentará"
+                            ),
+                            indicator: "orange"
+                        });
+                        return;
+                    }
+                    this.poll_electronic_invoice(invoice_name, remaining_attempts - 1);
+                },
+                error: () => {
+                    this.poll_electronic_invoice(invoice_name, remaining_attempts - 1);
+                }
+            });
+        }, 2000);
+    }
+
     // TIDAX
     print_invoice_silent(invoice_name){
         if (!RM.can_pay_order(this.order)) return;

@@ -62,6 +62,38 @@ docs = {
                 "El valor se controla desde Restaurant Company Settings."
             ),
         ),
+        restaurant_electronic_status=dict(
+            label="Estado de emisión restaurante",
+            fieldtype="Select",
+            options="\nQueued\nSending\nAccepted\nRetry Required\nRejected",
+            insert_after="update_stock",
+            read_only=1,
+            no_copy=1,
+            in_standard_filter=1,
+            description="Estado recuperable del envío electrónico iniciado desde Restaurant Manage.",
+        ),
+        restaurant_electronic_attempts=dict(
+            label="Intentos de emisión restaurante",
+            fieldtype="Int",
+            insert_after="restaurant_electronic_status",
+            default="0",
+            read_only=1,
+            no_copy=1,
+        ),
+        restaurant_electronic_last_attempt=dict(
+            label="Último intento de emisión restaurante",
+            fieldtype="Datetime",
+            insert_after="restaurant_electronic_attempts",
+            read_only=1,
+            no_copy=1,
+        ),
+        restaurant_electronic_last_error=dict(
+            label="Último error de emisión restaurante",
+            fieldtype="Small Text",
+            insert_after="restaurant_electronic_last_attempt",
+            read_only=1,
+            no_copy=1,
+        ),
     ),
     "POS Invoice Item": dict(
         identifier=dict(label="Identifier", fieldtype="Data"),
