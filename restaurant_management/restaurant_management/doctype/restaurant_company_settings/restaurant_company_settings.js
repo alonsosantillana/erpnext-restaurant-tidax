@@ -43,6 +43,9 @@ frappe.ui.form.on("Restaurant Company Settings", {
 		frm.set_query("pos_profile", () => ({
 			filters: { company: frm.doc.company, disabled: 0 },
 		}));
+		frm.set_query("default_customer", () => ({
+			filters: { disabled: 0 },
+		}));
 		frm.set_query("default_expense_account", () => ({
 			filters: { company: frm.doc.company, root_type: "Expense", is_group: 0, disabled: 0 },
 		}));

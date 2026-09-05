@@ -16,4 +16,5 @@
 - Migración de `v15.local` completada.
 - Metadatos verificados en base de datos.
 - Resumen real verificado: S/ 12.00 en Efectivo para `POS-OPE-ADA-2026-00002`.
-- `openspec validate` queda pendiente porque la instalación local requiere Node 20+ y el bench usa Node 18.
+- Validacion estricta de OpenSpec aprobada usando Node 22 local.
+\n\n## Correccion de resumen obsoleto - 2026-09-05\n\n- Cuatro pruebas focalizadas de conciliacion y gastos aprobadas.\n- POS-CLO-ECS-2026-00008 verificado con total S\/ 340.00, neto S\/ 275.29, cantidad 13, ventas BCP S\/ 232.00 y efectivo S\/ 108.00.\n- El render directo del servidor devuelve los datos correctos de 00008; S\/ 533.20, S\/ 431.72 y cantidad 22 pertenecen exactamente a 00007.\n- El resumen ahora se reconstruye desde el documento actual y muestra ventas brutas por metodo antes de gastos.\n- Sintaxis JavaScript aprobada y grafo Graphify regenerado.\n

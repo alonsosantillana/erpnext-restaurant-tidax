@@ -1,12 +1,14 @@
 from collections import defaultdict
+from datetime import timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, get_datetime, nowdate
+from frappe.utils import cint, flt, get_datetime, now_datetime
 
 from erpnext.manufacturing.doctype.bom.bom import get_bom_items
 from erpnext.manufacturing.doctype.work_order.work_order import get_item_details
 from erpnext.stock.get_item_details import get_default_bom
+from erpnext.stock.utils import get_stock_balance
 
 
 def _check_material_request_permission(ptype):
@@ -56,12 +58,77 @@ def validate_company_production_settings(doc):
 			_validate_warehouse(doc.get(fieldname), doc.company, label)
 
 
+def set_pos_invoice_stock_update(doc, method=None):
+	"""Apply the company production policy to every restaurant POS invoice."""
+	if not doc.company:
+		return
+
+	settings_name = frappe.db.get_value(
+		"Restaurant Company Settings", {"company": doc.company}, "name"
+	)
+	if not settings_name:
+		return
+
+	update_stock = frappe.db.get_value(
+		"Restaurant Company Settings", settings_name, "update_stock_on_invoice"
+	)
+	doc.update_stock = cint(1 if update_stock is None else update_stock)
+
+	if doc.update_stock and not doc.set_warehouse and doc.pos_profile:
+		doc.set_warehouse = frappe.db.get_value("POS Profile", doc.pos_profile, "warehouse")
+
+
 def _validate_period(from_datetime, to_datetime):
 	start = get_datetime(from_datetime)
 	end = get_datetime(to_datetime)
 	if start > end:
 		frappe.throw(_("La fecha Desde no puede ser posterior a la fecha Hasta."))
 	return start, end
+
+
+def _get_production_timeline(sources, fallback_datetime=None):
+	opening_entries = set()
+	opening_datetimes = []
+	consumption_datetimes = [
+		get_datetime(source.get("posting_datetime"))
+		for source in sources
+		if source.get("posting_datetime")
+	]
+	missing_opening = [
+		source.get("pos_invoice") or source.get("pos_invoice_item")
+		for source in sources
+		if not source.get("pos_opening_entry") or not source.get("opening_datetime")
+	]
+	if missing_opening:
+		frappe.throw(
+			_("Estas Facturas POS no están vinculadas correctamente a una apertura POS: {0}.").format(
+				", ".join(sorted(set(missing_opening)))
+			)
+		)
+	for source in sources:
+		opening_entry = source.get("pos_opening_entry")
+		opening_datetime = source.get("opening_datetime")
+		if opening_entry:
+			opening_entries.add(opening_entry)
+		if opening_datetime:
+			opening_datetimes.append(get_datetime(opening_datetime))
+
+	if len(opening_entries) > 1:
+		frappe.throw(
+			_("Las ventas seleccionadas pertenecen a varias aperturas POS ({0}). Genere una solicitud por cada apertura.").format(
+				", ".join(sorted(opening_entries))
+			)
+		)
+
+	first_consumption = (
+		min(consumption_datetimes) if consumption_datetimes else get_datetime(fallback_datetime)
+	).replace(microsecond=0)
+	opening_datetime = (
+		min(opening_datetimes) if opening_datetimes else first_consumption
+	).replace(microsecond=0)
+	production_datetime = opening_datetime - timedelta(minutes=1)
+	transfer_datetime = opening_datetime - timedelta(minutes=2)
+	return transfer_datetime, production_datetime, first_consumption, opening_datetime
 
 
 def _get_unprocessed_sales(company, pos_profile, start, end):
@@ -74,9 +141,12 @@ def _get_unprocessed_sales(company, pos_profile, start, end):
 			pii.item_name,
 			pii.qty,
 			pii.stock_uom,
+			pi.restaurant_pos_opening_entry as pos_opening_entry,
+			poe.period_start_date as opening_datetime,
 			timestamp(pi.posting_date, coalesce(pi.posting_time, '00:00:00')) as posting_datetime
 		from `tabPOS Invoice Item` pii
 		inner join `tabPOS Invoice` pi on pi.name = pii.parent
+		left join `tabPOS Opening Entry` poe on poe.name = pi.restaurant_pos_opening_entry
 		where pi.docstatus = 1
 			and pi.is_return = 0
 			and pi.update_stock = 1
@@ -172,14 +242,20 @@ def _build_preview(company, sales, settings):
 			}
 		)
 
+	transfer_datetime = (
+		_get_production_timeline(production_sources, now_datetime())[0]
+		if production_sources
+		else None
+	)
 	materials = []
 	for item_code in sorted(material_totals):
 		material = material_totals[item_code]
 		available_qty = flt(
-			frappe.db.get_value(
-				"Bin",
-				{"item_code": item_code, "warehouse": settings.raw_material_warehouse},
-				"actual_qty",
+			get_stock_balance(
+				item_code,
+				settings.raw_material_warehouse,
+				transfer_datetime.date(),
+				transfer_datetime.time(),
 			)
 		)
 		materials.append(
@@ -222,6 +298,12 @@ def get_restaurant_production_preview(company, pos_profile, from_datetime, to_da
 	production_items, materials, production_sources, skipped_items = _build_preview(
 		company, sales, settings
 	)
+	if production_sources:
+		transfer_datetime, production_datetime, first_consumption, opening_datetime = _get_production_timeline(
+			production_sources, start
+		)
+	else:
+		transfer_datetime = production_datetime = first_consumption = opening_datetime = None
 	return {
 		"production_items": production_items,
 		"materials": materials,
@@ -232,6 +314,10 @@ def get_restaurant_production_preview(company, pos_profile, from_datetime, to_da
 		"finished_goods_warehouse": settings.finished_goods_warehouse,
 		"from_datetime": start,
 		"to_datetime": end,
+		"transfer_datetime": transfer_datetime,
+		"production_datetime": production_datetime,
+		"first_consumption_datetime": first_consumption,
+		"opening_datetime": opening_datetime,
 	}
 
 
@@ -251,9 +337,12 @@ def _get_locked_source_rows(source_names):
 			pi.pos_profile,
 			pi.docstatus,
 			pi.is_return,
-			pi.update_stock
+			pi.update_stock,
+			pi.restaurant_pos_opening_entry as pos_opening_entry,
+			poe.period_start_date as opening_datetime
 		from `tabPOS Invoice Item` pii
 		inner join `tabPOS Invoice` pi on pi.name = pii.parent
+		left join `tabPOS Opening Entry` poe on poe.name = pi.restaurant_pos_opening_entry
 		where pii.name in %(source_names)s
 		for update
 		""",
@@ -287,6 +376,7 @@ def validate_restaurant_production_material_request(doc, method=None):
 
 	actual_by_name = {row.pos_invoice_item: row for row in database_rows}
 	expected_qty = defaultdict(float)
+	opening_entries = set()
 	for source in sources:
 		actual = actual_by_name[source.pos_invoice_item]
 		if actual.docstatus != 1 or actual.is_return or not actual.update_stock or actual.company != doc.company:
@@ -304,7 +394,23 @@ def validate_restaurant_production_material_request(doc, method=None):
 		_get_valid_bom(actual.item_code, doc.company)
 		if source.item_code != actual.item_code or abs(flt(source.qty) - flt(actual.qty)) > 0.000001:
 			frappe.throw(_("La trazabilidad de la línea {0} fue modificada.").format(source.pos_invoice_item))
+		if not actual.pos_opening_entry or not actual.opening_datetime:
+			frappe.throw(
+				_("La Factura POS {0} no está vinculada a una apertura POS. Corrija el vínculo antes de producir.").format(
+					frappe.bold(actual.pos_invoice)
+				)
+			)
+		opening_entries.add(actual.pos_opening_entry)
+		source.pos_opening_entry = actual.pos_opening_entry
+		source.opening_datetime = actual.opening_datetime
 		expected_qty[actual.item_code] += flt(actual.qty)
+
+	if len(opening_entries) > 1:
+		frappe.throw(
+			_("La solicitud contiene ventas de varias aperturas POS ({0}). Genere una solicitud por cada apertura.").format(
+				", ".join(sorted(opening_entries))
+			)
+		)
 
 	request_items = {}
 	for item in doc.items:
@@ -370,6 +476,10 @@ def create_restaurant_work_orders(material_request):
 
 	validate_restaurant_production_material_request(request)
 	settings = _get_production_settings(request.company)
+	production_datetime = _get_production_timeline(
+		request.restaurant_production_sources,
+		request.restaurant_from_datetime or request.transaction_date,
+	)[1]
 	created = []
 	for item in request.items:
 		already_created = flt(
@@ -397,11 +507,11 @@ def create_restaurant_work_orders(material_request):
 				"source_warehouse": settings.raw_material_warehouse,
 				"description": item.description,
 				"stock_uom": item.stock_uom,
-				"expected_delivery_date": item.schedule_date,
+				"expected_delivery_date": production_datetime.date(),
 				"bom_no": item.bom_no or details.bom_no,
 				"material_request": request.name,
 				"material_request_item": item.name,
-				"planned_start_date": request.transaction_date or nowdate(),
+				"planned_start_date": production_datetime,
 				"company": request.company,
 				"project": item.project,
 			}
@@ -411,3 +521,107 @@ def create_restaurant_work_orders(material_request):
 		created.append(work_order.name)
 
 	return {"work_orders": created}
+
+
+def _check_fast_production_permissions():
+	for doctype in ("Work Order", "Stock Entry"):
+		for ptype in ("create", "submit"):
+			if not frappe.has_permission(doctype, ptype=ptype):
+				frappe.throw(
+					_("No tiene permiso para {0} {1}.").format(ptype, doctype),
+					frappe.PermissionError,
+				)
+
+
+def _make_and_submit_stock_entry(work_order, purpose, qty, posting_datetime):
+	from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
+
+	stock_entry = frappe.get_doc(make_stock_entry(work_order.name, purpose, qty))
+	stock_entry.set_posting_time = 1
+	stock_entry.posting_date = posting_datetime.date()
+	stock_entry.posting_time = posting_datetime.time()
+	stock_entry.insert()
+	stock_entry.submit()
+	return stock_entry.name
+
+
+@frappe.whitelist()
+def process_restaurant_production(material_request):
+	request = frappe.get_doc("Material Request", material_request)
+	request.check_permission("read")
+	_check_fast_production_permissions()
+	if request.docstatus != 1 or not cint(request.get("restaurant_production")):
+		frappe.throw(_("Seleccione una Solicitud de Material de Resto enviada."))
+
+	validate_restaurant_production_material_request(request)
+	transfer_datetime, production_datetime, first_consumption, opening_datetime = _get_production_timeline(
+		request.restaurant_production_sources,
+		request.restaurant_from_datetime or request.transaction_date,
+	)
+	create_restaurant_work_orders(request.name)
+	work_order_names = frappe.get_all(
+		"Work Order",
+		filters=dict(material_request=request.name, docstatus=["<", 2]),
+		pluck="name",
+		order_by="creation, name",
+	)
+
+	work_orders = [frappe.get_doc("Work Order", name) for name in work_order_names]
+	for work_order in work_orders:
+		if work_order.operations and flt(work_order.qty) > flt(work_order.produced_qty):
+			frappe.throw(
+				_("La Orden de Producción {0} tiene operaciones. Procésela manualmente mediante Job Cards.").format(
+					frappe.bold(work_order.name)
+				)
+			)
+
+	stock_entries = []
+	processed_work_orders = []
+	for work_order in work_orders:
+		remaining_qty = flt(work_order.qty) - flt(work_order.produced_qty)
+		if remaining_qty <= 0:
+			continue
+
+		if work_order.docstatus == 0:
+			work_order.planned_start_date = production_datetime
+			work_order.expected_delivery_date = production_datetime.date()
+			work_order.save()
+			work_order.submit()
+
+		work_order.reload()
+		if not cint(work_order.skip_transfer):
+			pending_transfer_qty = flt(work_order.qty) - flt(
+				work_order.material_transferred_for_manufacturing
+			)
+			if pending_transfer_qty > 0:
+				stock_entries.append(
+					_make_and_submit_stock_entry(
+						work_order,
+						"Material Transfer for Manufacture",
+						pending_transfer_qty,
+						transfer_datetime,
+					)
+				)
+				work_order.reload()
+
+		remaining_qty = flt(work_order.qty) - flt(work_order.produced_qty)
+		if remaining_qty > 0:
+			stock_entries.append(
+				_make_and_submit_stock_entry(
+					work_order,
+					"Manufacture",
+					remaining_qty,
+					production_datetime,
+				)
+			)
+			processed_work_orders.append(work_order.name)
+
+	return dict(
+		work_orders=work_order_names,
+		processed_work_orders=processed_work_orders,
+		stock_entries=stock_entries,
+		transfer_datetime=transfer_datetime,
+		production_datetime=production_datetime,
+		first_consumption_datetime=first_consumption,
+		opening_datetime=opening_datetime,
+	)

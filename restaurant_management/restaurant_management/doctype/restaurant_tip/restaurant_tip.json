@@ -23,6 +23,13 @@
   "status",
   "collection_journal_entry",
   "error_message",
+  "correction_section",
+  "corrects_tip",
+  "replaced_by",
+  "column_break_cancellation",
+  "cancellation_reason",
+  "cancelled_by",
+  "cancelled_on",
   "waiter_section",
   "waiter",
   "waiter_name"
@@ -62,8 +69,7 @@
    "in_list_view": 1,
    "label": "Table Order",
    "options": "Table Order",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
   },
   {
    "fieldname": "pos_invoice",
@@ -71,8 +77,7 @@
    "in_list_view": 1,
    "label": "POS Invoice",
    "options": "POS Invoice",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
   },
   {
    "fieldname": "pos_profile",
@@ -92,6 +97,7 @@
    "in_list_view": 1,
    "label": "Tip Amount",
    "non_negative": 1,
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -100,6 +106,7 @@
    "in_list_view": 1,
    "label": "Collection Method",
    "options": "Mode of Payment",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -111,6 +118,7 @@
    "fieldtype": "Link",
    "label": "Collection Account",
    "options": "Account",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -118,6 +126,7 @@
    "fieldtype": "Link",
    "label": "Tips Payable Account",
    "options": "Account",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -147,6 +156,53 @@
    "fieldname": "error_message",
    "fieldtype": "Small Text",
    "label": "Accounting Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "correction_section",
+   "fieldtype": "Section Break",
+   "label": "Anulación y rectificación"
+  },
+  {
+   "fieldname": "corrects_tip",
+   "fieldtype": "Link",
+   "label": "Rectifica propina",
+   "no_copy": 1,
+   "options": "Restaurant Tip",
+   "read_only": 1
+  },
+  {
+   "fieldname": "replaced_by",
+   "fieldtype": "Link",
+   "label": "Rectificada por",
+   "no_copy": 1,
+   "options": "Restaurant Tip",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cancellation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cancellation_reason",
+   "fieldtype": "Small Text",
+   "label": "Motivo de anulación / rectificación",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_by",
+   "fieldtype": "Link",
+   "label": "Anulada por",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_on",
+   "fieldtype": "Datetime",
+   "label": "Anulada el",
+   "no_copy": 1,
    "read_only": 1
   },
   {

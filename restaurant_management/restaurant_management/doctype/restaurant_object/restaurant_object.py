@@ -16,6 +16,30 @@ from restaurant_management.restaurant_management.company_settings import (
 
 
 PRODUCTION_CENTER_ITEM_LIMIT = 500
+KITCHEN_TRANSITION_ROLE = "resto_cocina"
+
+
+def can_transition_production(user=None):
+    return KITCHEN_TRANSITION_ROLE in set(
+        frappe.get_roles(user or frappe.session.user)
+    )
+
+
+def get_default_order_customer(company, pos_profile):
+    settings = get_restaurant_settings(company=company)
+    customer = settings.get("default_customer") or frappe.db.get_value(
+        "POS Profile", pos_profile, "customer"
+    )
+    if not customer:
+        return None
+
+    customer_record = frappe.db.get_value(
+        "Customer", customer, ["name", "disabled"], as_dict=True
+    )
+    if not customer_record or customer_record.disabled:
+        frappe.throw(_("El cliente predeterminado debe estar habilitado."))
+    return customer_record.name
+
 
 
 def production_command_batch_key(item):
@@ -232,7 +256,7 @@ class RestaurantObject(Document):
         order = frappe.new_doc("Table Order")
         if pos_profile:
             order.pos_profile = None if pos_profile is None else pos_profile.name
-            order.customer = frappe.db.get_value('POS Profile', pos_profile.name, 'customer')
+            order.customer = get_default_order_customer(company, pos_profile.name)
             taxes_and_charges = frappe.db.get_value('POS Profile', pos_profile.name, 'taxes_and_charges')
             # if taxes_and_charges is None:
             #    taxes = get_default_taxes_and_charges("Sales Taxes and Charges Template", company=company)
@@ -804,7 +828,7 @@ class RestaurantObject(Document):
                 key=lambda row: (row["item_name"] or row["item_code"]),
             ),
             "attended": attended,
-            "can_transition": frappe.has_permission("Table Order", "write"),
+            "can_transition": can_transition_production(),
             "truncated": {
                 "active": active_truncated,
                 "attended": False,
@@ -926,6 +950,11 @@ class RestaurantObject(Document):
         )
 
     def set_commands_status(self, identifiers, expected_status):
+        if not can_transition_production():
+            frappe.throw(
+                _("Only users with the Kitchen role can update dish preparation status"),
+                frappe.PermissionError,
+            )
         self._validate_production_center()
         company, pos_profile = self._production_company_and_profile()
         identifiers = frappe.parse_json(identifiers) if isinstance(identifiers, str) else identifiers

@@ -63,7 +63,10 @@ doc_events = {
         "on_cancel": "restaurant_management.restaurant_management.production.release_restaurant_production_sources",
     },
     "POS Invoice": {
-        "before_validate": "restaurant_management.restaurant_management.pos_closing.assign_restaurant_pos_opening",
+        "before_validate": [
+            "restaurant_management.restaurant_management.pos_closing.assign_restaurant_pos_opening",
+            "restaurant_management.restaurant_management.production.set_pos_invoice_stock_update",
+        ],
         "validate": "restaurant_management.restaurant_management.doctype.table_order.table_order.enforce_restaurant_pos_invoice_currency",
         "on_cancel": "restaurant_management.restaurant_management.doctype.restaurant_tip.restaurant_tip.cancel_tip_for_invoice",
     },
@@ -109,6 +112,7 @@ fixtures = [
                 "resto_mozo",
                 "resto_cocina",
                 "resto_delivery",
+                "resto_produccion",
             ],
         ]],
     },

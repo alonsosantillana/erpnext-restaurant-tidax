@@ -18,6 +18,8 @@ modifican ventas, impuestos ni comprobantes fiscales.
 - Gastos enviados de la apertura seleccionada.
 - Bloqueo por gastos en borrador.
 - Reporte de cierre relacionado por apertura, no solamente por fecha.
+- Resumen enviado reconstruido con el cierre actualmente abierto, sin reutilizar HTML de otro cierre.
+- Ventas por método de pago mostradas antes de descontar gastos operativos.
 
 ## Fuera de alcance
 

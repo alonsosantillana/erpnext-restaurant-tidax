@@ -10,6 +10,8 @@
   "item_code",
   "qty",
   "stock_uom",
+  "pos_opening_entry",
+  "opening_datetime",
   "posting_datetime"
  ],
  "fields": [
@@ -56,9 +58,24 @@
    "read_only": 1
   },
   {
+   "fieldname": "pos_opening_entry",
+   "fieldtype": "Link",
+   "label": "Apertura POS",
+   "options": "POS Opening Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "opening_datetime",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Hora de apertura",
+   "read_only": 1
+  },
+  {
    "fieldname": "posting_datetime",
    "fieldtype": "Datetime",
-   "label": "Fecha de venta",
+   "in_list_view": 1,
+   "label": "Fecha y hora de consumo",
    "read_only": 1
   }
  ],

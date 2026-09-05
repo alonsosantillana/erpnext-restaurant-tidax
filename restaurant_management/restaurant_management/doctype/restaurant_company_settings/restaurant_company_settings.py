@@ -14,8 +14,18 @@ from restaurant_management.restaurant_management.production import (
 class RestaurantCompanySettings(RestaurantSettingsMixin, Document):
     def validate(self):
         self.validate_restaurant_settings()
+        self.validate_default_customer()
         self.validate_print_routes()
         validate_company_production_settings(self)
+
+    def validate_default_customer(self):
+        if not self.default_customer:
+            return
+        customer = frappe.db.get_value(
+            "Customer", self.default_customer, ["name", "disabled"], as_dict=True
+        )
+        if not customer or customer.disabled:
+            frappe.throw(frappe._("El cliente predeterminado debe estar habilitado."))
 
     def validate_print_routes(self):
         enabled_keys = set()

@@ -14,10 +14,10 @@ frappe.ui.form.on("Material Request", {
 		if (frm.doc.docstatus === 1 && frm.doc.restaurant_production) {
 			frm.remove_custom_button(__("Work Order"), __("Create"));
 			frm.add_custom_button(
-				__("Órdenes de producción Resto"),
-				() => create_restaurant_work_orders(frm),
-				__("Create")
+				__("Procesar producción"),
+				() => process_restaurant_production(frm)
 			);
+			frm.change_custom_button_type(__("Procesar producción"), null, "primary");
 		}
 	},
 
@@ -97,7 +97,7 @@ async function open_restaurant_production_dialog(frm) {
 			}
 			await apply_restaurant_production(frm, values, preview);
 			dialog.hide();
-			show_material_preview(preview);
+			show_material_preview(preview, frm);
 		},
 	});
 	dialog.show();
@@ -144,7 +144,7 @@ async function apply_restaurant_production(frm, values, preview) {
 	frm.dirty();
 }
 
-function show_material_preview(preview) {
+function show_material_preview(preview, frm = null) {
 	const materials = preview.materials || [];
 	const skippedItems = preview.skipped_items || [];
 	if (!materials.length && !skippedItems.length) {
@@ -185,27 +185,70 @@ function show_material_preview(preview) {
 			<tbody>${skippedRows}</tbody></table></div>`
 		: "";
 
-	frappe.msgprint({
+	const openingTime = preview.opening_datetime
+		? frappe.datetime.str_to_user(preview.opening_datetime)
+		: "";
+	const transferTime = preview.transfer_datetime
+		? frappe.datetime.str_to_user(preview.transfer_datetime)
+		: "";
+	const productionTime = preview.production_datetime
+		? frappe.datetime.str_to_user(preview.production_datetime)
+		: "";
+	const firstConsumption = preview.first_consumption_datetime
+		? frappe.datetime.str_to_user(preview.first_consumption_datetime)
+		: "";
+	const timelineSection = productionTime
+		? `<div class="alert alert-info">${__("Apertura de caja: {0}. Traslado de materia prima: {1}. Producción: {2}. Primer consumo registrado: {3}.", [openingTime, transferTime, productionTime, firstConsumption])}</div>`
+		: "";
+
+	const message = {
 		title: __("Vista previa de producción"),
 		wide: true,
 		message: `<p>${__("Solo los productos vendidos con un BOM activo y predeterminado se incluyen en la solicitud. El consumo real se ejecutará desde las Órdenes de Producción.")}</p>
-			${materialSection}${skippedSection}`,
-	});
+			${timelineSection}${materialSection}${skippedSection}`,
+	};
+	if (frm) {
+		message.primary_action = {
+			label: __("Guardar y enviar solicitud"),
+			action: async () => {
+				frappe.hide_msgprint();
+				await frm.savesubmit();
+			},
+		};
+	}
+	frappe.msgprint(message);
 }
 
-async function create_restaurant_work_orders(frm) {
+async function process_restaurant_production(frm) {
 	const response = await frappe.call({
-		method: RESTAURANT_PRODUCTION_METHOD + ".create_restaurant_work_orders",
+		method: RESTAURANT_PRODUCTION_METHOD + ".process_restaurant_production",
 		args: { material_request: frm.doc.name },
 		freeze: true,
-		freeze_message: __("Creando órdenes de producción..."),
+		freeze_message: __("Procesando órdenes e inventario..."),
 	});
-	const workOrders = (response.message || {}).work_orders || [];
-	if (!workOrders.length) {
-		frappe.msgprint(__("Todos los productos de esta solicitud ya tienen Orden de Producción."));
+	const result = response.message || {};
+	const workOrders = result.work_orders || [];
+	const stockEntries = result.stock_entries || [];
+	if (!stockEntries.length) {
+		frappe.msgprint(__("Esta solicitud ya fue procesada completamente."));
+		await frm.reload_doc();
 		return;
 	}
-	const links = workOrders.map((name) => `<a href="/app/work-order/${encodeURIComponent(name)}">${frappe.utils.escape_html(name)}</a>`);
-	frappe.msgprint(__("Órdenes de Producción creadas: {0}", [links.join(", ")]));
-	frm.reload_doc();
+
+	const workOrderLinks = workOrders.map((name) =>
+		`<a href="/app/work-order/${encodeURIComponent(name)}">${frappe.utils.escape_html(name)}</a>`
+	).join(", ");
+	const stockEntryLinks = stockEntries.map((name) =>
+		`<a href="/app/stock-entry/${encodeURIComponent(name)}">${frappe.utils.escape_html(name)}</a>`
+	).join(", ");
+	const openingTime = frappe.datetime.str_to_user(result.opening_datetime);
+	const productionTime = frappe.datetime.str_to_user(result.production_datetime);
+	frappe.msgprint({
+		title: __("Producción procesada"),
+		indicator: "green",
+		message: `<p>${__("La producción se contabilizó el {0}, antes de la apertura de caja del {1}.", [productionTime, openingTime])}</p>
+			<p><strong>${__("Órdenes de Producción")}:</strong> ${workOrderLinks}</p>
+			<p><strong>${__("Movimientos de inventario")}:</strong> ${stockEntryLinks}</p>`,
+	});
+	await frm.reload_doc();
 }

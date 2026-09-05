@@ -23,7 +23,9 @@ from restaurant_management.restaurant_management.page.restaurant_manage.restaura
 from restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object import (
     RestaurantObject,
     aggregate_pre_account_state,
+    can_transition_production,
     elapsed_minutes,
+    get_default_order_customer,
     preparation_performance,
     production_command_batch_key,
     production_transition_values,
@@ -39,6 +41,82 @@ from restaurant_management.restaurant_management.doctype.desk_form.desk_form imp
 
 
 class TestRestaurantObject(FrappeTestCase):
+	def test_only_kitchen_role_can_transition_production(self):
+		roles_path = (
+			"restaurant_management.restaurant_management.doctype.restaurant_object"
+			".restaurant_object.frappe.get_roles"
+		)
+		with patch(roles_path, return_value=["resto_cocina"]):
+			self.assertTrue(can_transition_production())
+
+		with patch(roles_path, return_value=["resto_mozo"]):
+			self.assertFalse(can_transition_production())
+
+	def test_default_order_customer_prefers_company_setting(self):
+		settings_path = (
+			"restaurant_management.restaurant_management.doctype.restaurant_object"
+			".restaurant_object.get_restaurant_settings"
+		)
+		value_path = (
+			"restaurant_management.restaurant_management.doctype.restaurant_object"
+			".restaurant_object.frappe.db.get_value"
+		)
+		with (
+			patch(settings_path, return_value=frappe._dict(default_customer="CUST-DEFAULT")),
+			patch(value_path, return_value=frappe._dict(name="CUST-DEFAULT", disabled=0)) as get_value,
+		):
+			customer = get_default_order_customer("Company A", "POS A")
+
+		self.assertEqual(customer, "CUST-DEFAULT")
+		get_value.assert_called_once_with(
+			"Customer", "CUST-DEFAULT", ["name", "disabled"], as_dict=True
+		)
+
+	def test_default_order_customer_falls_back_to_pos_profile(self):
+		settings_path = (
+			"restaurant_management.restaurant_management.doctype.restaurant_object"
+			".restaurant_object.get_restaurant_settings"
+		)
+		value_path = (
+			"restaurant_management.restaurant_management.doctype.restaurant_object"
+			".restaurant_object.frappe.db.get_value"
+		)
+		with (
+			patch(settings_path, return_value=frappe._dict(default_customer=None)),
+			patch(value_path) as get_value,
+		):
+			get_value.side_effect = [
+				"CUST-PROFILE",
+				frappe._dict(name="CUST-PROFILE", disabled=0),
+			]
+			customer = get_default_order_customer("Company A", "POS A")
+
+		self.assertEqual(customer, "CUST-PROFILE")
+		self.assertEqual(
+			get_value.call_args_list,
+			[
+				call("POS Profile", "POS A", "customer"),
+				call("Customer", "CUST-PROFILE", ["name", "disabled"], as_dict=True),
+			],
+		)
+
+	def test_production_transition_rejects_non_kitchen_user(self):
+		center = RestaurantObject({
+			"doctype": "Restaurant Object",
+			"name": "PC-TEST",
+			"description": "Kitchen",
+			"type": "Production Center",
+		})
+		roles_path = (
+			"restaurant_management.restaurant_management.doctype.restaurant_object"
+			".restaurant_object.frappe.get_roles"
+		)
+		with (
+			patch(roles_path, return_value=["resto_mozo"]),
+			self.assertRaises(frappe.PermissionError),
+		):
+			center.set_commands_status(["ITEM-1"], "Sent")
+
 	def test_pre_account_table_state_requires_every_active_order(self):
 		state = aggregate_pre_account_state([
 			frappe._dict(
@@ -770,8 +848,8 @@ class TestRestaurantObject(FrappeTestCase):
 				return_value="2026-07-21",
 			),
 			patch(
-				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.has_permission",
-				return_value=True,
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.frappe.get_roles",
+				return_value=["resto_cocina"],
 			),
 		):
 			dashboard = center.production_center_dashboard()
@@ -843,6 +921,10 @@ class TestRestaurantObject(FrappeTestCase):
 		order = get_doc.return_value
 
 		with (
+			patch(
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.can_transition_production",
+				return_value=True,
+			),
 			patch.object(center, "_validate_production_center"),
 			patch.object(
 				center,
@@ -911,6 +993,10 @@ class TestRestaurantObject(FrappeTestCase):
 		)]
 
 		with (
+			patch(
+				"restaurant_management.restaurant_management.doctype.restaurant_object.restaurant_object.can_transition_production",
+				return_value=True,
+			),
 			patch.object(center, "_validate_production_center"),
 			patch.object(
 				center,

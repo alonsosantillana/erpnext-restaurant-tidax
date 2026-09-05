@@ -7,19 +7,25 @@ from frappe.modules.import_file import import_file_by_path
 docs = {
     "POS Profile User": dict(
         allow_restaurant_payment=dict(
-            label="Can Collect Payment",
+            label="Puede cobrar",
             fieldtype="Check",
             default="0",
             insert_after="user",
             in_list_view=1,
+            description=(
+                "Permite al mozo usar el botón Pagar en sus propias órdenes."
+            ),
         ),
         allow_restaurant_payment_for_others=dict(
-            label="Can Collect Other Orders",
+            label="Cobrar otros pedidos",
             fieldtype="Check",
             default="0",
             insert_after="allow_restaurant_payment",
             depends_on="eval:doc.allow_restaurant_payment",
             in_list_view=1,
+            description=(
+                "Permite al mozo cobrar órdenes asignadas a otros usuarios."
+            ),
         ),
         restaurant_permission=dict(
             label="Restaurant Permission",
@@ -42,6 +48,19 @@ docs = {
         restaurant_pos_opening_entry=dict(
             label="Restaurant POS Opening Entry", fieldtype="Link", options="POS Opening Entry",
             insert_after="pos_profile", read_only=1, hidden=1, no_copy=1, search_index=1,
+        ),
+        update_stock=dict(
+            label="Actualiza inventario",
+            fieldtype="Check",
+            insert_after="restaurant_pos_opening_entry",
+            default="0",
+            read_only=1,
+            no_copy=1,
+            in_standard_filter=1,
+            description=(
+                "Indica si la Factura POS generó movimientos de inventario. "
+                "El valor se controla desde Restaurant Company Settings."
+            ),
         ),
     ),
     "POS Invoice Item": dict(
@@ -151,17 +170,23 @@ docs = {
             label="Consumos hasta", fieldtype="Datetime", insert_after="restaurant_from_datetime",
             read_only=1, no_copy=1,
         ),
+        restaurant_production_column=dict(
+            fieldtype="Column Break", insert_after="restaurant_to_datetime",
+        ),
         restaurant_raw_material_warehouse=dict(
             label="Almacén de materia prima", fieldtype="Link", options="Warehouse",
-            insert_after="restaurant_to_datetime", read_only=1, no_copy=1,
+            insert_after="restaurant_production_column", read_only=1, no_copy=1,
         ),
         restaurant_wip_warehouse=dict(
             label="Almacén en proceso", fieldtype="Link", options="Warehouse",
             insert_after="restaurant_raw_material_warehouse", read_only=1, no_copy=1,
         ),
+        restaurant_production_sources_section=dict(
+            fieldtype="Section Break", insert_after="restaurant_wip_warehouse",
+        ),
         restaurant_production_sources=dict(
             label="Líneas de venta incluidas", fieldtype="Table", options="Restaurant Production Source",
-            insert_after="restaurant_wip_warehouse", read_only=1, no_copy=1,
+            insert_after="restaurant_production_sources_section", read_only=1, no_copy=1,
         ),
     ),
     "Material Request Item": dict(
@@ -183,6 +208,7 @@ OPERATIONAL_ROLES = (
     'resto_mozo',
     'resto_cocina',
     'resto_delivery',
+    'resto_produccion',
 )
 
 CUSTOMER_ROLES = (
@@ -190,6 +216,78 @@ CUSTOMER_ROLES = (
     'resto_cajero',
     'resto_mozo',
     'resto_delivery',
+)
+
+CASHIER_PERMISSION_RULES = {
+    # Cash-session documents: the cashier can operate and submit, but cannot
+    # cancel or delete accounting documents.
+    'POS Profile': ('read', 'select'),
+    'POS Opening Entry': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'POS Closing Entry': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'POS Invoice': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'Sales Invoice': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'Purchase Invoice': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    # Catalogs consulted by restaurant checkout, purchasing, expenses, and cash closing.
+    'Item': ('read', 'select'),
+    'Item Group': ('read', 'select'),
+    'Item Price': ('read', 'select'),
+    'Price List': ('read', 'select'),
+    'Warehouse': ('read', 'select'),
+    'Mode of Payment': ('read', 'select'),
+    'Account': ('read', 'select'),
+    'Cost Center': ('read', 'select'),
+    'Currency': ('read', 'select'),
+    'UOM': ('read', 'select'),
+    'Stock Settings': ('read',),
+    'Buying Settings': ('read',),
+    'Supplier': ('read', 'select', 'create', 'write'),
+    'Supplier Group': ('read', 'select'),
+    'Purchase Order': ('read', 'select'),
+    'Purchase Receipt': ('read', 'select'),
+    'Purchase Taxes and Charges Template': ('read', 'select'),
+    'Tax Category': ('read', 'select'),
+    'Item Tax Template': ('read', 'select'),
+    'Payment Terms Template': ('read', 'select'),
+    'Terms and Conditions': ('read', 'select'),
+}
+
+WAITER_PERMISSION_RULES = {
+    # Required by the order item editor's item_code Link field.
+    'Item': ('read', 'select'),
+}
+
+PRODUCTION_PERMISSION_RULES = {
+    # Operational production documents. Cancellation and deletion remain
+    # reserved for managers so posted stock movements cannot be reversed here.
+    'Material Request': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'Work Order': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'Stock Entry': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'Stock Ledger Entry': ('read', 'select', 'report'),
+    'Job Card': ('read', 'select', 'create', 'write', 'submit', 'print', 'report'),
+    'Serial and Batch Bundle': ('read', 'select', 'create', 'write', 'submit'),
+    # Recipes and catalogs used by the restaurant production flow are read-only.
+    'BOM': ('read', 'select', 'print', 'report'),
+    'Item': ('read', 'select'),
+    'Item Group': ('read', 'select'),
+    'Warehouse': ('read', 'select'),
+    'UOM': ('read', 'select'),
+    'Stock Entry Type': ('read', 'select'),
+    'Operation': ('read', 'select'),
+    'Workstation': ('read', 'select'),
+    'Workstation Type': ('read', 'select'),
+    'Routing': ('read', 'select'),
+    'Project': ('read', 'select'),
+    'Cost Center': ('read', 'select'),
+    'Account': ('read', 'select'),
+    'Currency': ('read', 'select'),
+    'POS Profile': ('read', 'select'),
+    'Stock Settings': ('read',),
+}
+
+
+PRODUCTION_REPORTS = (
+    'Stock Balance',
+    'Stock Ledger',
 )
 
 
@@ -250,9 +348,21 @@ def set_pos_closing_grid_properties():
 def set_operational_role_permissions():
     from frappe.permissions import add_permission, update_permission_property
 
+    for role in OPERATIONAL_ROLES:
+        if frappe.db.exists('Role', role):
+            continue
+        role_doc = frappe.get_doc({
+            'doctype': 'Role',
+            'role_name': role,
+            'desk_access': 1,
+            'is_custom': 0,
+        })
+        role_doc.flags.ignore_permissions = True
+        role_doc.insert()
+
     permission_rules = {
         'Company': {
-            role: ('read',) for role in OPERATIONAL_ROLES
+            role: ('read', 'select') for role in OPERATIONAL_ROLES
         },
         'Customer': {
             role: ('read', 'select', 'create') for role in CUSTOMER_ROLES
@@ -261,6 +371,12 @@ def set_operational_role_permissions():
             role: ('read', 'select', 'create') for role in CUSTOMER_ROLES
         },
     }
+    for doctype, permission_types in CASHIER_PERMISSION_RULES.items():
+        permission_rules.setdefault(doctype, {})['resto_cajero'] = permission_types
+    for doctype, permission_types in WAITER_PERMISSION_RULES.items():
+        permission_rules.setdefault(doctype, {})['resto_mozo'] = permission_types
+    for doctype, permission_types in PRODUCTION_PERMISSION_RULES.items():
+        permission_rules.setdefault(doctype, {})['resto_produccion'] = permission_types
 
     for doctype, role_rules in permission_rules.items():
         for role, permission_types in role_rules.items():
@@ -297,6 +413,37 @@ def set_operational_role_permissions():
 
         frappe.clear_cache(doctype=doctype)
 
+    set_production_report_permissions()
+
+
+def set_production_report_permissions():
+    for report_name in PRODUCTION_REPORTS:
+        if not frappe.db.exists('Report', report_name):
+            continue
+
+        role_parents = [('Report', report_name)]
+        if custom_role := frappe.db.get_value(
+            'Custom Role', {'report': report_name}, 'name'
+        ):
+            role_parents.append(('Custom Role', custom_role))
+
+        for parenttype, parent in role_parents:
+            role_filters = {
+                'parent': parent,
+                'parenttype': parenttype,
+                'parentfield': 'roles',
+                'role': 'resto_produccion',
+            }
+            if frappe.db.exists('Has Role', role_filters):
+                continue
+
+            frappe.get_doc({
+                'doctype': 'Has Role',
+                **role_filters,
+            }).insert(ignore_permissions=True)
+
+    frappe.clear_cache()
+
 
 def set_custom_fields():
     for doctype, fields in docs.items():
@@ -320,6 +467,52 @@ def set_custom_fields():
             custom_field.update(values)
             custom_field.flags.ignore_version = True
             custom_field.save() if field_id else custom_field.insert()
+
+    _reorder_custom_fields(
+        "Material Request",
+        (
+            "restaurant_production_section",
+            "restaurant_production",
+            "restaurant_pos_profile",
+            "restaurant_from_datetime",
+            "restaurant_to_datetime",
+            "restaurant_production_column",
+            "restaurant_raw_material_warehouse",
+            "restaurant_wip_warehouse",
+            "restaurant_production_sources_section",
+            "restaurant_production_sources",
+        ),
+    )
+
+
+def _reorder_custom_fields(doctype, fieldnames):
+    """Keep app-owned custom fields in a deterministic visual order."""
+    custom_fields = frappe.get_all(
+        "Custom Field",
+        filters={"dt": doctype},
+        fields=["name", "fieldname", "idx"],
+    )
+    app_fields = {
+        field.fieldname: field
+        for field in custom_fields
+        if field.fieldname in fieldnames
+    }
+    last_other_idx = max(
+        (field.idx or 0 for field in custom_fields if field.fieldname not in fieldnames),
+        default=0,
+    )
+
+    for offset, fieldname in enumerate(fieldnames, start=1):
+        if field := app_fields.get(fieldname):
+            frappe.db.set_value(
+                "Custom Field",
+                field.name,
+                "idx",
+                last_other_idx + offset,
+                update_modified=False,
+            )
+
+    frappe.clear_cache(doctype=doctype)
 
 
 def sync_desk_forms():
