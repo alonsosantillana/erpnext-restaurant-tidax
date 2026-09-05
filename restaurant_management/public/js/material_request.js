@@ -15,7 +15,7 @@ frappe.ui.form.on("Material Request", {
 			frm.remove_custom_button(__("Work Order"), __("Create"));
 			frm.add_custom_button(
 				__("Procesar producción"),
-				() => process_restaurant_production(frm)
+				() => confirm_restaurant_production(frm)
 			);
 			frm.change_custom_button_type(__("Procesar producción"), null, "primary");
 		}
@@ -217,6 +217,16 @@ function show_material_preview(preview, frm = null) {
 		};
 	}
 	frappe.msgprint(message);
+}
+
+function confirm_restaurant_production(frm) {
+	frappe.confirm(
+		__(
+			"¿Desea procesar la producción de {0}? Se crearán y enviarán las Órdenes de Producción y los movimientos de inventario. Esta acción afectará las existencias.",
+			[frappe.utils.escape_html(frm.doc.name)]
+		),
+		() => process_restaurant_production(frm)
+	);
 }
 
 async function process_restaurant_production(frm) {
