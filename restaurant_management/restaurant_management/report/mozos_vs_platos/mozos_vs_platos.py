@@ -3,6 +3,10 @@
 
 import frappe
 
+from restaurant_management.restaurant_management.report_utils import (
+	append_pos_session_conditions,
+)
+
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
@@ -27,6 +31,7 @@ def get_data(filters):
 		conditions.append(
 			"COALESCE(NULLIF(table_order.cambio_mozo, %(empty_value)s), table_order.owner) = %(user_mozo)s"
 		)
+	append_pos_session_conditions(filters, conditions)
 
 	return frappe.db.sql(
 		f"""

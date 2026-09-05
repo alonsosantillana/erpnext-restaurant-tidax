@@ -5,6 +5,10 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate
 
+from restaurant_management.restaurant_management.report_utils import (
+	append_pos_session_conditions,
+)
+
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
@@ -33,9 +37,18 @@ def get_data(filters):
 	filters.invoice_status = "Consolidated"
 	filters.empty_value = ""
 	filters.user_mozo = filters.get("user_mozo") or ""
+	conditions = [
+		"invoice.company = %(company)s",
+		"invoice.posting_date BETWEEN %(report_date_from)s AND %(report_date_to)s",
+		"invoice.docstatus = 1",
+		"table_order.docstatus = 1",
+		"invoice.status = %(invoice_status)s",
+		"invoice.is_return = 0",
+	]
+	append_pos_session_conditions(filters, conditions)
 
 	return frappe.db.sql(
-		"""
+		f"""
 			WITH waiter_summary AS (
 				SELECT
 					invoice.posting_date AS fecha,
@@ -57,13 +70,7 @@ def get_data(filters):
 						NULLIF(table_order.cambio_mozo, %(empty_value)s),
 						table_order.owner
 					)
-				WHERE
-					invoice.company = %(company)s
-					AND invoice.posting_date BETWEEN %(report_date_from)s AND %(report_date_to)s
-					AND invoice.docstatus = 1
-					AND table_order.docstatus = 1
-					AND invoice.status = %(invoice_status)s
-					AND invoice.is_return = 0
+				WHERE {" AND ".join(conditions)}
 				GROUP BY
 					invoice.posting_date,
 					COALESCE(

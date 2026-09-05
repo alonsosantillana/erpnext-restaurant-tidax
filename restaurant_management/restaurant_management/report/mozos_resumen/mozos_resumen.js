@@ -27,6 +27,33 @@ frappe.query_reports["Mozos Resumen"] = {
 			"default": frappe.datetime.get_today()
 		},
 		{
+			"fieldname": "pos_opening_entry",
+			"label": __("Apertura POS"),
+			"fieldtype": "Link",
+			"options": "POS Opening Entry",
+			"get_query": () => ({
+				"filters": {
+					"company": frappe.query_report.get_filter_value("company"),
+					"docstatus": 1
+				}
+			})
+		},
+		{
+			"fieldname": "pos_closing_entry",
+			"label": __("Cierre POS"),
+			"fieldtype": "Link",
+			"options": "POS Closing Entry",
+			"get_query": () => {
+				const filters = {
+					"company": frappe.query_report.get_filter_value("company"),
+					"docstatus": 1
+				};
+				const opening = frappe.query_report.get_filter_value("pos_opening_entry");
+				if (opening) filters.pos_opening_entry = opening;
+				return { filters };
+			}
+		},
+		{
 			"fieldname": "user_mozo",
 			"label": __("Mozo"),
 			"fieldtype": "Link",
