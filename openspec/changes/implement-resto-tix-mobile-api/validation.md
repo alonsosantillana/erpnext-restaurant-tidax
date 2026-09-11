@@ -38,9 +38,16 @@ bench --site v15.local execute frappe.db.exists --args '["DocType", "Restaurant 
 - Result: migration completed successfully and the DocType lookup returned `Restaurant Mobile Request`.
 - No commercial document or test fixture was created.
 
+The approved QA OAuth Client was configured with Authorization Code, explicit
+consent, the custom application callback and minimum `all` scope. A temporary
+end-to-end run through the real FastAPI BFF validated authorization, S256 PKCE
+exchange, bearer acceptance and revocation. The generated code, token and login
+session were removed after the test; no token or generated client secret was
+printed or persisted outside Frappe.
+
 ## Residual validation
 
-- OAuth2/PKCE input handling and delegated invalid-token behavior passed at the BFF; a complete authorized flow still requires the approved QA OAuth Client.
+- OAuth2/PKCE and revocation passed end to end; expiry, cross-user scope and a real waiter context remain pending.
 - Double-tap, retry-after-timeout and simultaneous-device cases require an isolated integration site.
 - Catalog/tax/total parity and Restaurant Manage, kitchen, printing and POS regression remain pending.
 - Production remains blocked until a valid HTTPS origin and revocable OAuth client are configured.

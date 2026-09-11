@@ -49,6 +49,8 @@
 - OpenSpec inicial creado el 2026-09-11.
 - Fachada Frappe y OpenAPI v1 implementadas el 2026-09-11.
 - Suite aislada: 16 pruebas unitarias exitosas; sin conexión ni escritura a la base de datos.
-- BFF FastAPI validado con 18 pruebas y delegación OAuth2/PKCE implementada; el cliente OAuth de QA aún no fue creado.
+- BFF FastAPI validado con 18 pruebas y delegación OAuth2/PKCE implementada.
 - Migración autorizada y completada en `v15.local`; el DocType `Restaurant Mobile Request` quedó instalado.
-- Pendientes: flujo OAuth autorizado completo, concurrencia real, regresión operativa y despliegue controlado.
+- Cliente OAuth QA creado con alcance mínimo `all`; autorización, token PKCE, aceptación del bearer y revocación pasaron de punta a punta.
+- Los códigos, tokens y sesión técnicos de la prueba fueron limpiados; no se crearon datos comerciales.
+- Pendientes: contexto con un mozo real, expiración/acceso cruzado, concurrencia, regresión operativa y despliegue controlado.
