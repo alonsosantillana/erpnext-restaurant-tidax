@@ -33,7 +33,7 @@ Implementar en `restaurant_management` una fachada REST segura para el MVP Andro
 
 - App: `restaurant_management`.
 - Módulos: API, Restaurant Manage y dominio de órdenes.
-- DocTypes: `Restaurant Permission`, `Restaurant Company Settings`, `Restaurant Object`, `Table Order`, `Order Entry Item` y un registro técnico de idempotencia por definir.
+- DocTypes: `Restaurant Permission`, `Restaurant Company Settings`, `Restaurant Object`, `Table Order`, `Order Entry Item` y el nuevo registro técnico `Restaurant Mobile Request`.
 - APIs: nueva fachada versionada `restaurant_management.mobile_api.v1`.
 - Hooks: solo si son necesarios para registrar o limpiar idempotencia; cualquier hook se documentará antes de implementarlo.
 - Fixtures/patches: no previstos; un nuevo DocType requerirá metadata versionada y migración estándar.

@@ -3,39 +3,39 @@
 - [x] 1.1 Confirmar plataforma React Native/FastAPI, Android piloto y topología inicial.
 - [x] 1.2 Consultar Graphify y verificar hallazgos contra código, DocTypes y hooks.
 - [x] 1.3 Definir alcance y exclusiones del MVP Resto Tix.
-- [ ] 1.4 Definir OpenAPI v1 completa, ejemplos y catálogo de errores.
-- [ ] 1.5 Confirmar el modelo técnico de idempotencia antes de crear metadata.
+- [x] 1.4 Definir OpenAPI v1 completa, ejemplos y catálogo de errores.
+- [x] 1.5 Confirmar el modelo técnico de idempotencia antes de crear metadata.
 
 ## 2. Seguridad y contexto
 
 - [ ] 2.1 Implementar autenticación delegada y contexto autorizado.
-- [ ] 2.2 Validar Company, POS Profile, ambiente y mesa en cada operación.
-- [ ] 2.3 Añadir límites de entrada, respuestas mínimas y errores estables.
+- [x] 2.2 Validar Company, POS Profile, ambiente y mesa en cada operación.
+- [x] 2.3 Añadir límites de entrada, respuestas mínimas y errores estables.
 - [ ] 2.4 Probar tokens vencidos/revocados y acceso cruzado.
 
 ## 3. Lecturas del MVP
 
-- [ ] 3.1 Implementar contexto y capacidades.
-- [ ] 3.2 Implementar ambientes, mesas y orden activa.
-- [ ] 3.3 Implementar catálogo paginado con precios/impuestos autoritativos.
-- [ ] 3.4 Implementar consulta de orden y reconciliación por versión.
+- [x] 3.1 Implementar contexto y capacidades.
+- [x] 3.2 Implementar ambientes, mesas y orden activa.
+- [x] 3.3 Implementar catálogo paginado con precios/impuestos autoritativos.
+- [x] 3.4 Implementar consulta de orden y reconciliación por versión.
 
 ## 4. Mutaciones del MVP
 
-- [ ] 4.1 Implementar registro idempotente y bloqueo de concurrencia.
-- [ ] 4.2 Implementar apertura/recuperación de orden.
-- [ ] 4.3 Implementar alta, cantidad, nota y retiro permitido de líneas.
-- [ ] 4.4 Implementar envío único de comandas y respuesta autoritativa.
-- [ ] 4.5 Publicar eventos posteriores al commit y reconciliables.
+- [x] 4.1 Implementar registro idempotente y bloqueo de concurrencia.
+- [x] 4.2 Implementar apertura/recuperación de orden.
+- [x] 4.3 Implementar alta, cantidad, nota y retiro permitido de líneas.
+- [x] 4.4 Implementar envío único de comandas y respuesta autoritativa.
+- [x] 4.5 Reutilizar eventos existentes posteriores al commit y reconciliables.
 
 ## 5. Validación
 
-- [ ] 5.1 Ejecutar pruebas unitarias del nuevo paquete.
+- [x] 5.1 Ejecutar pruebas unitarias del nuevo paquete.
 - [ ] 5.2 Ejecutar pruebas de doble toque, reintento y concurrencia.
 - [ ] 5.3 Comparar catálogo, precios, impuestos y totales con Restaurant Manage.
 - [ ] 5.4 Ejecutar regresión de órdenes, cocina, impresión y POS.
 - [ ] 5.5 Ejecutar pruebas integradas desde el BFF FastAPI en un sitio aislado.
-- [ ] 5.6 Registrar comandos, resultados, desviaciones y riesgos residuales.
+- [x] 5.6 Registrar comandos, resultados, desviaciones y riesgos residuales.
 
 ## 6. Despliegue
 
@@ -47,4 +47,6 @@
 ## Registro de validación
 
 - OpenSpec inicial creado el 2026-09-11.
-- Implementación y pruebas funcionales pendientes de aprobación posterior.
+- Fachada Frappe y OpenAPI v1 implementadas el 2026-09-11.
+- Suite aislada: 16 pruebas unitarias exitosas; sin conexión ni escritura a la base de datos.
+- Pendientes: autenticación BFF/OAuth integrada, concurrencia real, regresión operativa, migración y despliegue en sitio aislado.

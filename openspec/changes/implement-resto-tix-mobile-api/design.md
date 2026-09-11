@@ -89,19 +89,18 @@ No se devolverán trazas, SQL, tokens ni datos de clientes ajenos al pedido auto
 - El resultado idempotente quedará confirmado en la misma transacción que el cambio comercial.
 - No se introducirán `frappe.db.commit()` manuales.
 
-La forma final del DocType técnico se fijará durante la primera tarea de implementación y se reflejará en esta especificación antes de crear metadata.
+El DocType técnico `Restaurant Mobile Request` usa `request_key` como nombre único interno (SHA-256 de usuario + UUID), conserva `client_request_id`, usuario, orden, acción, hash canónico, estado `Processing`/`Completed`, fechas de solicitud/finalización/caducidad y la respuesta JSON mínima. Solo `System Manager` tiene acceso directo; la fachada lo administra internamente con permisos ignorados de forma acotada. La retención inicial es de siete días y su limpieza programada se difiere hasta validar la política operativa del piloto.
 
 ## Realtime and Reconciliation
 
 Los eventos existentes ayudan a actualizar la UI, pero no son fuente de verdad. El API devolverá una versión/marca verificable y `get_changes` permitirá refrescar mesas u órdenes afectadas al volver del segundo plano o perder eventos. El MVP podrá usar sondeo acotado desde FastAPI mientras se califica Socket.IO en React Native.
 
-## Files Expected
+## Files Implemented
 
-- Nuevo paquete `restaurant_management/mobile_api/` con versión `v1`.
-- Servicios compartidos extraídos únicamente cuando web y móvil necesiten la misma regla.
-- Metadata y controlador de idempotencia, si se confirma el DocType técnico.
-- Pruebas unitarias y de integración cercanas a la nueva API.
-- `hooks.py` solo si la limpieza programada necesita un hook explícito.
+- `restaurant_management/mobile_api/v1.py` y pruebas unitarias cercanas.
+- Metadata y controlador de `Restaurant Mobile Request`.
+- Contrato externo `docs/openapi/resto-tix-v1.yaml` para el BFF FastAPI.
+- Sin cambios en `hooks.py`; la limpieza programada queda para un incremento posterior.
 
 No se prevén cambios en `electronic_invoice.py`, reportes, fixtures tributarios ni apps core.
 

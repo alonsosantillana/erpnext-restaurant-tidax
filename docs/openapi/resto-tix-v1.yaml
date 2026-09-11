@@ -1,0 +1,632 @@
+openapi: 3.1.0
+info:
+  title: Resto Tix API
+  version: 1.0.0
+  description: >-
+    Public contract exposed by the Resto Tix FastAPI BFF. ERPNext remains the
+    authoritative source for restaurant permissions, tables, orders, prices,
+    taxes, totals and production routing.
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: resto-tix.invalid
+        description: Environment-specific Resto Tix BFF hostname.
+security:
+  - oauth2Pkce: []
+tags:
+  - name: Context
+  - name: Restaurant
+  - name: Orders
+paths:
+  /api/v1/context:
+    get:
+      operationId: getContext
+      tags: [Context]
+      summary: Get the authenticated waiter context and capabilities.
+      responses:
+        "200":
+          description: Authorized restaurant context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/tables:
+    get:
+      operationId: getTables
+      tags: [Restaurant]
+      summary: List authorized rooms and tables with visible active orders.
+      responses:
+        "200":
+          description: Authorized rooms and tables.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TablesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/catalog:
+    get:
+      operationId: getCatalog
+      tags: [Restaurant]
+      summary: Search the authoritative ERPNext POS catalog.
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 120
+        - in: query
+          name: item_group
+          schema:
+            type: string
+        - in: query
+          name: start
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: page_length
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Catalog page calculated for the authenticated POS context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/orders/{order_name}:
+    get:
+      operationId: getOrder
+      tags: [Orders]
+      summary: Read one authorized restaurant order.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      responses:
+        "200":
+          description: Current authoritative order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/orders/open:
+    post:
+      operationId: openOrder
+      tags: [Orders]
+      summary: Open or recover the active order for an authorized table.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenOrderRequest"
+      responses:
+        "200":
+          description: Existing or newly created authoritative order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/orders/{order_name}/items:
+    post:
+      operationId: mutateOrderItem
+      tags: [Orders]
+      summary: Add, edit or remove an order item through an allowlisted action.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MutateItemRequest"
+      responses:
+        "200":
+          description: Authoritative order after the mutation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/orders/{order_name}/commands:
+    post:
+      operationId: sendCommand
+      tags: [Orders]
+      summary: Confirm unsent order lines and route them to production.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MutationControl"
+      responses:
+        "200":
+          description: Authoritative order with confirmed command states.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/changes:
+    get:
+      operationId: getChanges
+      tags: [Orders]
+      summary: Reconcile authorized active orders changed after a marker.
+      parameters:
+        - in: query
+          name: since
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        "200":
+          description: Changed authoritative orders and next marker.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  securitySchemes:
+    oauth2Pkce:
+      type: oauth2
+      description: OAuth 2.0 Authorization Code flow. The mobile client must use PKCE.
+      flows:
+        authorizationCode:
+          authorizationUrl: /oauth/authorize
+          tokenUrl: /oauth/token
+          scopes: {}
+  parameters:
+    OrderName:
+      in: path
+      name: order_name
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 140
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication is missing, expired or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The authenticated user is outside the requested restaurant scope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The authorized resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Request identifier reuse, concurrent edit or invalid order state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    BaseEnvelope:
+      type: object
+      required: [api_version, data, server_time]
+      properties:
+        api_version:
+          type: string
+          const: "1.0"
+        data: {}
+        server_time:
+          type: string
+          format: date-time
+    MutationControl:
+      type: object
+      additionalProperties: false
+      required: [client_request_id, expected_order_version]
+      properties:
+        client_request_id:
+          type: string
+          format: uuid
+        expected_order_version:
+          type: string
+          format: date-time
+    OpenOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [table_name, guest_count, client_request_id]
+      properties:
+        table_name:
+          type: string
+          minLength: 1
+          maxLength: 140
+        guest_count:
+          type: integer
+          minimum: 1
+          maximum: 100
+        client_request_id:
+          type: string
+          format: uuid
+    MutateItemRequest:
+      type: object
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/MutationControl"
+        - type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [add, set_quantity, set_note, remove]
+            item_code:
+              type: string
+              maxLength: 140
+            identifier:
+              type: string
+              maxLength: 140
+            quantity:
+              type: integer
+              minimum: 1
+              maximum: 100
+            notes:
+              type: string
+              maxLength: 500
+    ContextResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Context"
+    Context:
+      type: object
+      required: [user, company, pos_profile, rooms, capabilities]
+      properties:
+        user:
+          type: object
+          required: [name, full_name]
+          properties:
+            name:
+              type: string
+            full_name:
+              type: string
+        company:
+          type: string
+        pos_profile:
+          type: string
+        rooms:
+          type: array
+          items:
+            type: string
+        capabilities:
+          type: object
+          required: [can_read_orders, can_create_order, can_update_order, can_send_command, can_pay]
+          properties:
+            can_read_orders:
+              type: boolean
+            can_create_order:
+              type: boolean
+            can_update_order:
+              type: boolean
+            can_send_command:
+              type: boolean
+            can_pay:
+              type: boolean
+              const: false
+    Room:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    ActiveOrderSummary:
+      type: object
+      required: [name, guest_count, amount, tax, version]
+      properties:
+        name:
+          type: string
+        guest_count:
+          type: integer
+        amount:
+          type: number
+        tax:
+          type: number
+        version:
+          type: string
+          format: date-time
+    RestaurantTable:
+      type: object
+      required: [name, description, room]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        room:
+          type: string
+        no_of_seats:
+          type: integer
+        color:
+          type: [string, "null"]
+        shape:
+          type: [string, "null"]
+        occupied_by_me:
+          type: boolean
+        active_order:
+          oneOf:
+            - $ref: "#/components/schemas/ActiveOrderSummary"
+            - type: "null"
+    TablesResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [rooms, tables]
+              properties:
+                rooms:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Room"
+                tables:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/RestaurantTable"
+    CatalogItem:
+      type: object
+      required: [item_code, item_name]
+      properties:
+        item_code:
+          type: string
+        item_name:
+          type: string
+        item_group:
+          type: [string, "null"]
+        image:
+          type: [string, "null"]
+        stock_uom:
+          type: [string, "null"]
+        uom:
+          type: [string, "null"]
+        price_list_rate:
+          type: [number, "null"]
+        rate:
+          type: [number, "null"]
+        actual_qty:
+          type: [number, "null"]
+        item_tax_template:
+          type: [string, "null"]
+        item_tax_rate:
+          type: [string, "null"]
+        has_batch_no:
+          type: [boolean, integer, "null"]
+        has_serial_no:
+          type: [boolean, integer, "null"]
+    CatalogResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items, pagination]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CatalogItem"
+                pagination:
+                  type: object
+                  required: [start, page_length, count, has_more]
+                  properties:
+                    start:
+                      type: integer
+                    page_length:
+                      type: integer
+                    count:
+                      type: integer
+                    has_more:
+                      type: boolean
+    OrderItem:
+      type: object
+      required: [identifier, item_code, qty, status]
+      properties:
+        identifier:
+          type: string
+        item_code:
+          type: string
+        item_name:
+          type: [string, "null"]
+        item_group:
+          type: [string, "null"]
+        qty:
+          type: number
+        rate:
+          type: number
+        price_list_rate:
+          type: number
+        amount:
+          type: number
+        tax_amount:
+          type: number
+        status:
+          type: string
+        notes:
+          type: [string, "null"]
+        ordered_time:
+          type: [string, "null"]
+          format: date-time
+        ordered_nro:
+          type: [integer, "null"]
+        processing_started_at:
+          type: [string, "null"]
+          format: date-time
+        completed_at:
+          type: [string, "null"]
+          format: date-time
+        preparation_time_target:
+          type: [number, "null"]
+        waiting_time_minutes:
+          type: [number, "null"]
+        preparation_time_minutes:
+          type: [number, "null"]
+        total_time_minutes:
+          type: [number, "null"]
+    Order:
+      type: object
+      required: [name, company, pos_profile, room, table, status, guest_count, tax, amount, items]
+      properties:
+        name:
+          type: string
+        company:
+          type: string
+        pos_profile:
+          type: string
+        room:
+          type: string
+        table:
+          type: string
+        status:
+          type: string
+        customer:
+          type: [string, "null"]
+        customer_name:
+          type: [string, "null"]
+        guest_count:
+          type: integer
+        currency:
+          type: [string, "null"]
+        selling_price_list:
+          type: string
+        tax:
+          type: number
+        amount:
+          type: number
+        items_count:
+          type: number
+        products_not_ordered:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+    OrderResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          required: [order_version]
+          properties:
+            order_version:
+              type: string
+              format: date-time
+            data:
+              $ref: "#/components/schemas/Order"
+    ChangesResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [orders, next_marker, truncated]
+              properties:
+                orders:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/OrderResponse"
+                next_marker:
+                  type: string
+                  format: date-time
+                truncated:
+                  type: boolean
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+            current_order:
+              oneOf:
+                - $ref: "#/components/schemas/Order"
+                - type: "null"
