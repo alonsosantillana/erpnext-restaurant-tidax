@@ -83,8 +83,16 @@ def _set_http_status(status_code: int) -> None:
         pass
 
 
-def _fail(code: str, message: str, status_code: int = 400, exc=None):
+def _fail(
+    code: str,
+    message: str,
+    status_code: int = 400,
+    exc=None,
+    details: dict[str, Any] | None = None,
+):
     _set_http_status(status_code)
+    if details:
+        frappe.local.response["error_data"] = details
     exception = exc or frappe.ValidationError
     frappe.throw(f"{code}: {_(message)}", exception)
 
@@ -304,6 +312,10 @@ def _assert_order_version(order, expected_order_version: str) -> None:
             "ORDER_VERSION_CONFLICT",
             "The order changed in another session",
             409,
+            details={
+                "current_order": _order_payload(order),
+                "current_order_version": _order_version(order),
+            },
         )
 
 

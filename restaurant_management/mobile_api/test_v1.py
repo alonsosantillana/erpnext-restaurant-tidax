@@ -118,6 +118,7 @@ class TestRestoTixMobileAPI(unittest.TestCase):
 
     def test_expected_order_version_rejects_stale_version(self):
         order = frappe._dict(name="ORDER-1")
+        current_order = {"name": "ORDER-1", "status": "Attending"}
         with (
             patch.object(
                 v1,
@@ -129,6 +130,8 @@ class TestRestoTixMobileAPI(unittest.TestCase):
                 "_fail",
                 side_effect=frappe.ValidationError("conflict"),
             ) as fail,
+            patch.object(v1, "_order_payload", return_value=current_order),
+            patch.object(v1, "_order_version", return_value="2026-09-11T12:01:00-05:00"),
             self.assertRaises(frappe.ValidationError),
         ):
             v1._assert_order_version(order, "2026-09-11T12:00:00")
@@ -137,6 +140,10 @@ class TestRestoTixMobileAPI(unittest.TestCase):
             "ORDER_VERSION_CONFLICT",
             "The order changed in another session",
             409,
+            details={
+                "current_order": current_order,
+                "current_order_version": "2026-09-11T12:01:00-05:00",
+            },
         )
 
     def test_cached_item_mutation_does_not_lock_or_repeat_order_change(self):

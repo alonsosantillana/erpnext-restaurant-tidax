@@ -630,3 +630,6 @@ components:
               oneOf:
                 - $ref: "#/components/schemas/Order"
                 - type: "null"
+            current_order_version:
+              type: [string, "null"]
+              format: date-time
