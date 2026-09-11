@@ -7,7 +7,7 @@
 - Private `Restaurant Mobile Request` metadata and controller.
 - Authentication context, contextual authorization, input bounds, optimistic concurrency and persistent idempotency at unit level.
 - No payment, POS Invoice or electronic-invoicing endpoint was added.
-- No hook, fixture, patch, core app, site configuration or runtime data was changed.
+- No hook, fixture, patch, core app, site configuration or commercial runtime data was changed.
 
 ## Commands and results
 
@@ -30,10 +30,17 @@ python3 -m py_compile restaurant_management/mobile_api/test_v1.py restaurant_man
 
 - Result: `Change 'implement-resto-tix-mobile-api' is valid`.
 
+```text
+bench --site v15.local migrate
+bench --site v15.local execute frappe.db.exists --args '["DocType", "Restaurant Mobile Request"]'
+```
+
+- Result: migration completed successfully and the DocType lookup returned `Restaurant Mobile Request`.
+- No commercial document or test fixture was created.
+
 ## Residual validation
 
-- OAuth2/PKCE and delegated-token behavior must be exercised through the FastAPI BFF.
+- OAuth2/PKCE input handling and delegated invalid-token behavior passed at the BFF; a complete authorized flow still requires the approved QA OAuth Client.
 - Double-tap, retry-after-timeout and simultaneous-device cases require an isolated integration site.
 - Catalog/tax/total parity and Restaurant Manage, kitchen, printing and POS regression remain pending.
-- `bench migrate` is required to install `Restaurant Mobile Request`; it was not run because it requires explicit authorization.
 - Production remains blocked until a valid HTTPS origin and revocable OAuth client are configured.

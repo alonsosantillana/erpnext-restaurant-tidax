@@ -8,7 +8,7 @@
 
 ## 2. Seguridad y contexto
 
-- [ ] 2.1 Implementar autenticación delegada y contexto autorizado.
+- [x] 2.1 Implementar autenticación delegada y contexto autorizado.
 - [x] 2.2 Validar Company, POS Profile, ambiente y mesa en cada operación.
 - [x] 2.3 Añadir límites de entrada, respuestas mínimas y errores estables.
 - [ ] 2.4 Probar tokens vencidos/revocados y acceso cruzado.
@@ -40,7 +40,7 @@
 ## 6. Despliegue
 
 - [ ] 6.1 Configurar cliente OAuth y origen HTTPS de QA con autorización explícita.
-- [ ] 6.2 Ejecutar `bench migrate` únicamente con autorización explícita.
+- [x] 6.2 Ejecutar `bench migrate` únicamente con autorización explícita.
 - [ ] 6.3 Realizar piloto controlado y conservar Restaurant Manage como reversión.
 - [ ] 6.4 Confirmar commit, push, revisión y plan de merge.
 
@@ -49,4 +49,6 @@
 - OpenSpec inicial creado el 2026-09-11.
 - Fachada Frappe y OpenAPI v1 implementadas el 2026-09-11.
 - Suite aislada: 16 pruebas unitarias exitosas; sin conexión ni escritura a la base de datos.
-- Pendientes: autenticación BFF/OAuth integrada, concurrencia real, regresión operativa, migración y despliegue en sitio aislado.
+- BFF FastAPI validado con 18 pruebas y delegación OAuth2/PKCE implementada; el cliente OAuth de QA aún no fue creado.
+- Migración autorizada y completada en `v15.local`; el DocType `Restaurant Mobile Request` quedó instalado.
+- Pendientes: flujo OAuth autorizado completo, concurrencia real, regresión operativa y despliegue controlado.
