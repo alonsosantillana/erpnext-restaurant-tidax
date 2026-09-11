@@ -52,5 +52,6 @@
 - BFF FastAPI validado con 18 pruebas y delegación OAuth2/PKCE implementada.
 - Migración autorizada y completada en `v15.local`; el DocType `Restaurant Mobile Request` quedó instalado.
 - Cliente OAuth QA creado con alcance mínimo `all`; autorización, token PKCE, aceptación del bearer y revocación pasaron de punta a punta.
+- Un mozo QA habilitado completó el flujo real de contexto y mesas: 2 ambientes y 4 mesas autorizadas, sin mutaciones comerciales.
 - Los códigos, tokens y sesión técnicos de la prueba fueron limpiados; no se crearon datos comerciales.
-- Pendientes: contexto con un mozo real, expiración/acceso cruzado, concurrencia, regresión operativa y despliegue controlado.
+- Pendientes: expiración/acceso cruzado, concurrencia, regresión operativa y despliegue controlado.

@@ -45,9 +45,20 @@ exchange, bearer acceptance and revocation. The generated code, token and login
 session were removed after the test; no token or generated client secret was
 printed or persisted outside Frappe.
 
+A second read-only run used an enabled QA waiter and validated the complete
+authorized context path through the BFF:
+
+- OAuth authorization and S256 PKCE exchange: passed.
+- Context matched the authenticated waiter: HTTP 200.
+- Authorized restaurant scope: 2 rooms and 4 tables.
+- Revocation made the bearer unusable: HTTP 401.
+- OAuth bearer and authorization-code counts for the QA client returned zero
+  after cleanup.
+- No order, table state or other commercial record was created or modified.
+
 ## Residual validation
 
-- OAuth2/PKCE and revocation passed end to end; expiry, cross-user scope and a real waiter context remain pending.
+- OAuth2/PKCE, real waiter context/tables and revocation passed end to end; expiry and cross-user scope remain pending.
 - Double-tap, retry-after-timeout and simultaneous-device cases require an isolated integration site.
 - Catalog/tax/total parity and Restaurant Manage, kitchen, printing and POS regression remain pending.
 - Production remains blocked until a valid HTTPS origin and revocable OAuth client are configured.
