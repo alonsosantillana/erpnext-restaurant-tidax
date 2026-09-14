@@ -110,7 +110,10 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         modified = datetime(2026, 9, 11, 12, 0, 0, 123456)
         order = frappe._dict(name="ORDER-1")
 
-        with patch.object(v1, "_latest_order_modified", return_value=modified):
+        with (
+            patch.object(v1, "_latest_order_modified", return_value=modified),
+            patch.object(v1, "get_system_timezone", return_value="America/Lima"),
+        ):
             version = v1._rfc3339(modified)
             v1._assert_order_version(order, version)
 
@@ -308,6 +311,116 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertEqual(order.reloads, 1)
         complete_request.assert_called_once()
 
+    def test_context_exposes_effective_erp_permissions(self):
+        context = frappe._dict(
+            user="waiter@example.com",
+            company="COMPANY-A",
+            pos_profile="POS-A",
+        )
+        payment_permissions = frappe._dict(can_pay=True)
+
+        with (
+            patch.object(v1, "_active_context", return_value=context),
+            patch.object(v1, "_allowed_rooms", return_value=["ROOM-1"]),
+            patch.object(v1, "_payment_permissions", return_value=payment_permissions),
+            patch.object(v1, "_can_print_pre_account", return_value=True),
+            patch.object(v1.frappe, "has_permission", return_value=True),
+            patch.object(v1.frappe.utils, "get_fullname", return_value="Mozo QA"),
+            patch.object(v1, "_server_time", return_value="2026-09-14T10:00:00-05:00"),
+        ):
+            result = v1.get_context()
+
+        capabilities = result["data"]["capabilities"]
+        self.assertTrue(capabilities["can_print_pre_account"])
+        self.assertTrue(capabilities["can_generate_invoice"])
+        self.assertTrue(capabilities["can_pay"])
+
+    def test_cached_pre_account_does_not_print_or_lock_again(self):
+        cached = {"api_version": "1.0", "data": {"queued": True}}
+        context = frappe._dict(company="COMPANY-A", pos_profile="POS-A")
+        with (
+            patch.object(v1, "_active_context", return_value=context),
+            patch.object(v1, "_begin_request", return_value=(MagicMock(), cached)),
+            patch.object(v1, "_lock_order") as lock_order,
+        ):
+            result = v1.print_pre_account(
+                "ORDER-1", str(uuid.uuid4()), "2026-09-11T12:00:00-05:00"
+            )
+
+        self.assertEqual(result, cached)
+        lock_order.assert_not_called()
+
+    def test_pre_account_rechecks_effective_permission(self):
+        context = frappe._dict(company="COMPANY-A", pos_profile="POS-A")
+        order = frappe._dict(name="ORDER-1")
+        with (
+            patch.object(v1, "_active_context", return_value=context),
+            patch.object(v1, "_begin_request", return_value=(MagicMock(), None)),
+            patch.object(v1, "_lock_order", return_value=order),
+            patch.object(v1, "_validate_order_access"),
+            patch.object(v1, "_assert_order_version"),
+            patch.object(v1, "_can_print_pre_account", return_value=False),
+            patch.object(v1, "_fail", side_effect=frappe.PermissionError("denied")) as fail,
+            self.assertRaises(frappe.PermissionError),
+        ):
+            v1.print_pre_account(
+                "ORDER-1", str(uuid.uuid4()), "2026-09-11T12:00:00-05:00"
+            )
+
+        fail.assert_called_once_with(
+            "PRE_ACCOUNT_NOT_ALLOWED",
+            "Not permitted to print a pre-account for this order",
+            403,
+            frappe.PermissionError,
+        )
+
+    def test_invoice_uses_server_total_and_configured_payment_method(self):
+        class FakeOrder:
+            name = "ORDER-1"
+            amount = 59.9
+            guest_count = 2
+            owner = "waiter@example.com"
+
+            def get(self, key, default=None):
+                return getattr(self, key, default)
+
+            def make_invoice(self, **kwargs):
+                self.invoice_kwargs = kwargs
+                return {"invoice_name": "POSINV-1", "status": True}
+
+        context = frappe._dict(
+            user="waiter@example.com", company="COMPANY-A", pos_profile="POS-A"
+        )
+        order = FakeOrder()
+        response = {"api_version": "1.0", "data": {"invoice_name": "POSINV-1"}}
+        with (
+            patch.object(v1, "_active_context", return_value=context),
+            patch.object(v1, "_begin_request", return_value=(MagicMock(), None)),
+            patch.object(v1, "_lock_order", return_value=order),
+            patch.object(v1, "_validate_order_access"),
+            patch.object(v1, "_assert_order_version"),
+            patch.object(v1, "_payment_permissions", return_value=frappe._dict(can_pay=True)),
+            patch.object(v1, "_billing_profile", return_value=(MagicMock(), [{"name": "Cash"}])),
+            patch.object(v1.frappe, "has_permission", return_value=True),
+            patch.object(v1, "flt", side_effect=lambda value, *_args: float(value)),
+            patch.object(v1, "_envelope", return_value=response),
+            patch.object(v1, "_complete_request") as complete_request,
+        ):
+            result = v1.create_invoice(
+                "ORDER-1",
+                "CUSTOMER-1",
+                "Cash",
+                "Boleta",
+                "Manual",
+                str(uuid.uuid4()),
+                "2026-09-11T12:00:00-05:00",
+            )
+
+        self.assertEqual(result, response)
+        self.assertEqual(order.invoice_kwargs["mode_of_payment"], {"Cash": 59.9})
+        self.assertEqual(order.invoice_kwargs["customer"], "CUSTOMER-1")
+        complete_request.assert_called_once()
+
     def test_table_payload_does_not_expose_assigned_user(self):
         context = frappe._dict(
             user="waiter@example.com",
@@ -329,6 +442,7 @@ class TestRestoTixMobileAPI(unittest.TestCase):
             patch.object(v1, "_active_context", return_value=context),
             patch.object(v1, "_allowed_rooms", return_value=["ROOM-1"]),
             patch.object(v1.frappe, "get_all", side_effect=[[room], [table], []]),
+            patch.object(v1, "_server_time", return_value="2026-09-14T10:00:00-05:00"),
         ):
             result = v1.get_tables()
 
@@ -336,7 +450,7 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertNotIn("current_user", table_payload)
         self.assertFalse(table_payload["occupied_by_me"])
 
-    def test_openapi_contract_contains_only_mvp_routes(self):
+    def test_openapi_contract_contains_mobile_role_action_routes(self):
         contract_path = Path(__file__).resolve().parents[2] / "docs" / "openapi" / "resto-tix-v1.yaml"
         contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
         paths = set(contract["paths"])
@@ -349,13 +463,15 @@ class TestRestoTixMobileAPI(unittest.TestCase):
                 "/api/v1/tables",
                 "/api/v1/catalog",
                 "/api/v1/orders/{order_name}",
+                "/api/v1/orders/{order_name}/billing-options",
                 "/api/v1/orders/open",
                 "/api/v1/orders/{order_name}/items",
                 "/api/v1/orders/{order_name}/commands",
+                "/api/v1/orders/{order_name}/pre-account",
+                "/api/v1/orders/{order_name}/invoice",
                 "/api/v1/changes",
             },
         )
-        self.assertFalse(any("payment" in path or "invoice" in path for path in paths))
         self.assertFalse(
             contract["components"]["schemas"]["MutateItemRequest"]["unevaluatedProperties"]
         )
@@ -408,10 +524,17 @@ class TestRestoTixMobileAPI(unittest.TestCase):
             v1.get_tables,
             v1.get_catalog,
             v1.get_order,
+            v1.get_billing_options,
             v1.get_changes,
         ):
             self.assertEqual(allowed[function], ["GET"])
-        for function in (v1.open_order, v1.mutate_item, v1.send_command):
+        for function in (
+            v1.open_order,
+            v1.mutate_item,
+            v1.send_command,
+            v1.print_pre_account,
+            v1.create_invoice,
+        ):
             self.assertEqual(allowed[function], ["POST"])
 
 

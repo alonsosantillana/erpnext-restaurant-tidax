@@ -112,6 +112,26 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/v1/orders/{order_name}/billing-options:
+    get:
+      operationId: getBillingOptions
+      tags: [Orders]
+      summary: Read authorized POS billing options for one order.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      responses:
+        "200":
+          description: Billing choices configured in the active POS Profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingOptionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/v1/orders/open:
     post:
       operationId: openOrder
@@ -188,6 +208,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/orders/{order_name}/pre-account:
+    post:
+      operationId: printPreAccount
+      tags: [Orders]
+      summary: Queue one authorized and idempotent pre-account print.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MutationControl"
+      responses:
+        "200":
+          description: Authoritative print queue result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreAccountResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/orders/{order_name}/invoice:
+    post:
+      operationId: createInvoice
+      tags: [Orders]
+      summary: Generate one authorized and idempotent POS invoice.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceRequest"
+      responses:
+        "200":
+          description: Created invoice reference and electronic submission state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -341,6 +417,28 @@ components:
             notes:
               type: string
               maxLength: 500
+    InvoiceRequest:
+      type: object
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/MutationControl"
+        - type: object
+          required: [customer, mode_of_payment, voucher_type, emission_mode]
+          properties:
+            customer:
+              type: string
+              minLength: 1
+              maxLength: 140
+            mode_of_payment:
+              type: string
+              minLength: 1
+              maxLength: 140
+            voucher_type:
+              type: string
+              enum: [Boleta, Factura]
+            emission_mode:
+              type: string
+              enum: [Electrónica, Manual]
     ContextResponse:
       allOf:
         - $ref: "#/components/schemas/BaseEnvelope"
@@ -370,7 +468,7 @@ components:
             type: string
         capabilities:
           type: object
-          required: [can_read_orders, can_create_order, can_update_order, can_send_command, can_pay]
+          required: [can_read_orders, can_create_order, can_update_order, can_send_command, can_print_pre_account, can_generate_invoice, can_pay]
           properties:
             can_read_orders:
               type: boolean
@@ -380,9 +478,12 @@ components:
               type: boolean
             can_send_command:
               type: boolean
+            can_print_pre_account:
+              type: boolean
+            can_generate_invoice:
+              type: boolean
             can_pay:
               type: boolean
-              const: false
     Room:
       type: object
       required: [name, description]
@@ -594,6 +695,89 @@ components:
               format: date-time
             data:
               $ref: "#/components/schemas/Order"
+    BillingOptionsResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [order_name, amount, payment_methods, receipt_options]
+              properties:
+                order_name:
+                  type: string
+                amount:
+                  type: number
+                currency:
+                  type: [string, "null"]
+                customer:
+                  oneOf:
+                    - type: object
+                      required: [name, customer_name]
+                      properties:
+                        name:
+                          type: string
+                        customer_name:
+                          type: string
+                    - type: "null"
+                payment_methods:
+                  type: array
+                  items:
+                    type: object
+                    required: [name, is_default]
+                    properties:
+                      name:
+                        type: string
+                      is_default:
+                        type: boolean
+                receipt_options:
+                  type: array
+                  items:
+                    type: object
+                    required: [voucher_type, emission_mode]
+                    properties:
+                      voucher_type:
+                        type: string
+                        enum: [Boleta, Factura]
+                      emission_mode:
+                        type: string
+                        enum: [Electrónica, Manual]
+    PreAccountResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          required: [order_version]
+          properties:
+            order_version:
+              type: string
+              format: date-time
+            data:
+              type: object
+              required: [order_name, queued]
+              properties:
+                order_name:
+                  type: string
+                queued:
+                  type: boolean
+                print_type:
+                  type: [string, "null"]
+                pre_account: {}
+    InvoiceResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [order_name, invoice_name, status]
+              properties:
+                order_name:
+                  type: string
+                invoice_name:
+                  type: string
+                status:
+                  type: boolean
+                electronic_submission: {}
     ChangesResponse:
       allOf:
         - $ref: "#/components/schemas/BaseEnvelope"

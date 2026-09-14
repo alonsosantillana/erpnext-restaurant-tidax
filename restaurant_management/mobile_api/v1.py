@@ -20,6 +20,7 @@ from frappe.utils import (
 from pytz import timezone
 
 from restaurant_management.restaurant_management.company_settings import (
+    get_restaurant_payment_permissions,
     get_restaurant_settings,
     get_user_restaurant_company,
 )
@@ -459,10 +460,54 @@ def _positive_integer(value, fieldname: str, maximum: int = MAX_ORDER_QUANTITY) 
     return cint(numeric)
 
 
+def _can_print_pre_account(context, order=None) -> bool:
+    if order is None:
+        return bool(
+            frappe.has_permission("Table Order", "print")
+            and frappe.has_permission("Table Order", "write")
+        )
+    return bool(
+        frappe.has_permission("Table Order", "print", order)
+        and _restaurant_access_allowed("order", "write", order, context)
+    )
+
+
+def _payment_permissions(context, order=None):
+    order_owner = None
+    if order is not None:
+        order_owner = order.get("cambio_mozo") or order.owner
+    return get_restaurant_payment_permissions(
+        context.pos_profile,
+        user=context.user,
+        order_owner=order_owner,
+    )
+
+
+def _billing_profile(context):
+    profile = frappe.get_doc("POS Profile", context.pos_profile)
+    payment_methods = []
+    seen = set()
+    for row in profile.get("payments", []):
+        mode = str(row.get("mode_of_payment") or "").strip()
+        if not mode or mode in seen:
+            continue
+        seen.add(mode)
+        payment_methods.append(
+            {
+                "name": mode,
+                "is_default": bool(cint(row.get("default"))),
+            }
+        )
+    return profile, payment_methods
+
+
 @frappe.whitelist(methods=["GET"])
 def get_context(company=None, pos_profile=None):
     context = _active_context(company, pos_profile)
     rooms = _allowed_rooms(context)
+    payment_permissions = _payment_permissions(context)
+    can_print_pre_account = _can_print_pre_account(context)
+    can_generate_invoice = bool(payment_permissions.can_pay)
     return _envelope(
         {
             "user": {"name": context.user, "full_name": frappe.utils.get_fullname(context.user)},
@@ -474,7 +519,9 @@ def get_context(company=None, pos_profile=None):
                 "can_create_order": bool(frappe.has_permission("Table Order", "create")),
                 "can_update_order": bool(frappe.has_permission("Table Order", "write")),
                 "can_send_command": bool(frappe.has_permission("Table Order", "write")),
-                "can_pay": False,
+                "can_print_pre_account": can_print_pre_account,
+                "can_generate_invoice": can_generate_invoice,
+                "can_pay": can_generate_invoice,
             },
         }
     )
@@ -598,6 +645,186 @@ def get_order(order_name, company=None, pos_profile=None):
     order = frappe.get_doc("Table Order", order_name)
     _validate_order_access(order, context, "read")
     return _envelope(_order_payload(order), order)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_billing_options(order_name, company=None, pos_profile=None):
+    context = _active_context(company, pos_profile)
+    order = frappe.get_doc("Table Order", order_name)
+    _validate_order_access(order, context, "read")
+    if not _payment_permissions(context, order).can_pay:
+        _fail(
+            "INVOICE_NOT_ALLOWED",
+            "Not permitted to generate an invoice for this order",
+            403,
+            frappe.PermissionError,
+        )
+
+    profile, payment_methods = _billing_profile(context)
+    default_customer = str(order.get("customer") or profile.get("customer") or "").strip()
+    customer_name = (
+        frappe.db.get_value("Customer", default_customer, "customer_name")
+        if default_customer
+        else None
+    )
+    from restaurant_management.restaurant_management.doctype.table_order.table_order import (
+        VOUCHER_CONFIG,
+    )
+
+    return _envelope(
+        {
+            "order_name": order.name,
+            "amount": flt(order.amount, 2),
+            "currency": order.get("currency") or profile.get("currency"),
+            "customer": (
+                {"name": default_customer, "customer_name": customer_name or default_customer}
+                if default_customer
+                else None
+            ),
+            "payment_methods": payment_methods,
+            "receipt_options": [
+                {"voucher_type": voucher_type, "emission_mode": emission_mode}
+                for voucher_type, emission_mode in VOUCHER_CONFIG
+            ],
+        }
+    )
+
+
+@frappe.whitelist(methods=["POST"])
+def print_pre_account(
+    order_name,
+    client_request_id,
+    expected_order_version,
+    company=None,
+    pos_profile=None,
+):
+    context = _active_context(company, pos_profile)
+    request_payload = {"expected_order_version": expected_order_version}
+    request_doc, cached = _begin_request(
+        "print_pre_account", order_name, client_request_id, request_payload
+    )
+    if cached is not None:
+        return cached
+
+    order = _lock_order(order_name)
+    _validate_order_access(order, context, "write")
+    _assert_order_version(order, expected_order_version)
+    if not _can_print_pre_account(context, order):
+        _fail(
+            "PRE_ACCOUNT_NOT_ALLOWED",
+            "Not permitted to print a pre-account for this order",
+            403,
+            frappe.PermissionError,
+        )
+
+    from restaurant_management.api import print_order_account
+
+    normalized_request_id = _parse_client_request_id(client_request_id)
+    print_result = print_order_account(order.name, request_id=normalized_request_id)
+    order.reload()
+    response = _envelope(
+        {
+            "order_name": order.name,
+            "queued": bool(print_result.get("queued")),
+            "print_type": print_result.get("print_type"),
+            "pre_account": print_result.get("pre_account"),
+        },
+        order,
+    )
+    _complete_request(request_doc, response, order.name)
+    return response
+
+
+@frappe.whitelist(methods=["POST"])
+def create_invoice(
+    order_name,
+    customer,
+    mode_of_payment,
+    voucher_type,
+    emission_mode,
+    client_request_id,
+    expected_order_version,
+    company=None,
+    pos_profile=None,
+):
+    context = _active_context(company, pos_profile)
+    customer = str(customer or "").strip()
+    mode_of_payment = str(mode_of_payment or "").strip()
+    voucher_type = str(voucher_type or "").strip()
+    emission_mode = str(emission_mode or "").strip()
+    if not customer or len(customer) > 140:
+        _fail("CUSTOMER_REQUIRED", "Select a valid customer")
+    if not mode_of_payment or len(mode_of_payment) > 140:
+        _fail("PAYMENT_METHOD_REQUIRED", "Select a valid payment method")
+
+    request_payload = {
+        "customer": customer,
+        "mode_of_payment": mode_of_payment,
+        "voucher_type": voucher_type,
+        "emission_mode": emission_mode,
+        "expected_order_version": expected_order_version,
+    }
+    request_doc, cached = _begin_request(
+        "create_invoice", order_name, client_request_id, request_payload
+    )
+    if cached is not None:
+        return cached
+
+    order = _lock_order(order_name)
+    _validate_order_access(order, context, "write")
+    _assert_order_version(order, expected_order_version)
+    if not _payment_permissions(context, order).can_pay:
+        _fail(
+            "INVOICE_NOT_ALLOWED",
+            "Not permitted to generate an invoice for this order",
+            403,
+            frappe.PermissionError,
+        )
+
+    profile, payment_methods = _billing_profile(context)
+    allowed_payment_methods = {row["name"] for row in payment_methods}
+    if mode_of_payment not in allowed_payment_methods:
+        _fail(
+            "PAYMENT_METHOD_NOT_ALLOWED",
+            "The payment method is not configured in the active POS Profile",
+            403,
+            frappe.PermissionError,
+        )
+    if not frappe.has_permission("Customer", "read", customer):
+        _fail(
+            "CUSTOMER_NOT_ALLOWED",
+            "Not permitted to use the selected customer",
+            403,
+            frappe.PermissionError,
+        )
+
+    from restaurant_management.restaurant_management.doctype.table_order.table_order import (
+        VOUCHER_CONFIG,
+    )
+
+    if (voucher_type, emission_mode) not in VOUCHER_CONFIG:
+        _fail("RECEIPT_OPTION_INVALID", "Select a valid receipt and emission mode")
+    payable_amount = flt(order.amount, 2)
+    if payable_amount <= 0:
+        _fail("ORDER_AMOUNT_INVALID", "The order has no payable amount", 409)
+
+    invoice_result = order.make_invoice(
+        mode_of_payment={mode_of_payment: payable_amount},
+        customer=customer,
+        guest_count=cint(order.guest_count),
+        voucher_type=voucher_type,
+        emission_mode=emission_mode,
+    )
+    response = _envelope(
+        {
+            "order_name": order.name,
+            "invoice_name": invoice_result.get("invoice_name"),
+            "electronic_submission": invoice_result.get("electronic_submission"),
+            "status": bool(invoice_result.get("status")),
+        }
+    )
+    _complete_request(request_doc, response, order.name)
+    return response
 
 
 @frappe.whitelist(methods=["POST"])
