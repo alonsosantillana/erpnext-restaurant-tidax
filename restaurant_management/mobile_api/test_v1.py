@@ -225,6 +225,89 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertEqual(entry["item_tax_template"], "IGV")
         self.assertEqual(entry["item_tax_rate"], '{"IGV - T": 18}')
 
+    def test_new_item_rejects_missing_pos_price_with_stable_error(self):
+        context = frappe._dict(
+            pos_profile="POS-A",
+            profile=frappe._dict(selling_price_list="Retail"),
+        )
+        catalog_item = frappe._dict(
+            item_code="DISH-1",
+            price_list_rate=0,
+            rate=0,
+        )
+        item = frappe._dict(
+            name="DISH-1",
+            item_name="Dish",
+            stock_uom="Nos",
+            disabled=0,
+            is_sales_item=1,
+            has_batch_no=0,
+            has_serial_no=0,
+        )
+        frappe_mock = MagicMock()
+        frappe_mock.db.get_value.return_value = item
+
+        with (
+            patch.object(v1, "get_restaurant_items", return_value={"items": [catalog_item]}),
+            patch.object(v1, "frappe", frappe_mock),
+            patch.object(
+                v1,
+                "_fail",
+                side_effect=frappe.ValidationError("missing price"),
+            ) as fail,
+            self.assertRaises(frappe.ValidationError),
+        ):
+            v1._new_item_entry(context, "DISH-1", 1, "", "rtx-id")
+
+        fail.assert_called_once_with(
+            "ITEM_PRICE_MISSING",
+            "The requested item has no price configured in the POS price list",
+            409,
+        )
+
+    def test_send_command_evaluates_table_order_send_property_once(self):
+        class FakeOrder:
+            name = "ORDER-1"
+            entry_items = [frappe._dict(status=v1.ITEM_STATUS_UNSENT)]
+
+            def __init__(self):
+                self.send_reads = 0
+                self.reloads = 0
+
+            @property
+            def send(self):
+                self.send_reads += 1
+                return {"name": self.name}
+
+            def reload(self):
+                self.reloads += 1
+                return self
+
+        order = FakeOrder()
+        context = frappe._dict(company="COMPANY-A", pos_profile="POS-A")
+        response = {"api_version": "1.0", "data": {"name": "ORDER-1"}}
+
+        with (
+            patch.object(v1, "_active_context", return_value=context),
+            patch.object(v1, "_begin_request", return_value=(MagicMock(), None)),
+            patch.object(v1, "_lock_order", return_value=order),
+            patch.object(v1, "_validate_order_access"),
+            patch.object(v1, "_assert_order_version"),
+            patch.object(v1, "_order_payload", return_value={"name": "ORDER-1"}),
+            patch.object(v1, "_envelope", return_value=response),
+            patch.object(v1, "_complete_request") as complete_request,
+        ):
+            result = v1.send_command(
+                order_name="ORDER-1",
+                client_request_id=str(uuid.uuid4()),
+                expected_order_version="2026-09-11T12:00:00-05:00",
+            )
+
+        self.assertEqual(result, response)
+        self.assertEqual(order.send_reads, 1)
+        self.assertEqual(order.reloads, 1)
+        complete_request.assert_called_once()
+
     def test_table_payload_does_not_expose_assigned_user(self):
         context = frappe._dict(
             user="waiter@example.com",

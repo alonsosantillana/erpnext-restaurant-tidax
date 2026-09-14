@@ -719,6 +719,12 @@ def _new_item_entry(context, item_code: str, quantity: int, notes: str, identifi
     price_list_rate = flt(
         catalog_item.get("price_list_rate") or catalog_item.get("rate")
     )
+    if price_list_rate <= 0:
+        _fail(
+            "ITEM_PRICE_MISSING",
+            "The requested item has no price configured in the POS price list",
+            409,
+        )
     return {
         "identifier": identifier,
         "item_code": item.name,
