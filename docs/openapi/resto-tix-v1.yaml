@@ -132,6 +132,22 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/v1/customers:
+    get:
+      operationId: searchCustomers
+      tags: [Orders]
+      summary: Search authorized active customers.
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 25, default: 20 }
+      responses:
+        "200": { description: Authorized customer choices }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /api/v1/orders/open:
     post:
       operationId: openOrder
@@ -216,6 +232,57 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/orders/{order_name}/details:
+    post:
+      operationId: updateOrderDetails
+      tags: [Orders]
+      summary: Change customer, guest count or global discount.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateOrderRequest" }
+      responses:
+        "200": { description: Authoritative updated order }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/orders/{order_name}/divide:
+    post:
+      operationId: divideOrder
+      tags: [Orders]
+      summary: Move selected dish quantities into a second account.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DivideOrderRequest" }
+      responses:
+        "200": { description: Both authoritative accounts }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/orders/{order_name}/transfer:
+    post:
+      operationId: transferOrder
+      tags: [Orders]
+      summary: Transfer an active order to another authorized table.
+      parameters:
+        - $ref: "#/components/parameters/OrderName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransferOrderRequest" }
+      responses:
+        "200": { description: Authoritative transferred order }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /api/v1/orders/{order_name}/pre-account:
     post:
       operationId: printPreAccount
@@ -417,6 +484,47 @@ components:
             notes:
               type: string
               maxLength: 500
+    UpdateOrderRequest:
+      type: object
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/MutationControl"
+        - type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [set_customer, set_guest_count, set_discount]
+            customer: { type: string, maxLength: 140 }
+            guest_count: { type: integer, minimum: 1, maximum: 100 }
+            discount: { type: number, minimum: 0 }
+            discount_global_percent: { type: number, minimum: 0, maximum: 100 }
+    DivideOrderRequest:
+      type: object
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/MutationControl"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: object
+              minProperties: 1
+              additionalProperties:
+                type: object
+                additionalProperties: false
+                required: [qty]
+                properties:
+                  qty: { type: integer, minimum: 1, maximum: 100 }
+    TransferOrderRequest:
+      type: object
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/MutationControl"
+        - type: object
+          required: [table_name]
+          properties:
+            table_name: { type: string, minLength: 1, maxLength: 140 }
     InvoiceRequest:
       type: object
       unevaluatedProperties: false
@@ -448,7 +556,7 @@ components:
               $ref: "#/components/schemas/Context"
     Context:
       type: object
-      required: [user, company, pos_profile, rooms, capabilities]
+      required: [user, company, pos_profile, rooms, presentation, capabilities]
       properties:
         user:
           type: object
@@ -466,9 +574,23 @@ components:
           type: array
           items:
             type: string
+        presentation:
+          type: object
+          required: [table_state_colors]
+          properties:
+            table_state_colors:
+              type: object
+              required: [pre_account_requested, pre_account_outdated]
+              properties:
+                pre_account_requested:
+                  type: string
+                  pattern: "^#[0-9A-Fa-f]{6}$"
+                pre_account_outdated:
+                  type: string
+                  pattern: "^#[0-9A-Fa-f]{6}$"
         capabilities:
           type: object
-          required: [can_read_orders, can_create_order, can_update_order, can_send_command, can_print_pre_account, can_generate_invoice, can_pay]
+          required: [can_read_orders, can_create_order, can_update_order, can_send_command, can_print_pre_account, can_generate_invoice, can_pay, can_change_customer, can_change_guest_count, can_apply_discount, can_divide_order, can_transfer_order]
           properties:
             can_read_orders:
               type: boolean
@@ -484,6 +606,11 @@ components:
               type: boolean
             can_pay:
               type: boolean
+            can_change_customer: { type: boolean }
+            can_change_guest_count: { type: boolean }
+            can_apply_discount: { type: boolean }
+            can_divide_order: { type: boolean }
+            can_transfer_order: { type: boolean }
     Room:
       type: object
       required: [name, description]
@@ -494,7 +621,7 @@ components:
           type: string
     ActiveOrderSummary:
       type: object
-      required: [name, guest_count, amount, tax, version, ready_items_count]
+      required: [name, guest_count, amount, tax, version, ready_items_count, pre_account_status]
       properties:
         name:
           type: string
@@ -506,10 +633,12 @@ components:
           type: number
         version:
           type: string
-          format: date-time
         ready_items_count:
           type: number
           minimum: 0
+        pre_account_status:
+          type: [string, "null"]
+          enum: [Requested, Outdated, null]
     RestaurantTable:
       type: object
       required: [name, description, room]
@@ -532,6 +661,10 @@ components:
           oneOf:
             - $ref: "#/components/schemas/ActiveOrderSummary"
             - type: "null"
+        active_orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveOrderSummary"
     TablesResponse:
       allOf:
         - $ref: "#/components/schemas/BaseEnvelope"
@@ -623,6 +756,10 @@ components:
         price_list_rate:
           type: number
         amount:
+          type: number
+        discount:
+          type: number
+        discount_global_percent:
           type: number
         tax_amount:
           type: number

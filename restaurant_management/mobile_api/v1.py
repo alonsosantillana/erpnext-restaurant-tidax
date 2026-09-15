@@ -35,6 +35,7 @@ IDEMPOTENCY_DAYS = 7
 MAX_CATALOG_PAGE_LENGTH = 50
 MAX_NOTES_LENGTH = 500
 MAX_ORDER_QUANTITY = 100
+MAX_CUSTOMER_RESULTS = 25
 MOBILE_REQUEST_DOCTYPE = "Restaurant Mobile Request"
 ORDER_STATUS_OPEN = "Attending"
 ITEM_STATUS_UNSENT = "Attending"
@@ -341,6 +342,8 @@ def _order_payload(order) -> dict[str, Any]:
         "selling_price_list": order.selling_price_list,
         "tax": flt(order.tax),
         "amount": flt(order.amount),
+        "discount": flt(order.discount),
+        "discount_global_percent": flt(order.discount_global_percent),
         "items_count": order.items_count,
         "products_not_ordered": order.products_not_ordered_count,
         "items": [_item_payload(item) for item in order.items_list()],
@@ -484,6 +487,34 @@ def _payment_permissions(context, order=None):
     )
 
 
+def _order_management_capabilities(context) -> dict[str, bool]:
+    can_write = bool(frappe.has_permission("Table Order", "write"))
+    can_create = bool(frappe.has_permission("Table Order", "create"))
+    can_read_customer = bool(frappe.has_permission("Customer", "read"))
+    allow_discount_value = _profile_value(
+        context.get("profile"), "allow_discount_change"
+    )
+    if allow_discount_value is None:
+        allow_discount_value = frappe.db.get_value(
+            "POS Profile", context.pos_profile, "allow_discount_change"
+        )
+    allow_discount = bool(cint(allow_discount_value))
+    return {
+        "can_change_customer": can_write and can_read_customer,
+        "can_change_guest_count": can_write,
+        "can_apply_discount": can_write and allow_discount,
+        "can_divide_order": can_write and can_create,
+        "can_transfer_order": can_write,
+    }
+
+
+def _ensure_open_dine_in_order(order) -> None:
+    if order.status != ORDER_STATUS_OPEN:
+        _fail("ORDER_NOT_OPEN", "Only an active order can be changed", 409)
+    if not order.is_dine_in:
+        _fail("DINE_IN_REQUIRED", "This operation is available only for dine-in orders", 409)
+
+
 def _billing_profile(context):
     profile = frappe.get_doc("POS Profile", context.pos_profile)
     payment_methods = []
@@ -509,12 +540,23 @@ def get_context(company=None, pos_profile=None):
     payment_permissions = _payment_permissions(context)
     can_print_pre_account = _can_print_pre_account(context)
     can_generate_invoice = bool(payment_permissions.can_pay)
+    management_capabilities = _order_management_capabilities(context)
     return _envelope(
         {
             "user": {"name": context.user, "full_name": frappe.utils.get_fullname(context.user)},
             "company": context.company,
             "pos_profile": context.pos_profile,
             "rooms": rooms,
+            "presentation": {
+                "table_state_colors": {
+                    "pre_account_requested": (
+                        context.settings.get("pre_account_requested_color") or "#b45309"
+                    ),
+                    "pre_account_outdated": (
+                        context.settings.get("pre_account_outdated_color") or "#dc2626"
+                    ),
+                }
+            },
             "capabilities": {
                 "can_read_orders": bool(frappe.has_permission("Table Order", "read")),
                 "can_create_order": bool(frappe.has_permission("Table Order", "create")),
@@ -523,6 +565,7 @@ def get_context(company=None, pos_profile=None):
                 "can_print_pre_account": can_print_pre_account,
                 "can_generate_invoice": can_generate_invoice,
                 "can_pay": can_generate_invoice,
+                **management_capabilities,
             },
         }
     )
@@ -558,21 +601,32 @@ def get_tables(company=None, pos_profile=None):
                 "status": ORDER_STATUS_OPEN,
             },
             fields=[
-                "name", "table", "owner", "cambio_mozo", "guest_count", "amount", "tax", "modified",
+                "name",
+                "table",
+                "owner",
+                "cambio_mozo",
+                "guest_count",
+                "amount",
+                "tax",
+                "modified",
+                "pre_account_status",
             ],
             order_by="creation asc",
         )
         for row in active_orders:
-            if row.table in active_by_table:
-                continue
             order = frappe.get_doc("Table Order", row.name)
             if _restaurant_access_allowed("order", "read", order, context):
-                active_by_table[row.table] = {
+                active_by_table.setdefault(row.table, []).append({
                     "name": row.name,
                     "guest_count": cint(row.guest_count),
                     "amount": flt(row.amount),
                     "tax": flt(row.tax),
                     "version": _order_version(order),
+                    "pre_account_status": (
+                        row.pre_account_status
+                        if row.pre_account_status in {"Requested", "Outdated"}
+                        else None
+                    ),
                     "ready_items_count": flt(
                         sum(
                             flt(item.qty)
@@ -580,7 +634,7 @@ def get_tables(company=None, pos_profile=None):
                             if item.status == ITEM_STATUS_READY
                         )
                     ),
-                }
+                })
 
     return _envelope(
         {
@@ -594,7 +648,8 @@ def get_tables(company=None, pos_profile=None):
                     "color": table.color,
                     "shape": table.shape,
                     "occupied_by_me": table.current_user == context.user,
-                    "active_order": active_by_table.get(table.name),
+                    "active_order": (active_by_table.get(table.name) or [None])[0],
+                    "active_orders": active_by_table.get(table.name, []),
                 }
                 for table in tables
             ],
@@ -653,6 +708,211 @@ def get_order(order_name, company=None, pos_profile=None):
     order = frappe.get_doc("Table Order", order_name)
     _validate_order_access(order, context, "read")
     return _envelope(_order_payload(order), order)
+
+
+@frappe.whitelist(methods=["GET"])
+def search_customers(search_value="", limit=20, company=None, pos_profile=None):
+    context = _active_context(company, pos_profile)
+    if not frappe.has_permission("Customer", "read"):
+        _fail(
+            "CUSTOMER_READ_NOT_ALLOWED",
+            "Not permitted to read customers",
+            403,
+            frappe.PermissionError,
+        )
+
+    limit = _positive_integer(limit, "limit", MAX_CUSTOMER_RESULTS)
+    search_value = str(search_value or "").strip()[:120]
+    filters = {"disabled": 0}
+    or_filters = None
+    if search_value:
+        pattern = f"%{search_value}%"
+        or_filters = {
+            "name": ("like", pattern),
+            "customer_name": ("like", pattern),
+            "tax_id": ("like", pattern),
+        }
+    customers = frappe.get_list(
+        "Customer",
+        filters=filters,
+        or_filters=or_filters,
+        fields=["name", "customer_name", "tax_id"],
+        order_by="customer_name asc, name asc",
+        limit_page_length=limit,
+    )
+    return _envelope({"customers": [dict(customer) for customer in customers]})
+
+
+@frappe.whitelist(methods=["POST"])
+def update_order(
+    order_name,
+    action,
+    client_request_id,
+    expected_order_version,
+    customer=None,
+    guest_count=None,
+    discount=None,
+    discount_global_percent=None,
+    company=None,
+    pos_profile=None,
+):
+    context = _active_context(company, pos_profile)
+    action = str(action or "").strip()
+    if action not in {"set_customer", "set_guest_count", "set_discount"}:
+        _fail("ORDER_ACTION_NOT_SUPPORTED", "Unsupported mobile order operation")
+
+    values = {
+        "action": action,
+        "customer": customer,
+        "guest_count": guest_count,
+        "discount": discount,
+        "discount_global_percent": discount_global_percent,
+        "expected_order_version": expected_order_version,
+    }
+    request_doc, cached = _begin_request(
+        "update_order", order_name, client_request_id, values
+    )
+    if cached is not None:
+        return cached
+
+    order = _lock_order(order_name)
+    _validate_order_access(order, context, "write")
+    _assert_order_version(order, expected_order_version)
+    _ensure_open_dine_in_order(order)
+
+    if action == "set_customer":
+        customer_name = str(customer or "").strip()
+        if not customer_name:
+            _fail("CUSTOMER_REQUIRED", "Select a customer")
+        customer_doc = frappe.get_doc("Customer", customer_name)
+        customer_doc.check_permission("read")
+        if customer_doc.disabled:
+            _fail("CUSTOMER_DISABLED", "The selected customer is disabled", 409)
+        order.customer = customer_doc.name
+    elif action == "set_guest_count":
+        order.guest_count = _positive_integer(guest_count, "guest_count", 100)
+    else:
+        if not _order_management_capabilities(context)["can_apply_discount"]:
+            _fail(
+                "DISCOUNT_NOT_ALLOWED",
+                "The POS Profile does not allow changing discounts",
+                403,
+                frappe.PermissionError,
+            )
+        fixed_amount = flt(discount)
+        percent = flt(discount_global_percent)
+        if fixed_amount < 0 or percent < 0 or percent > 100:
+            _fail("DISCOUNT_INVALID", "Enter a valid discount")
+        order.discount = fixed_amount
+        order.discount_global_percent = percent
+
+    order.save()
+    order.reload()
+    order.synchronize({"action": "Update", "client": client_request_id})
+    response = _envelope(_order_payload(order), order)
+    _complete_request(request_doc, response, order.name)
+    return response
+
+
+@frappe.whitelist(methods=["POST"])
+def divide_order(
+    order_name,
+    items,
+    client_request_id,
+    expected_order_version,
+    company=None,
+    pos_profile=None,
+):
+    context = _active_context(company, pos_profile)
+    if isinstance(items, str):
+        try:
+            items = json.loads(items)
+        except ValueError:
+            _fail("DIVIDE_ITEMS_INVALID", "Select valid dishes to divide")
+    normalized_items = {}
+    for identifier, selection in (items or {}).items():
+        if not isinstance(selection, dict):
+            _fail("DIVIDE_ITEMS_INVALID", "Select valid dishes to divide")
+        normalized_items[str(identifier)] = {
+            "qty": _positive_integer(selection.get("qty"), "quantity")
+        }
+    request_payload = {
+        "items": normalized_items,
+        "expected_order_version": expected_order_version,
+    }
+    request_doc, cached = _begin_request(
+        "divide_order", order_name, client_request_id, request_payload
+    )
+    if cached is not None:
+        return cached
+
+    order = _lock_order(order_name)
+    _validate_order_access(order, context, "write")
+    _assert_order_version(order, expected_order_version)
+    _ensure_open_dine_in_order(order)
+    if not frappe.has_permission("Table Order", "create"):
+        _fail(
+            "ORDER_DIVIDE_NOT_ALLOWED",
+            "Not permitted to create the divided account",
+            403,
+            frappe.PermissionError,
+        )
+    result = order.divide(normalized_items, client_request_id)
+    order.reload()
+    new_order_name = result["new_order"]["order"]["data"]["name"]
+    new_order = frappe.get_doc("Table Order", new_order_name)
+    response = _envelope(
+        {
+            "current_order": _order_payload(order),
+            "new_order": _order_payload(new_order),
+        },
+        order,
+    )
+    _complete_request(request_doc, response, order.name)
+    return response
+
+
+@frappe.whitelist(methods=["POST"])
+def transfer_order(
+    order_name,
+    table_name,
+    client_request_id,
+    expected_order_version,
+    company=None,
+    pos_profile=None,
+):
+    context = _active_context(company, pos_profile)
+    table_name = str(table_name or "").strip()
+    if not table_name:
+        _fail("DESTINATION_TABLE_REQUIRED", "Select a destination table")
+    request_payload = {
+        "table_name": table_name,
+        "expected_order_version": expected_order_version,
+    }
+    request_doc, cached = _begin_request(
+        "transfer_order", order_name, client_request_id, request_payload
+    )
+    if cached is not None:
+        return cached
+
+    order = _lock_order(order_name)
+    _validate_order_access(order, context, "write")
+    _assert_order_version(order, expected_order_version)
+    _ensure_open_dine_in_order(order)
+    if table_name == order.table:
+        _fail("DESTINATION_TABLE_UNCHANGED", "Select a different destination table")
+    frappe.db.sql(
+        "SELECT name FROM `tabRestaurant Object` WHERE name = %s FOR UPDATE",
+        (table_name,),
+    )
+    table = frappe.get_doc("Restaurant Object", table_name)
+    table.reload()
+    _validate_table_access(table, context)
+    order.transfer(table.name, client_request_id)
+    order.reload()
+    response = _envelope(_order_payload(order), order)
+    _complete_request(request_doc, response, order.name)
+    return response
 
 
 @frappe.whitelist(methods=["GET"])

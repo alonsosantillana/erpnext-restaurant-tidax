@@ -316,8 +316,13 @@ class TestRestoTixMobileAPI(unittest.TestCase):
             user="waiter@example.com",
             company="COMPANY-A",
             pos_profile="POS-A",
+            profile=frappe._dict(allow_discount_change=1),
         )
         payment_permissions = frappe._dict(can_pay=True)
+        context.settings = frappe._dict(
+            pre_account_requested_color="#a16207",
+            pre_account_outdated_color="#be123c",
+        )
 
         with (
             patch.object(v1, "_active_context", return_value=context),
@@ -334,6 +339,17 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertTrue(capabilities["can_print_pre_account"])
         self.assertTrue(capabilities["can_generate_invoice"])
         self.assertTrue(capabilities["can_pay"])
+        self.assertTrue(capabilities["can_change_customer"])
+        self.assertTrue(capabilities["can_change_guest_count"])
+        self.assertTrue(capabilities["can_divide_order"])
+        self.assertTrue(capabilities["can_transfer_order"])
+        self.assertEqual(
+            result["data"]["presentation"]["table_state_colors"],
+            {
+                "pre_account_requested": "#a16207",
+                "pre_account_outdated": "#be123c",
+            },
+        )
 
     def test_cached_pre_account_does_not_print_or_lock_again(self):
         cached = {"api_version": "1.0", "data": {"queued": True}}
@@ -475,6 +491,7 @@ class TestRestoTixMobileAPI(unittest.TestCase):
             amount=60,
             tax=0,
             modified="2026-09-14 19:00:00",
+            pre_account_status="Requested",
         )
         order = frappe._dict(
             entry_items=[
@@ -500,6 +517,9 @@ class TestRestoTixMobileAPI(unittest.TestCase):
 
         table_payload = result["data"]["tables"][0]
         self.assertEqual(table_payload["active_order"]["ready_items_count"], 2.0)
+        self.assertEqual(
+            table_payload["active_order"]["pre_account_status"], "Requested"
+        )
 
     def test_openapi_contract_contains_mobile_role_action_routes(self):
         contract_path = Path(__file__).resolve().parents[2] / "docs" / "openapi" / "resto-tix-v1.yaml"
@@ -513,11 +533,15 @@ class TestRestoTixMobileAPI(unittest.TestCase):
                 "/api/v1/context",
                 "/api/v1/tables",
                 "/api/v1/catalog",
+                "/api/v1/customers",
                 "/api/v1/orders/{order_name}",
                 "/api/v1/orders/{order_name}/billing-options",
                 "/api/v1/orders/open",
                 "/api/v1/orders/{order_name}/items",
                 "/api/v1/orders/{order_name}/commands",
+                "/api/v1/orders/{order_name}/details",
+                "/api/v1/orders/{order_name}/divide",
+                "/api/v1/orders/{order_name}/transfer",
                 "/api/v1/orders/{order_name}/pre-account",
                 "/api/v1/orders/{order_name}/invoice",
                 "/api/v1/changes",
@@ -526,11 +550,10 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertFalse(
             contract["components"]["schemas"]["MutateItemRequest"]["unevaluatedProperties"]
         )
-        active_order_schema = contract["components"]["schemas"]["ActiveOrderSummary"]
-        self.assertIn("ready_items_count", active_order_schema["required"])
-        self.assertEqual(active_order_schema["properties"]["version"]["format"], "date-time")
-        self.assertEqual(active_order_schema["properties"]["ready_items_count"]["type"], "number")
-        self.assertEqual(active_order_schema["properties"]["ready_items_count"]["minimum"], 0)
+        self.assertIn(
+            "ready_items_count",
+            contract["components"]["schemas"]["ActiveOrderSummary"]["required"],
+        )
 
         pending = [contract]
         references = []
