@@ -450,6 +450,57 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertNotIn("current_user", table_payload)
         self.assertFalse(table_payload["occupied_by_me"])
 
+    def test_table_payload_counts_ready_order_items(self):
+        context = frappe._dict(
+            user="waiter@example.com",
+            company="COMPANY-A",
+            pos_profile="POS-A",
+        )
+        room = frappe._dict(name="ROOM-1", description="Main")
+        table = frappe._dict(
+            name="TABLE-1",
+            description="Table 1",
+            room="ROOM-1",
+            no_of_seats=4,
+            color="#fff",
+            shape="Round",
+            current_user="waiter@example.com",
+        )
+        active_order = frappe._dict(
+            name="ORDER-1",
+            table="TABLE-1",
+            owner="waiter@example.com",
+            cambio_mozo=None,
+            guest_count=2,
+            amount=60,
+            tax=0,
+            modified="2026-09-14 19:00:00",
+        )
+        order = frappe._dict(
+            entry_items=[
+                frappe._dict(status=v1.ITEM_STATUS_READY, qty=2),
+                frappe._dict(status="Processing", qty=1),
+            ]
+        )
+
+        with (
+            patch.object(v1, "_active_context", return_value=context),
+            patch.object(v1, "_allowed_rooms", return_value=["ROOM-1"]),
+            patch.object(
+                v1.frappe,
+                "get_all",
+                side_effect=[[room], [table], [active_order]],
+            ),
+            patch.object(v1.frappe, "get_doc", return_value=order),
+            patch.object(v1, "_restaurant_access_allowed", return_value=True),
+            patch.object(v1, "_order_version", return_value="2026-09-14T19:00:00-05:00"),
+            patch.object(v1, "_server_time", return_value="2026-09-14T19:00:01-05:00"),
+        ):
+            result = v1.get_tables()
+
+        table_payload = result["data"]["tables"][0]
+        self.assertEqual(table_payload["active_order"]["ready_items_count"], 2.0)
+
     def test_openapi_contract_contains_mobile_role_action_routes(self):
         contract_path = Path(__file__).resolve().parents[2] / "docs" / "openapi" / "resto-tix-v1.yaml"
         contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
@@ -475,6 +526,11 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertFalse(
             contract["components"]["schemas"]["MutateItemRequest"]["unevaluatedProperties"]
         )
+        active_order_schema = contract["components"]["schemas"]["ActiveOrderSummary"]
+        self.assertIn("ready_items_count", active_order_schema["required"])
+        self.assertEqual(active_order_schema["properties"]["version"]["format"], "date-time")
+        self.assertEqual(active_order_schema["properties"]["ready_items_count"]["type"], "number")
+        self.assertEqual(active_order_schema["properties"]["ready_items_count"]["minimum"], 0)
 
         pending = [contract]
         references = []

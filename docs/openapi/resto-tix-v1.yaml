@@ -494,7 +494,7 @@ components:
           type: string
     ActiveOrderSummary:
       type: object
-      required: [name, guest_count, amount, tax, version]
+      required: [name, guest_count, amount, tax, version, ready_items_count]
       properties:
         name:
           type: string
@@ -507,6 +507,9 @@ components:
         version:
           type: string
           format: date-time
+        ready_items_count:
+          type: number
+          minimum: 0
     RestaurantTable:
       type: object
       required: [name, description, room]

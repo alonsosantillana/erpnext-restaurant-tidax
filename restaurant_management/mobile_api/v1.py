@@ -38,6 +38,7 @@ MAX_ORDER_QUANTITY = 100
 MOBILE_REQUEST_DOCTYPE = "Restaurant Mobile Request"
 ORDER_STATUS_OPEN = "Attending"
 ITEM_STATUS_UNSENT = "Attending"
+ITEM_STATUS_READY = "Completed"
 
 CATALOG_FIELDS = (
     "item_code",
@@ -572,6 +573,13 @@ def get_tables(company=None, pos_profile=None):
                     "amount": flt(row.amount),
                     "tax": flt(row.tax),
                     "version": _order_version(order),
+                    "ready_items_count": flt(
+                        sum(
+                            flt(item.qty)
+                            for item in order.entry_items
+                            if item.status == ITEM_STATUS_READY
+                        )
+                    ),
                 }
 
     return _envelope(
