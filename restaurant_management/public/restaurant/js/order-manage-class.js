@@ -200,19 +200,21 @@ class OrderManage extends ObjectManage {
 						</div>
 					</td>
 					<td class="container-order-items">
-						<div class="panel-order-items">
-							<ul class="products-list" id="${this.order_entry_container_name}">
-								
-							</ul>
-							${this.empty_carts.html()}
-							${this.not_selected_order.html()}
+						<div class="order-side-panel">
+							<div class="panel-order-items">
+								<ul class="products-list" id="${this.order_entry_container_name}">
+
+								</ul>
+								${this.empty_carts.html()}
+								${this.not_selected_order.html()}
+							</div>
+							<table class="table no-border table-condensed panel-order-edit" id ="${this.editor_container_name}">
+
+							</table>
+							<table class="table no-border order-manage-control-buttons pad-container" id="${this.pad_container_name}">
+
+							</table>
 						</div>
-						<table class="table no-border table-condensed panel-order-edit" id ="${this.editor_container_name}">
-						
-						</table>
-						<table class="table no-border order-manage-control-buttons pad-container" id="${this.pad_container_name}">
-						
-						</table>
 					</td>
 				</tr>
 			</table>
