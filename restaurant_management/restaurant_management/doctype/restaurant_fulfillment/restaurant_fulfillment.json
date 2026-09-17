@@ -20,6 +20,7 @@
   "instructions",
   "operation_section",
   "order_channel",
+  "delivery_provider",
   "external_order_id",
   "promised_at",
   "delivery_fee",
@@ -147,7 +148,15 @@
    "fieldname": "order_channel",
    "fieldtype": "Select",
    "label": "Order Channel",
-   "options": "Phone\nWhatsApp\nWeb\nMarketplace\nWalk-in\nOther",
+   "options": "Phone\nWhatsApp\nWeb\nMarketplace\nPedidosYa\nWalk-in\nOther",
+   "reqd": 1
+  },
+  {
+   "default": "Restaurant",
+   "fieldname": "delivery_provider",
+   "fieldtype": "Select",
+   "label": "Delivery Provider",
+   "options": "Restaurant\nPedidosYa\nCustomer Pickup",
    "reqd": 1
   },
   {

@@ -13,7 +13,7 @@ FULFILLMENT_TRANSITIONS = {
     "Delivery": {
         "New": {"Preparing", "Cancelled"},
         "Preparing": {"Ready", "Cancelled"},
-        "Ready": {"Preparing", "Assigned", "Cancelled"},
+        "Ready": {"Preparing", "Assigned", "Out for Delivery", "Cancelled"},
         "Assigned": {"Preparing", "Out for Delivery", "Cancelled"},
         "Out for Delivery": {"Delivered", "Delivery Failed"},
         "Delivery Failed": {"Assigned", "Cancelled"},
@@ -38,6 +38,7 @@ LOGISTICS_FIELDS = (
     "delivery_reference",
     "instructions",
     "delivery_fee",
+    "delivery_provider",
 )
 
 
@@ -131,7 +132,16 @@ class RestaurantFulfillment(Document):
     def _validate_address(self):
         if self.fulfillment_type == "Delivery":
             if not self.address:
-                frappe.throw(_("Select a delivery address"))
+                external_destination = (
+                    self.order_channel == "PedidosYa"
+                    and (
+                        self.delivery_provider == "PedidosYa"
+                        or self.address_display_snapshot
+                    )
+                )
+                if not external_destination:
+                    frappe.throw(_("Select a delivery address"))
+                return
             if not address_belongs_to_customer(self.address, self.customer):
                 frappe.throw(_("The delivery address must belong to the selected customer"))
         elif self.address:
@@ -170,7 +180,7 @@ class RestaurantFulfillment(Document):
             self.customer_name_snapshot = frappe.db.get_value(
                 "Customer", self.customer, "customer_name"
             ) or self.customer
-        if self.fulfillment_type == "Delivery" and (
+        if self.fulfillment_type == "Delivery" and self.address and (
             address_changed or not self.address_display_snapshot
         ):
             self.address_display_snapshot = render_address_snapshot(self.address)
@@ -243,12 +253,21 @@ class RestaurantFulfillment(Document):
             if not courier_name:
                 frappe.throw(_("Enter the courier before assigning the delivery"))
             self.courier_name = courier_name
+        if next_status == "Out for Delivery" and current_status == "Ready":
+            if self.delivery_provider != "PedidosYa":
+                frappe.throw(_("Assign a restaurant courier before dispatch"))
 
         self._transition_in_progress = True
         self.status = next_status
         self.failure_reason = str(reason or "").strip() or None
         self._append_status_log(current_status, next_status, reason)
         self.save(ignore_permissions=automatic)
+        if next_status == "Ready":
+            from restaurant_management.integrations.pedidosya.service import notify_prepared_by_fulfillment
+            notify_prepared_by_fulfillment(self.name)
+        if next_status in {"Picked Up", "Out for Delivery"}:
+            from restaurant_management.integrations.pedidosya.service import notify_picked_up_by_fulfillment
+            notify_picked_up_by_fulfillment(self.name)
         return self.board_summary()
 
     def board_summary(self):

@@ -1,0 +1,16 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": ["remote_code", "item_code", "mapping_type"],
+ "fields": [
+  {"fieldname": "remote_code", "fieldtype": "Data", "in_list_view": 1, "label": "PedidosYa Remote Code", "reqd": 1},
+  {"fieldname": "item_code", "fieldtype": "Link", "in_list_view": 1, "label": "Item", "options": "Item", "reqd": 1},
+  {"default": "Product", "fieldname": "mapping_type", "fieldtype": "Select", "in_list_view": 1, "label": "Type", "options": "Product\nTopping", "reqd": 1}
+ ],
+ "module": "Restaurant Management",
+ "name": "PedidosYa Item Mapping",
+ "permissions": []
+}

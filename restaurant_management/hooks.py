@@ -260,7 +260,8 @@ scheduler_events = {
 # 	]
     "cron": {
         "*/5 * * * *": [
-            "restaurant_management.electronic_invoice.enqueue_pending_pos_invoice_electronic"
+            "restaurant_management.electronic_invoice.enqueue_pending_pos_invoice_electronic",
+            "restaurant_management.integrations.pedidosya.service.recover_pending_orders",
         ],
         "0 3 * * *":[
             "restaurant_management.restaurant_management.doctype.utils.update_estado_platos"
