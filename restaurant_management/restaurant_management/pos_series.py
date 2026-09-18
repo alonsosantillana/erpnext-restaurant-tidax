@@ -25,6 +25,7 @@ POS_SERIES_PREFIXES = {
 SERIES_DISPLAY_FIELD = "restaurant_naming_series"
 TABLE_ORDER_SERIES_FIELD = "order_naming_series"
 EXPENSE_SERIES_FIELD = "expense_naming_series"
+RESERVATION_SERIES_FIELD = "reservation_naming_series"
 
 
 def get_company_series_abbreviation(company):
@@ -52,6 +53,10 @@ def get_default_expense_series(company):
     return f"GTO-{get_company_series_abbreviation(company)}-.YYYY.-.#####"
 
 
+def get_default_reservation_series(company):
+    return f"RES-{get_company_series_abbreviation(company)}-.YYYY.-.#####"
+
+
 def validate_company_pos_series(settings):
     if settings.doctype != COMPANY_SETTINGS_DOCTYPE:
         return
@@ -71,6 +76,13 @@ def validate_company_pos_series(settings):
     NamingSeries(expense_series).validate()
     configured[EXPENSE_SERIES_FIELD] = expense_series
 
+    reservation_series = cstr(settings.get(RESERVATION_SERIES_FIELD)).strip()
+    if not reservation_series:
+        reservation_series = get_default_reservation_series(settings.company)
+        settings.set(RESERVATION_SERIES_FIELD, reservation_series)
+    NamingSeries(reservation_series).validate()
+    configured[RESERVATION_SERIES_FIELD] = reservation_series
+
     for document_type, fieldname in POS_SERIES_FIELDS.items():
         series = cstr(settings.get(fieldname)).strip()
         if not series:
@@ -88,6 +100,7 @@ def validate_company_pos_series(settings):
         for other_fieldname in [
             TABLE_ORDER_SERIES_FIELD,
             EXPENSE_SERIES_FIELD,
+            RESERVATION_SERIES_FIELD,
             *POS_SERIES_FIELDS.values(),
         ]:
             company = frappe.db.get_value(
@@ -120,6 +133,15 @@ def get_company_expense_series(company):
     series = cstr(settings.get(EXPENSE_SERIES_FIELD)).strip()
     if not series:
         series = get_default_expense_series(company)
+    NamingSeries(series).validate()
+    return series
+
+
+def get_company_reservation_series(company):
+    settings = get_restaurant_settings(company=company)
+    series = cstr(settings.get(RESERVATION_SERIES_FIELD)).strip()
+    if not series:
+        series = get_default_reservation_series(company)
     NamingSeries(series).validate()
     return series
 

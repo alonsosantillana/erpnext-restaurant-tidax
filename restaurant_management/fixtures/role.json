@@ -46,5 +46,13 @@
     "is_custom": 0,
     "name": "resto_produccion",
     "role_name": "resto_produccion"
+  },
+  {
+    "desk_access": 1,
+    "disabled": 0,
+    "doctype": "Role",
+    "is_custom": 0,
+    "name": "resto_reservas",
+    "role_name": "resto_reservas"
   }
 ]

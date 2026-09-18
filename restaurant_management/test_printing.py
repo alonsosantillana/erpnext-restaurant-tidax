@@ -66,6 +66,43 @@ class TestRestaurantPrinting(FrappeTestCase):
 		self.assertEqual(payload["url"], "RPJ-TEST-00001.pdf")
 		self.assertEqual(payload["file_content"], "UERG")
 
+	@patch("restaurant_management.printing.frappe.get_doc")
+	@patch("restaurant_management.printing.frappe.get_attr")
+	@patch("restaurant_management.printing._get_claimed_job")
+	def test_order_job_renders_only_its_sent_batch(
+		self, get_claimed_job, get_attr, get_doc
+	):
+		get_claimed_job.return_value = frappe._dict(
+			name="RPJ-TEST-ORDER-00001",
+			status="Sending",
+			source_doctype="Table Order",
+			source_name="OR-ADA-2026-00001",
+			print_format="Order",
+			print_type="ORDER",
+			copies=1,
+			route_type="ORDER",
+			transport_mode="PDF",
+			order_batch_number=2,
+		)
+		items = [
+			frappe._dict(identifier="ITEM-1", ordered_nro=1),
+			frappe._dict(identifier="ITEM-2", ordered_nro=2),
+			frappe._dict(identifier="ITEM-3", ordered_nro=2),
+		]
+		order = Mock()
+		order.get.return_value = items
+		order.set.side_effect = lambda fieldname, value: setattr(order, fieldname, value)
+		get_doc.return_value = order
+		get_attr.return_value.return_value = {"pdf_base64": "UERG"}
+
+		payload = render_job("RPJ-TEST-ORDER-00001", "browser-1")
+
+		order.set.assert_called_once_with("entry_items", items[1:])
+		get_attr.return_value.assert_called_once_with(
+			"Table Order", "OR-ADA-2026-00001", "Order", doc=order
+		)
+		self.assertEqual(payload["file_content"], "UERG")
+
 	def test_disconnect_releases_only_the_claimed_station(self):
 		station = frappe._dict(
 			name="Test Station", company="Test Company", station_user="cashier.com"
@@ -170,6 +207,10 @@ class TestRestaurantPrinting(FrappeTestCase):
 		order = Mock()
 		order.name = "OR-ADA-2026-00001"
 		order.company = "ADDERA PERU SAC"
+		order.get.return_value = [
+			frappe._dict(ordered_nro=1, ordered_time="2026-09-18 10:00:00"),
+			frappe._dict(ordered_nro=2, ordered_time="2026-09-18 10:05:00"),
+		]
 		get_doc.return_value = order
 		enqueue_print.return_value = {"queued": False, "configured": False}
 
@@ -181,8 +222,9 @@ class TestRestaurantPrinting(FrappeTestCase):
 			order.name,
 			"ORDER",
 			company=order.company,
-			event_key="order-send-1",
+			event_key="order-batch-2",
 			require_route=False,
+			order_batch_number=2,
 		)
 		self.assertFalse(result["queued"])
 
@@ -388,3 +430,40 @@ class TestRestaurantPrinting(FrappeTestCase):
 		build_account.assert_called_once_with(
 			order, company_tax_id=None, waiter_name="Mozo Uno", copies=1
 		)
+
+	@patch("restaurant_management.printing.build_table_order_kitchen_escpos", return_value=b"ORDER")
+	@patch("restaurant_management.printing.frappe.db.get_value", side_effect=[None, "Mozo Uno"])
+	@patch("restaurant_management.printing._get_pdf_source")
+	@patch("restaurant_management.printing._get_claimed_job")
+	def test_order_escpos_job_uses_filtered_round_as_raw_content(
+		self, get_claimed_job, get_pdf_source, get_value, build_order
+	):
+		job = frappe._dict(
+			name="RPJ-TEST-ESC-00003",
+			status="Sending",
+			source_doctype="Table Order",
+			source_name="OR-ECS-2026-00032",
+			print_format="Order",
+			print_type="ORDER",
+			route_type="ORDER",
+			transport_mode="ESC/POS",
+			order_batch_number=2,
+			copies=1,
+		)
+		get_claimed_job.return_value = job
+		order = frappe._dict(
+			name="OR-ECS-2026-00032",
+			company="ERPCLOUD SAC",
+			owner="waiter.com",
+			entry_items=[frappe._dict(item_code="BEB-002", ordered_nro=2)],
+		)
+		get_pdf_source.return_value = order
+
+		payload = render_job(job.name, "browser-1")
+
+		get_pdf_source.assert_called_once_with(job)
+		build_order.assert_called_once_with(order, waiter_name="Mozo Uno", copies=1)
+		self.assertEqual(payload["url"], "RPJ-TEST-ESC-00003.bin")
+		self.assertEqual(payload["raw_content"], "T1JERVI=")
+		self.assertEqual(payload["transport_mode"], "ESC/POS")
+		self.assertNotIn("file_content", payload)

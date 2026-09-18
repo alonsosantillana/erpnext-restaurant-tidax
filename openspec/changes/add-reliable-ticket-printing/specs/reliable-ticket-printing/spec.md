@@ -72,6 +72,19 @@ the same Company.
 Comanda and kitchen printing SHALL be independently optional and SHALL only
 contain the newly sent round.
 
+#### Scenario: Subsequent order round
+
+- **WHEN** an attended order already has sent dishes and the waiter sends one or more new dishes
+- **THEN** the durable ORDER job stores the new ordered_nro
+- **AND** its rendered ticket contains only dishes assigned to that round
+- **AND** retrying the same round does not create a duplicate business event
+
+#### Scenario: Native high-contrast kitchen ticket
+
+- **WHEN** an ORDER job is delivered to the configured thermal printer
+- **THEN** the station receives native ESC/POS data rather than a rasterized PDF
+- **AND** the ticket emphasizes the table, quantity, dish and notes without prices
+
 #### Scenario: Kitchen route disabled
 
 - **WHEN** an order is sent and its kitchen route is disabled

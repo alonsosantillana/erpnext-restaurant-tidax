@@ -20,7 +20,7 @@
 - [x] 3.4 Route precuenta and electronic invoice printing through the queue.
 - [x] 3.5 Add auditable confirm-printed and discard actions for print incidents.
 - [x] 3.6 Add an immediate, company-scoped station disconnect action.
-- [ ] 3.7 Add optional ORDER and KITCHEN triggers for newly sent rounds.
+- [x] 3.7 Add optional ORDER trigger for newly sent rounds; KITCHEN remains pending.
 
 ## 4. Qualification
 

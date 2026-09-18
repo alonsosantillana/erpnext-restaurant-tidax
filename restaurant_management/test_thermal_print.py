@@ -4,6 +4,7 @@ import unittest
 from restaurant_management.thermal_print import (
 	build_pos_invoice_escpos,
 	build_table_order_account_escpos,
+	build_table_order_kitchen_escpos,
 	qr_svg_data_uri,
 )
 
@@ -196,4 +197,39 @@ class TestThermalPrintHelpers(unittest.TestCase):
 		self.assertEqual(len(item), 48)
 		self.assertIn(b"Descuento global", raw)
 		self.assertNotIn(b"1Q0", raw)
+		self.assertTrue(raw.endswith(b"\x1dVB\x00"))
+
+	def test_escpos_kitchen_order_is_large_clear_and_has_no_prices(self):
+		doc = {
+			"name": "OR-ECS-2026-00032",
+			"company": "ERPCLOUD SAC",
+			"room_description": "Room 1",
+			"table_description": "T5",
+			"entry_items": [{
+				"item_code": "PLT-003",
+				"item_name": "CHILCANO",
+				"qty": 2,
+				"rate": 10,
+				"amount": 20,
+				"notes": "SIN LIMON",
+				"item_pt": "Bar",
+				"ordered_time": "2026-09-18 11:54:00",
+				"ordered_nro": 3,
+			}],
+		}
+
+		raw = build_table_order_kitchen_escpos(doc, waiter_name="Mozo ERPCLOUD")
+		text = raw.decode("cp850", errors="ignore")
+
+		self.assertIn("COMANDA", text)
+		self.assertIn("MESA: T5", text)
+		self.assertIn("Ambiente: Room 1", text)
+		self.assertIn("Mozo: Mozo ERPCLOUD", text)
+		self.assertIn("Ronda: 3", text)
+		self.assertIn("2 x CHILCANO", text)
+		self.assertIn("Centro: Bar", text)
+		self.assertIn("NOTA: SIN LIMON", text)
+		self.assertNotIn("S/.", text)
+		self.assertNotIn("10.00", text)
+		self.assertGreaterEqual(raw.count(b"\x1d!\x11"), 3)
 		self.assertTrue(raw.endswith(b"\x1dVB\x00"))

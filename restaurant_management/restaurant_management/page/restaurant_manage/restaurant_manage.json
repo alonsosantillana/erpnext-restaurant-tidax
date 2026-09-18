@@ -53,6 +53,9 @@
   },
 {
    "role": "resto_delivery"
+  },
+  {
+   "role": "resto_reservas"
   }
  ],
  "script": null,

@@ -404,3 +404,55 @@ def build_table_order_account_escpos(
 		return receipt.finish()
 
 	return b"".join(build_copy() for _ in range(max(1, int(copies or 1))))
+
+
+def build_table_order_kitchen_escpos(
+	doc,
+	*,
+	waiter_name=None,
+	copies=1,
+	columns=DEFAULT_COLUMNS,
+):
+	"""Build a high-contrast kitchen order containing the supplied order round."""
+	items = list(_value(doc, "entry_items", []) or [])
+	first_item = items[0] if items else None
+
+	def build_copy():
+		receipt = _EscPosReceipt(columns=columns)
+		receipt.command(ESC + b"@")
+		receipt.command(ESC + b"t\x02")
+		receipt.line("COMANDA", align=1, bold=True, double=True)
+		receipt.wrapped(_value(doc, "company"), align=1, bold=True)
+		receipt.separator("=")
+		receipt.wrapped("Orden: {0}".format(_value(doc, "name")), bold=True)
+		if _value(doc, "table_description"):
+			receipt.wrapped(
+				"MESA: {0}".format(_value(doc, "table_description")),
+				bold=True,
+				double=True,
+			)
+		if _value(doc, "room_description"):
+			receipt.wrapped("Ambiente: {0}".format(_value(doc, "room_description")), bold=True)
+		if waiter_name:
+			receipt.wrapped("Mozo: {0}".format(waiter_name), bold=True)
+		ordered_time = _value(first_item, "ordered_time")
+		ordered_nro = _value(first_item, "ordered_nro")
+		if ordered_time:
+			receipt.wrapped("Hora: {0}".format(ordered_time))
+		if ordered_nro:
+			receipt.wrapped("Ronda: {0}".format(_number(ordered_nro)), bold=True)
+		receipt.separator("=")
+		for item in items:
+			quantity = _number(_value(item, "qty"))
+			name = _value(item, "item_name") or _value(item, "item_code")
+			receipt.wrapped("{0} x {1}".format(quantity, name), bold=True, double=True)
+			if _value(item, "item_pt"):
+				receipt.wrapped("Centro: {0}".format(_value(item, "item_pt")))
+			if _value(item, "notes"):
+				receipt.wrapped("NOTA: {0}".format(_value(item, "notes")), bold=True)
+			receipt.separator()
+		if _value(doc, "comentario"):
+			receipt.wrapped("Comentario: {0}".format(_value(doc, "comentario")), bold=True)
+		return receipt.finish()
+
+	return b"".join(build_copy() for _ in range(max(1, int(copies or 1))))

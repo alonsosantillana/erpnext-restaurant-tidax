@@ -35,6 +35,7 @@
   "taxes_and_charges",
   "selling_price_list",
   "company",
+  "reservation",
   "customer_name",
   "customer_tax_id",
   "customer_tipo_documento_identidad",
@@ -200,6 +201,15 @@
    "label": "Company",
    "options": "Company",
    "reqd": 1
+  },
+  {
+   "fieldname": "reservation",
+   "fieldtype": "Link",
+   "label": "Reserva",
+   "no_copy": 1,
+   "options": "Restaurant Reservation",
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fetch_from": "table.description",

@@ -73,6 +73,54 @@ class TestTableOrder(unittest.TestCase):
 			}],
 		})
 
+	def test_send_queues_the_exact_new_order_round(self):
+		order = TableOrder({
+			"doctype": "Table Order",
+			"name": "OR-ADA-2026-00001",
+			"company": "ADDERA PERU SAC",
+			"status": "Attending",
+			"service_type": "Dine In",
+			"table": "TABLE-1",
+			"entry_items": [{
+				"doctype": "Order Entry Item",
+				"identifier": "ITEM-NEW",
+				"item_code": "PLT-001",
+				"status": "Attending",
+				"ordered_nro": 0,
+			}],
+		})
+		persisted_item = MagicMock(
+			identifier="ITEM-NEW",
+			item_code="PLT-001",
+			status="Attending",
+			ordered_time=None,
+			ordered_nro=0,
+		)
+		response = {"order": {"data": {"name": order.name}}, "items": []}
+
+		with (
+			patch("frappe.utils.now_datetime", return_value="2026-09-18 10:00:00"),
+			patch.object(TableOrder, "_table", new_callable=PropertyMock) as table,
+			patch.object(frappe, "get_doc", return_value=persisted_item),
+			patch.object(order, "reload"),
+			patch.object(order, "synchronize"),
+			patch.object(order, "data", return_value=response),
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order.preparation_targets",
+				return_value={"PLT-001": {"minutes": 12, "source": "Item"}},
+			),
+			patch("restaurant_management.printing.enqueue_order_round") as enqueue_round,
+		):
+			enqueue_round.return_value = {"queued": True, "job": "RPJ-1"}
+			result = order.send
+
+		enqueue_round.assert_called_once_with(order, 1)
+		persisted_item.save.assert_called_once_with()
+		table.return_value.get_command_data.assert_called_once_with(persisted_item)
+		self.assertEqual(result["ordered_nro"], 1)
+		self.assertEqual(result["ordered_identifiers"], ["ITEM-NEW"])
+		self.assertEqual(result["print_queue"]["job"], "RPJ-1")
+
 	def test_pre_account_signature_ignores_notes_and_kitchen_status(self):
 		order = self.pre_account_order()
 		signature = pre_account_signature(order)

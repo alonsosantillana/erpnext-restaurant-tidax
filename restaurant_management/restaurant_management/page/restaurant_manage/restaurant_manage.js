@@ -212,6 +212,19 @@ RestaurantManage = class RestaurantManage {
 			this.add_object("Room");
 		});
 
+		this.reservations_button = frappe.jshtml({
+			tag: "div",
+			properties: {
+				class: "btn-default button reservations-button",
+				title: __("Agenda de reservas"),
+				role: "button",
+				"aria-label": __("Reservas")
+			},
+			content: "<span class=\"fa fa-calendar\" aria-hidden=\"true\"></span>"
+		}).on("click", () => {
+			frappe.set_route("List", "Restaurant Reservation", "Calendar");
+		});
+
 		this.setting_button = frappe.jshtml({
 			tag: "div",
 			properties: {
@@ -279,6 +292,7 @@ RestaurantManage = class RestaurantManage {
 					${this.general_edit_button.html()}
 					${this.rooms_container.html()}
 					${this.add_room_button.html()}
+					${this.reservations_button.html()}
 					${this.setting_button.html()}
 				</div>
 				${this.transfer_notice.html()}
@@ -405,6 +419,15 @@ RestaurantManage = class RestaurantManage {
 				)
 			);
 		this.wrapper.find(".fulfillment-hub-host").append(this.fulfillment_hub);
+	}
+
+	configure_reservation_navigation() {
+		const enabled = Boolean(Number((this.restrictions || {}).enable_reservations));
+		if (enabled) {
+			this.reservations_button.show();
+		} else {
+			this.reservations_button.hide();
+		}
 	}
 
 	configure_fulfillment_navigation() {
@@ -636,6 +659,7 @@ RestaurantManage = class RestaurantManage {
 		this.restaurant_permissions = r.pos.restaurant_permissions;
 		this.order_item_editor_form = r.order_item_editor_form;
 		this.configure_fulfillment_navigation();
+		this.configure_reservation_navigation();
 
 		if (r.pos.has_pos) {
 			this.#pos_profile = r.pos.pos;

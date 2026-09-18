@@ -259,6 +259,31 @@
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
 }
 
+.restaurant-manage .floor-map .d-table .reservation-indicator {
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    z-index: 12;
+    max-width: calc(100% - 8px);
+    height: 16px;
+    padding: 0 5px;
+    transform: translateX(-50%);
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(37, 99, 235, 0.92);
+    color: var(--white);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.restaurant-manage.editing .floor-map .d-table .reservation-indicator {
+    display: none;
+}
+
 .restaurant-manage .floor-map .d-table .pre-account-indicator {
     position: absolute;
     top: 23px;

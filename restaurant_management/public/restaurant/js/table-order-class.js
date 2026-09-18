@@ -867,7 +867,13 @@ class TableOrder {
                     message: __("Order sent to production"),
                     indicator: "green"
                 });
-                this.queue_order_print();
+
+                if (r.message.print_queue && r.message.print_queue.error) {
+                    frappe.show_alert({
+                        message: r.message.print_queue.error,
+                        indicator: "orange"
+                    });
+                }
             },
         });
     }
@@ -990,13 +996,14 @@ class TableOrder {
         }
         this.print_account_silent();// TIDAX   ----> PDF + IMPRIMIR
     }
-    queue_order_print() {
+    queue_order_print(ordered_nro = null) {
         frappe.call({
             method: "restaurant_management.printing.queue_order_print",
             type: "POST",
             args: {
                 order_name: this.data.name,
-                request_id: RM.uuid("order-print")
+                request_id: RM.uuid("order-print"),
+                ordered_nro
             }
         });
     }

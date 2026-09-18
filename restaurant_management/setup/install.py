@@ -241,6 +241,7 @@ OPERATIONAL_ROLES = (
     'resto_cocina',
     'resto_delivery',
     'resto_produccion',
+    'resto_reservas',
 )
 
 CUSTOMER_ROLES = (
@@ -248,7 +249,18 @@ CUSTOMER_ROLES = (
     'resto_cajero',
     'resto_mozo',
     'resto_delivery',
+    'resto_reservas',
 )
+
+RESERVATION_PERMISSION_RULES = {
+    'Company': ('read', 'select'),
+    'Customer': ('read', 'select', 'create'),
+    'Restaurant Object': ('read', 'select'),
+    'Restaurant Company Settings': ('read', 'select'),
+    'POS Profile': ('read', 'select'),
+    'Table Order': ('read', 'select', 'create', 'write', 'print', 'report'),
+    'User': ('read', 'select'),
+}
 
 CASHIER_PERMISSION_RULES = {
     # Cash-session documents: the cashier can operate and submit, but cannot
@@ -409,6 +421,8 @@ def set_operational_role_permissions():
         permission_rules.setdefault(doctype, {})['resto_mozo'] = permission_types
     for doctype, permission_types in PRODUCTION_PERMISSION_RULES.items():
         permission_rules.setdefault(doctype, {})['resto_produccion'] = permission_types
+    for doctype, permission_types in RESERVATION_PERMISSION_RULES.items():
+        permission_rules.setdefault(doctype, {})['resto_reservas'] = permission_types
 
     for doctype, role_rules in permission_rules.items():
         for role, permission_types in role_rules.items():

@@ -8,6 +8,7 @@ RESTAURANT_ROLES = (
     "resto_cocina",
     "resto_delivery",
     "resto_produccion",
+    "resto_reservas",
 )
 
 LEGACY_ROLE_MAP = {

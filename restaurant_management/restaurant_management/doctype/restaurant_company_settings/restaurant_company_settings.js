@@ -37,6 +37,12 @@ frappe.ui.form.on("Restaurant Company Settings", {
 				`GTO-${abbr}-.YYYY.-.#####`
 			);
 		}
+		if (!frm.doc.reservation_naming_series) {
+			await frm.set_value(
+				"reservation_naming_series",
+				`RES-${abbr}-.YYYY.-.#####`
+			);
+		}
 	},
 
 	setup(frm) {
@@ -44,6 +50,9 @@ frappe.ui.form.on("Restaurant Company Settings", {
 			filters: { company: frm.doc.company, disabled: 0 },
 		}));
 		frm.set_query("default_customer", () => ({
+			filters: { disabled: 0 },
+		}));
+		frm.set_query("reservation_default_customer", () => ({
 			filters: { disabled: 0 },
 		}));
 		frm.set_query("default_expense_account", () => ({

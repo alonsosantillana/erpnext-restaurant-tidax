@@ -56,6 +56,9 @@ RestaurantObject = class RestaurantObject {
             this.data.pre_account_status = data.pre_account_status;
             this.data.pre_account_requested_at = data.pre_account_requested_at;
         }
+        if (typeof data.upcoming_reservation !== "undefined") {
+            this.data.upcoming_reservation = data.upcoming_reservation;
+        }
         this.set_orders_count();
 
         // The notification is emitted after the order transaction commits.
@@ -321,6 +324,16 @@ RestaurantObject = class RestaurantObject {
             text: this.pre_account_label
         });
 
+        this.reservation_indicator = frappe.jshtml({
+            tag: "span",
+            properties: {
+                class: "reservation-indicator " + (this.upcoming_reservation ? "" : "hide"),
+                title: this.reservation_title
+            },
+            content: `<span class="fa fa-calendar"></span> {{text}}`,
+            text: this.reservation_label
+        });
+
         this.edit_button = frappe.jshtml({
             tag: "button",
             properties: { class: "btn d-table-btn btn-default btn-flat btn-sm" },
@@ -368,6 +381,7 @@ RestaurantObject = class RestaurantObject {
             <div class="resize-handle c ne"></div><div class="resize-handle c nw"></div><div class="resize-handle c sw"></div><div class="resize-handle c se"></div>
 		    <div class="resize-handle b v w"></div><div class="resize-handle b v e"></div><div class="resize-handle b h n"></div><div class="resize-handle b h s"></div>
             ${this.pre_account_indicator.html()}
+            ${this.reservation_indicator.html()}
             ${this.guest_count_indicator.html()}
             ${this.indicator.html()}
             ${this.description.html()}
@@ -544,6 +558,7 @@ RestaurantObject = class RestaurantObject {
                 counter.css("background-color", RM.can_open_order_manage(this) ? "" : RM.restrictions.color);
             });
             this.set_pre_account_state();
+            this.set_reservation_state();
             return;
         }
 
@@ -568,6 +583,35 @@ RestaurantObject = class RestaurantObject {
         this.pre_account_indicator[this.pre_account_status ? "remove_class" : "add_class"]("hide");
         this.pre_account_indicator.val(this.pre_account_label);
         this.pre_account_indicator.prop("title", this.pre_account_title);
+    }
+
+    set_reservation_state() {
+        if (!this.is_table || !this.reservation_indicator) return;
+        const visible = Boolean(this.upcoming_reservation);
+        this.reservation_indicator[visible ? "remove_class" : "add_class"]("hide");
+        this.reservation_indicator.val(this.reservation_label);
+        this.reservation_indicator.prop("title", this.reservation_title);
+    }
+
+    get upcoming_reservation() {
+        return this.is_table ? (this.data.upcoming_reservation || null) : null;
+    }
+
+    get reservation_label() {
+        const reservation = this.upcoming_reservation;
+        if (!reservation) return "";
+        const time = moment(reservation.reservation_from).format("HH:mm");
+        return time + " · " + reservation.guest_count;
+    }
+
+    get reservation_title() {
+        const reservation = this.upcoming_reservation;
+        if (!reservation) return "";
+        return __("Reserva {0}: {1}, {2} comensales", [
+            reservation.name,
+            reservation.guest_name,
+            reservation.guest_count,
+        ]);
     }
 
     get pre_account_status() {

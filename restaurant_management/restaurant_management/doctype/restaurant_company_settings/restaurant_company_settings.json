@@ -25,6 +25,19 @@
   "enable_pickup",
   "column_break_fulfillment",
   "delivery_fee_item",
+  "reservations_section",
+  "enable_reservations",
+  "reservation_naming_series",
+  "reservation_default_duration_minutes",
+  "reservation_preparation_minutes",
+  "reservation_cleanup_minutes",
+  "column_break_reservations",
+  "reservation_arrival_grace_minutes",
+  "reservation_max_advance_days",
+  "reservation_default_customer",
+  "allow_unassigned_reservations",
+  "allow_reservation_capacity_override",
+  "reservation_auto_no_show",
   "tips_section",
   "enable_tips",
   "column_break_tips",
@@ -178,6 +191,93 @@
    "fieldtype": "Link",
    "label": "Delivery Fee Item",
    "options": "Item"
+  },
+  {
+   "fieldname": "reservations_section",
+   "fieldtype": "Section Break",
+   "label": "Reservas de mesas"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_reservations",
+   "fieldtype": "Check",
+   "label": "Habilitar reservas"
+  },
+  {
+   "depends_on": "enable_reservations",
+   "description": "Serie por empresa. Ejemplo: RES-ECS-.YYYY.-.#####",
+   "fieldname": "reservation_naming_series",
+   "fieldtype": "Data",
+   "label": "Serie de reservas",
+   "mandatory_depends_on": "enable_reservations"
+  },
+  {
+   "default": "90",
+   "depends_on": "enable_reservations",
+   "fieldname": "reservation_default_duration_minutes",
+   "fieldtype": "Int",
+   "label": "Duración predeterminada (min)"
+  },
+  {
+   "default": "15",
+   "depends_on": "enable_reservations",
+   "fieldname": "reservation_preparation_minutes",
+   "fieldtype": "Int",
+   "label": "Preparación previa (min)"
+  },
+  {
+   "default": "15",
+   "depends_on": "enable_reservations",
+   "fieldname": "reservation_cleanup_minutes",
+   "fieldtype": "Int",
+   "label": "Limpieza posterior (min)"
+  },
+  {
+   "fieldname": "column_break_reservations",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "20",
+   "depends_on": "enable_reservations",
+   "fieldname": "reservation_arrival_grace_minutes",
+   "fieldtype": "Int",
+   "label": "Tolerancia de llegada (min)"
+  },
+  {
+   "default": "90",
+   "depends_on": "enable_reservations",
+   "fieldname": "reservation_max_advance_days",
+   "fieldtype": "Int",
+   "label": "Máximo de anticipación (días)"
+  },
+  {
+   "depends_on": "enable_reservations",
+   "description": "Cliente usado al abrir una orden si la reserva no tiene uno.",
+   "fieldname": "reservation_default_customer",
+   "fieldtype": "Link",
+   "label": "Cliente predeterminado de reservas",
+   "options": "Customer"
+  },
+  {
+   "default": "1",
+   "depends_on": "enable_reservations",
+   "fieldname": "allow_unassigned_reservations",
+   "fieldtype": "Check",
+   "label": "Permitir pendientes sin mesa"
+  },
+  {
+   "default": "0",
+   "depends_on": "enable_reservations",
+   "fieldname": "allow_reservation_capacity_override",
+   "fieldtype": "Check",
+   "label": "Permitir exceder capacidad"
+  },
+  {
+   "default": "0",
+   "depends_on": "enable_reservations",
+   "fieldname": "reservation_auto_no_show",
+   "fieldtype": "Check",
+   "label": "Marcar no asistencia automáticamente"
   },
   {
    "fieldname": "tips_section",

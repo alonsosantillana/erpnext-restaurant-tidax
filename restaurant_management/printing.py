@@ -1,6 +1,6 @@
 """Durable, company-scoped restaurant printing.
 
-PDF rendering remains available through ``silent_print``; fiscal invoices and pre-accounts may
+PDF rendering remains available through ``silent_print``; fiscal invoices, pre-accounts and kitchen orders may
 use native ESC/POS. This module owns routing and the auditable delivery lifecycle.
 """
 
@@ -20,6 +20,7 @@ from restaurant_management.restaurant_management.company_settings import (
 from restaurant_management.thermal_print import (
 	build_pos_invoice_escpos,
 	build_table_order_account_escpos,
+	build_table_order_kitchen_escpos,
 )
 
 
@@ -101,9 +102,21 @@ def enqueue_print(
 	requested_by=None,
 	require_route=True,
 	coalesce_pending=False,
+	order_batch_number=None,
 ):
 	"""Create at most one job for the same source, route and business event."""
 	source = frappe.get_doc(source_doctype, source_name)
+	order_batch_number = cint(order_batch_number or 0)
+	if order_batch_number:
+		if source_doctype != "Table Order" or str(route_type or "").upper() != "ORDER":
+			frappe.throw(_("Order batches can only be used with ORDER print jobs"))
+		if not any(
+			cint(item.ordered_nro) == order_batch_number
+			for item in source.get("entry_items", [])
+		):
+			frappe.throw(
+				_("Order batch {0} has no dishes to print").format(order_batch_number)
+			)
 	company = company or source.get("company")
 	if not company:
 		frappe.throw(_("The print source must belong to a company"))
@@ -178,6 +191,7 @@ def enqueue_print(
 		"production_center": route.production_center,
 		"source_doctype": source_doctype,
 		"source_name": source_name,
+		"order_batch_number": order_batch_number or None,
 		"print_format": route.print_format,
 		"print_type": route.print_type,
 		"transport_mode": route.transport_mode or "PDF",
@@ -242,23 +256,38 @@ def queue_invoice_print(invoice_name, request_id=None):
 	)
 
 
-@frappe.whitelist(methods=["POST"])
-def queue_order_print(order_name, request_id=None):
-	"""Queue an order through the optional, company-scoped ORDER route."""
-	_authenticated_user()
-	order = frappe.get_doc("Table Order", order_name)
-	order.check_permission("read")
-	request_id = str(request_id or frappe.generate_hash(length=32)).strip()
-	if not CLIENT_ID_PATTERN.fullmatch(request_id):
-		frappe.throw(_("Invalid order print request identifier"), frappe.ValidationError)
+def enqueue_order_round(order, ordered_nro):
+	"""Queue one immutable order round through the optional ORDER route."""
+	ordered_nro = cint(ordered_nro)
+	if ordered_nro <= 0:
+		frappe.throw(_("Select a valid order batch"), frappe.ValidationError)
 	return enqueue_print(
 		"Table Order",
 		order.name,
 		"ORDER",
 		company=order.company,
-		event_key=f"order-{request_id}",
+		event_key=f"order-batch-{ordered_nro}",
 		require_route=False,
+		order_batch_number=ordered_nro,
 	)
+
+
+@frappe.whitelist(methods=["POST"])
+def queue_order_print(order_name, request_id=None, ordered_nro=None):
+	"""Queue a specific sent round through the optional company ORDER route."""
+	_authenticated_user()
+	order = frappe.get_doc("Table Order", order_name)
+	order.check_permission("read")
+	if request_id:
+		request_id = str(request_id).strip()
+		if not CLIENT_ID_PATTERN.fullmatch(request_id):
+			frappe.throw(_("Invalid order print request identifier"), frappe.ValidationError)
+
+	ordered_nro = cint(ordered_nro or 0) or max(
+		(cint(item.ordered_nro) for item in order.get("entry_items", []) if item.ordered_time),
+		default=0,
+	)
+	return enqueue_order_round(order, ordered_nro)
 
 
 
@@ -474,14 +503,35 @@ def _get_claimed_job(job_name, client_id):
 	return job
 
 
+def _get_pdf_source(job):
+	"""Return the exact source snapshot represented by a durable print job."""
+	if job.route_type != "ORDER" or not cint(job.get("order_batch_number")):
+		return None
+
+	source = frappe.get_doc(job.source_doctype, job.source_name)
+	ordered_nro = cint(job.order_batch_number)
+	batch_items = [
+		item for item in source.get("entry_items", [])
+		if cint(item.ordered_nro) == ordered_nro
+	]
+	if not batch_items:
+		frappe.throw(_("Order batch {0} no longer has dishes to print").format(ordered_nro))
+	source.set("entry_items", batch_items)
+	return source
+
+
 @frappe.whitelist(methods=["POST"])
 def render_job(job, client_id):
 	doc = _get_claimed_job(job, client_id)
 	if doc.status != "Sending":
 		frappe.throw(_("Only Sending jobs can be rendered"))
 
-	if doc.transport_mode == "ESC/POS" and doc.route_type in {"INVOICE", "ACCOUNT"}:
-		source = frappe.get_doc(doc.source_doctype, doc.source_name)
+	if doc.transport_mode == "ESC/POS" and doc.route_type in {"INVOICE", "ACCOUNT", "ORDER"}:
+		source = (
+			_get_pdf_source(doc)
+			if doc.route_type == "ORDER"
+			else frappe.get_doc(doc.source_doctype, doc.source_name)
+		)
 		company_tax_id = frappe.db.get_value("Company", source.company, "tax_id")
 		if doc.route_type == "INVOICE":
 			tip = frappe.db.get_value(
@@ -499,12 +549,20 @@ def render_job(job, client_id):
 				tip=tip,
 				copies=max(1, cint(doc.copies)),
 			)
-		else:
+		elif doc.route_type == "ACCOUNT":
 			waiter_user = source.get("cambio_mozo") or source.owner
 			waiter_name = frappe.db.get_value("User", waiter_user, "full_name")
 			raw = build_table_order_account_escpos(
 				source,
 				company_tax_id=company_tax_id,
+				waiter_name=waiter_name,
+				copies=max(1, cint(doc.copies)),
+			)
+		else:
+			waiter_user = source.get("cambio_mozo") or source.owner
+			waiter_name = frappe.db.get_value("User", waiter_user, "full_name")
+			raw = build_table_order_kitchen_escpos(
+				source,
 				waiter_name=waiter_name,
 				copies=max(1, cint(doc.copies)),
 			)
@@ -520,7 +578,13 @@ def render_job(job, client_id):
 		}
 
 	create_pdf = frappe.get_attr("silent_print.utils.service.create_pdf")
-	rendered = create_pdf(doc.source_doctype, doc.source_name, doc.print_format)
+	print_source = _get_pdf_source(doc)
+	rendered = create_pdf(
+		doc.source_doctype,
+		doc.source_name,
+		doc.print_format,
+		doc=print_source,
+	)
 	return {
 		"id": doc.name,
 		"job_id": doc.name,

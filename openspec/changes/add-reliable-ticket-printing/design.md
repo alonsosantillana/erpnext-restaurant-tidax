@@ -53,6 +53,21 @@ Las rutas de cocina pueden limitarse a un Production Center.
 - ACCOUNT se solicita explicitamente desde el boton Cuenta.
 - ORDER/KITCHEN se encolan al enviar una ronda nueva, nunca por cambios de estado.
 
+### Immutable order rounds
+
+Every press of Order assigns one ordered_nro to the dishes that were still
+Attending. The durable ORDER job stores that batch number. PDF rendering reloads
+the Table Order and exposes only entries from the stored batch to the Order
+Print Format. The browser does not enqueue a second request after the send
+response; the server creates the job in the same business operation and treats
+printing failures as non-blocking.
+
+The ORDER route uses native ESC/POS output for a high-contrast 80 mm kitchen
+ticket. It does not include prices and emphasizes quantity, dish, production
+center and notes with printer-native bold and double-size commands. The PDF
+Order Print Format remains an 80 mm fallback, but existing ORDER routes migrate
+to ESC/POS to avoid raster scaling and reduced thermal-print clarity.
+
 ### Compatibility
 
 La estacion acepta el acuse normalizado por silent_print para HWB 0.13.0 y

@@ -1452,7 +1452,25 @@ class TableOrder(Document):
 
             sync_order_preparation(self.name)
 
-        return self.data()
+        try:
+            from restaurant_management.printing import enqueue_order_round
+
+            print_queue = enqueue_order_round(self, ordered_nro)
+        except Exception:
+            frappe.log_error(
+                title=_("Automatic order printing failed"),
+                message=frappe.get_traceback(),
+            )
+            print_queue = {
+                "queued": False,
+                "error": _("The order was sent, but its ticket could not be queued"),
+            }
+
+        result = self.data()
+        result["ordered_nro"] = ordered_nro
+        result["ordered_identifiers"] = items_to_return
+        result["print_queue"] = print_queue
+        return result
 
     def set_item_note(self, item, notes):
         frappe.db.set_value("Order Entry Item", {"identifier": item}, "notes", notes)

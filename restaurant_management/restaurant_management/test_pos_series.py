@@ -8,9 +8,11 @@ from restaurant_management.restaurant_management.pos_series import (
     autoname_table_order,
     get_company_expense_series,
     get_company_pos_series,
+    get_company_reservation_series,
     get_company_table_order_series,
     get_default_expense_series,
     get_default_pos_series,
+    get_default_reservation_series,
     get_default_table_order_series,
     resolve_pos_document_company,
     resolve_table_order_company,
@@ -191,3 +193,27 @@ class TestPOSSeries(FrappeTestCase):
             resolve_table_order_company,
             doc,
         )
+
+
+    @patch(
+        "restaurant_management.restaurant_management.pos_series.frappe.db.get_value",
+        return_value="ECS",
+    )
+    def test_default_reservation_series_uses_company_abbreviation(self, get_value):
+        self.assertEqual(
+            get_default_reservation_series("Company B"),
+            "RES-ECS-.YYYY.-.#####",
+        )
+
+    @patch(
+        "restaurant_management.restaurant_management.pos_series.get_restaurant_settings"
+    )
+    def test_reads_reservation_series_from_company_settings(self, get_settings):
+        get_settings.return_value = frappe._dict(
+            reservation_naming_series="RES-ADA-.YYYY.-.#####"
+        )
+        self.assertEqual(
+            get_company_reservation_series("Company A"),
+            "RES-ADA-.YYYY.-.#####",
+        )
+        get_settings.assert_called_once_with(company="Company A")

@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import cint
 
 from restaurant_management.restaurant_management.company_settings import (
     RestaurantSettingsMixin,
@@ -15,6 +16,7 @@ class RestaurantCompanySettings(RestaurantSettingsMixin, Document):
     def validate(self):
         self.validate_restaurant_settings()
         self.validate_default_customer()
+        self.validate_reservation_settings()
         self.validate_print_routes()
         validate_company_production_settings(self)
 
@@ -27,6 +29,37 @@ class RestaurantCompanySettings(RestaurantSettingsMixin, Document):
         if not customer or customer.disabled:
             frappe.throw(frappe._("El cliente predeterminado debe estar habilitado."))
 
+    def validate_reservation_settings(self):
+        numeric_fields = (
+            "reservation_default_duration_minutes",
+            "reservation_preparation_minutes",
+            "reservation_cleanup_minutes",
+            "reservation_arrival_grace_minutes",
+            "reservation_max_advance_days",
+        )
+        for fieldname in numeric_fields:
+            if cint(self.get(fieldname)) < 0:
+                frappe.throw(
+                    frappe._("{0} no puede ser negativo").format(
+                        self.meta.get_label(fieldname)
+                    )
+                )
+        if self.enable_reservations and cint(
+            self.reservation_default_duration_minutes
+        ) < 1:
+            frappe.throw(frappe._("La duración de la reserva debe ser mayor a cero"))
+        if self.reservation_default_customer:
+            customer = frappe.db.get_value(
+                "Customer",
+                self.reservation_default_customer,
+                ["name", "disabled"],
+                as_dict=True,
+            )
+            if not customer or customer.disabled:
+                frappe.throw(
+                    frappe._("El cliente predeterminado de reservas debe estar habilitado.")
+                )
+
     def validate_print_routes(self):
         enabled_keys = set()
         for route in self.get("print_routes", []):
@@ -34,8 +67,8 @@ class RestaurantCompanySettings(RestaurantSettingsMixin, Document):
                 frappe.throw(frappe._("Station, Print Format and Hardware Print Type are required"))
             if route.copies is None or route.copies < 1:
                 frappe.throw(frappe._("Print route copies must be at least one"))
-            if route.transport_mode == "ESC/POS" and route.document_type not in {"INVOICE", "ACCOUNT"}:
-                frappe.throw(frappe._("ESC/POS transport is currently available only for INVOICE and ACCOUNT routes"))
+            if route.transport_mode == "ESC/POS" and route.document_type not in {"INVOICE", "ACCOUNT", "ORDER"}:
+                frappe.throw(frappe._("ESC/POS transport is currently available only for INVOICE, ACCOUNT and ORDER routes"))
             station = frappe.db.get_value("Restaurant Print Station", route.station, ["company", "enabled"], as_dict=True)
             if not station or station.company != self.company:
                 frappe.throw(frappe._("Print station {0} must belong to company {1}").format(route.station, self.company))

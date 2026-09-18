@@ -202,6 +202,7 @@ class RestaurantObject(Document):
                 notification["guest_count"] = self.guest_count
                 notification["pre_account_status"] = pre_account["status"]
                 notification["pre_account_requested_at"] = pre_account["requested_at"]
+                notification["upcoming_reservation"] = self.upcoming_reservation
 
             frappe.publish_realtime(self.name, notification, after_commit=True)
 
@@ -232,7 +233,7 @@ class RestaurantObject(Document):
         if not settings.multiple_pending_order and self.orders_count > 0:
             frappe.throw(_("Complete pending orders"))
 
-    def add_order(self, client=None):
+    def add_order(self, client=None, reservation=None):
         # last_user = self.current_user
         active_company = get_user_restaurant_company()
         if not active_company or active_company != self.company:
@@ -246,6 +247,14 @@ class RestaurantObject(Document):
         self.validate_transaction()
 
         self.validate_table()
+
+        from restaurant_management.restaurant_management.doctype.restaurant_reservation.restaurant_reservation import (
+            validate_table_available_for_order,
+        )
+
+        validate_table_available_for_order(
+            self.name, self.company, reservation=reservation
+        )
 
         from erpnext.stock.get_item_details import get_pos_profile
         # from erpnext.controllers.accounts_controller import get_default_taxes_and_charges
@@ -269,6 +278,7 @@ class RestaurantObject(Document):
         order.selling_price_list = pos_profile.selling_price_list
         order.table = self.name
         order.company = company
+        order.reservation = reservation
         order.guest_count = 1
 
         order.save()
@@ -343,6 +353,16 @@ class RestaurantObject(Document):
             "company": self.company,
         }, pluck="guest_count")
         return sum(frappe.utils.cint(value) for value in guest_counts)
+
+    @property
+    def upcoming_reservation(self):
+        if self.type != "Table":
+            return None
+        from restaurant_management.restaurant_management.doctype.restaurant_reservation.restaurant_reservation import (
+            get_table_reservation_summary,
+        )
+
+        return get_table_reservation_summary(self.name, self.company)
 
     @property
     def orders_count_in_production_center(self):
@@ -877,6 +897,7 @@ class RestaurantObject(Document):
             data["guest_count"] = self.guest_count
             data["pre_account_status"] = pre_account["status"]
             data["pre_account_requested_at"] = pre_account["requested_at"]
+            data["upcoming_reservation"] = self.upcoming_reservation
 
         if self.type == "Production Center":
             data["status_managed"] = self._status_managed

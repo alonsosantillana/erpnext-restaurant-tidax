@@ -75,6 +75,7 @@ doc_events = {
     },
     "Table Order": {
         "autoname": "restaurant_management.restaurant_management.pos_series.autoname_table_order",
+        "on_update": "restaurant_management.restaurant_management.doctype.restaurant_reservation.restaurant_reservation.complete_reservation_for_order",
     },
 }
 
@@ -118,6 +119,7 @@ fixtures = [
                 "resto_cocina",
                 "resto_delivery",
                 "resto_produccion",
+                "resto_reservas",
             ],
         ]],
     },
@@ -262,6 +264,7 @@ scheduler_events = {
         "*/5 * * * *": [
             "restaurant_management.electronic_invoice.enqueue_pending_pos_invoice_electronic",
             "restaurant_management.integrations.pedidosya.service.recover_pending_orders",
+            "restaurant_management.restaurant_management.doctype.restaurant_reservation.restaurant_reservation.mark_expired_reservations_no_show",
         ],
         "0 3 * * *":[
             "restaurant_management.restaurant_management.doctype.utils.update_estado_platos"
