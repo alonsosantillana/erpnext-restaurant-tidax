@@ -27,6 +27,7 @@ from restaurant_management.restaurant_management.doctype.restaurant_tip.restaura
 from restaurant_management.restaurant_management.company_settings import (
     get_restaurant_settings,
     get_restaurant_payment_permissions,
+    get_user_restaurant_company,
 )
 status_attending = "Attending"
 
@@ -553,6 +554,78 @@ class TableOrder(Document):
             current_order=self.data(),
             new_order=new_order.data(),
         )
+
+    def deliver_completed_items(self, identifiers, expected_modified):
+        """Record table service separately from kitchen production transitions."""
+        from restaurant_management.restaurant_management.restaurant_manage import check_exceptions
+
+        user = frappe.session.user
+        if "resto_mozo" not in set(frappe.get_roles(user)):
+            frappe.throw(_("Only waiters can deliver dishes to a table"), frappe.PermissionError)
+        company = get_user_restaurant_company(user)
+        if (
+            not company
+            or company != self.company
+            or not frappe.has_permission("Company", "read", self.company)
+            or not frappe.has_permission("Table Order", "read", doc=self)
+            or not frappe.has_permission("Table Order", "write", doc=self)
+        ):
+            frappe.throw(_("Table Order is outside the authorized restaurant company"), frappe.PermissionError)
+        check_exceptions(
+            dict(name="Table Order", short_name="order", action="write", data=self),
+            "You cannot modify an order from another User",
+        )
+        if not isinstance(identifiers, list) or not 1 <= len(identifiers) <= 100:
+            frappe.throw(_("Select 1 to 100 dishes"))
+        if any(not isinstance(value, str) or not value.strip() or value != value.strip() for value in identifiers):
+            frappe.throw(_("Dish identifiers must be non-empty text"))
+        if len(set(identifiers)) != len(identifiers):
+            frappe.throw(_("Dish identifiers must be unique"))
+
+        frappe.db.sql("SELECT name FROM `tabTable Order` WHERE name = %s FOR UPDATE", (self.name,))
+        frappe.db.sql(
+            "SELECT name FROM `tabOrder Entry Item` WHERE parent = %s AND parenttype = %s AND parentfield = %s FOR UPDATE",
+            (self.name, "Table Order", "entry_items"),
+        )
+        self.reload()
+        if get_user_restaurant_company(user) != self.company:
+            frappe.throw(_("Table Order company changed"), frappe.PermissionError)
+        if not all(frappe.has_permission("Table Order", permission, doc=self) for permission in ("read", "write")):
+            frappe.throw(_("Table Order permission changed"), frappe.PermissionError)
+        check_exceptions(
+            dict(name="Table Order", short_name="order", action="write", data=self),
+            "You cannot modify an order from another User",
+        )
+        if not expected_modified or frappe.utils.get_datetime(self.modified) != frappe.utils.get_datetime(expected_modified):
+            frappe.throw(_("Table Order changed after it was read"), frappe.ValidationError)
+        if self.docstatus or self.status != "Attending" or not self.is_dine_in or self.get("link_invoice"):
+            frappe.throw(_("Only active, uninvoiced dine-in orders can deliver dishes"))
+
+        rows = frappe.get_all(
+            "Order Entry Item",
+            filters={"identifier": ("in", identifiers)},
+            fields=["name", "identifier", "parent", "parenttype", "parentfield", "status"],
+            limit_page_length=len(identifiers) + 1,
+        )
+        if len(rows) != len(identifiers) or any(
+            row.parent != self.name
+            or row.parenttype != "Table Order"
+            or row.parentfield != "entry_items"
+            or row.status != "Completed"
+            for row in rows
+        ):
+            frappe.throw(_("Dishes are not completed or do not belong to this order"), frappe.ValidationError)
+
+        for row in rows:
+            frappe.db.set_value("Order Entry Item", row.name, "status", "Delivered")
+        frappe.db.set_value(
+            "Table Order", self.name,
+            {"modified": frappe.utils.now_datetime(), "modified_by": user},
+            update_modified=False,
+        )
+        self.reload()
+        self.synchronize(dict(action="Update"))
+        return {"updated": identifiers, "previous_status": "Completed", "status": "Delivered"}
 
     @staticmethod
     def debug_data(data):
