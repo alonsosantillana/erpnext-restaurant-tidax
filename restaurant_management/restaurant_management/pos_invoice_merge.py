@@ -19,6 +19,25 @@ def _sum_source_taxes(source, base=False):
 	return sum(flt(tax.get(fieldname)) for tax in source.get("taxes"))
 
 
+def _component_rounding_tolerance(items, source, precision, base=False):
+	"""Maximum aggregate residual produced by rounding source components."""
+	fieldname = (
+		"base_tax_amount_after_discount_amount"
+		if base
+		else "tax_amount_after_discount_amount"
+	)
+	item_fieldname = "base_amount" if base else "amount"
+	item_count = sum(1 for item in items if flt(item.get(item_fieldname)))
+	tax_count = sum(
+		1 for tax in source.get("taxes") if flt(tax.get(fieldname))
+	)
+	component_count = item_count + tax_count
+	# For N independently rounded components, the difference against the rounded
+	# document total cannot exceed ceil(N / 2) units of the currency precision.
+	tolerance_units = max(1, (component_count + 1) // 2)
+	return flt(tolerance_units * (10 ** (-precision)), precision)
+
+
 def _source_items(invoice, source_name):
 	return [item for item in invoice.get("items") if item.get("pos_invoice") == source_name]
 
@@ -53,8 +72,6 @@ def reconcile_restaurant_pos_components(invoice, sources, currency_precision=Non
 	"""Make mapped POS components equal their source totals without changing taxes."""
 	precision = currency_precision if currency_precision is not None else get_currency_precision()
 	precision = precision or 2
-	unit = 10 ** (-precision)
-
 	for source in sources:
 		items = _source_items(invoice, source.name)
 		item_total = sum(flt(item.get("amount")) for item in items)
@@ -70,12 +87,23 @@ def reconcile_restaurant_pos_components(invoice, sources, currency_precision=Non
 			precision,
 		)
 
-		if abs(residual) > unit or abs(base_residual) > unit:
+		tolerance = _component_rounding_tolerance(items, source, precision)
+		base_tolerance = _component_rounding_tolerance(
+			items, source, precision, base=True
+		)
+		if abs(residual) > tolerance or abs(base_residual) > base_tolerance:
 			frappe.throw(
 				_(
-					"La Factura POS {0} tiene una diferencia de componentes de {1}. "
-					"Revise sus importes e impuestos antes de consolidar."
-				).format(frappe.bold(source.name), frappe.bold(residual)),
+					"La Factura POS {0} tiene una diferencia de componentes de {1} "
+					"(base {2}), superior a la tolerancia de redondeo de {3} "
+					"(base {4}). Revise sus importes e impuestos antes de consolidar."
+				).format(
+					frappe.bold(source.name),
+					frappe.bold(residual),
+					frappe.bold(base_residual),
+					frappe.bold(tolerance),
+					frappe.bold(base_tolerance),
+				),
 				title=_("Diferencia no conciliable"),
 			)
 

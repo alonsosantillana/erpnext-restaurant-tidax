@@ -101,3 +101,135 @@ class TestPOSInvoiceMerge(FrappeTestCase):
 			[source],
 			2,
 		)
+
+	def test_accumulated_three_cent_rounding_is_reconciled_for_many_lines(self):
+		amounts = [20.0] * 10 + [2.41]
+		invoice = frappe._dict(items=[_item("POS-MANY", amount) for amount in amounts])
+		source = frappe._dict(
+			name="POS-MANY",
+			grand_total=250.0,
+			base_grand_total=250.0,
+			is_return=0,
+			taxes=[
+				frappe._dict(
+					tax_amount_after_discount_amount=21.25,
+					base_tax_amount_after_discount_amount=21.25,
+				),
+				frappe._dict(
+					tax_amount_after_discount_amount=26.31,
+					base_tax_amount_after_discount_amount=26.31,
+				),
+			],
+		)
+
+		reconcile_restaurant_pos_components(invoice, [source], currency_precision=2)
+
+		self.assertEqual(invoice["items"][-1].amount, 2.44)
+		self.assertAlmostEqual(
+			sum(item.amount for item in invoice["items"]) + 21.25 + 26.31,
+			250.0,
+			places=2,
+		)
+
+	def test_many_lines_still_reject_difference_above_rounding_limit(self):
+		amounts = [20.0] * 10 + [2.41]
+		invoice = frappe._dict(items=[_item("POS-BAD", amount) for amount in amounts])
+		source = frappe._dict(
+			name="POS-BAD",
+			grand_total=250.05,
+			base_grand_total=250.05,
+			is_return=0,
+			taxes=[
+				frappe._dict(
+					tax_amount_after_discount_amount=21.25,
+					base_tax_amount_after_discount_amount=21.25,
+				),
+				frappe._dict(
+					tax_amount_after_discount_amount=26.31,
+					base_tax_amount_after_discount_amount=26.31,
+				),
+			],
+		)
+
+		self.assertRaises(
+			frappe.ValidationError,
+			reconcile_restaurant_pos_components,
+			invoice,
+			[source],
+			2,
+		)
+
+	def test_return_rounding_residual_keeps_negative_item_sign(self):
+		amounts = [-20.0] * 10 + [-2.41]
+		invoice = frappe._dict(items=[_item("POS-RETURN", amount) for amount in amounts])
+		source = frappe._dict(
+			name="POS-RETURN",
+			grand_total=-250.0,
+			base_grand_total=-250.0,
+			is_return=1,
+			taxes=[
+				frappe._dict(
+					tax_amount_after_discount_amount=-21.25,
+					base_tax_amount_after_discount_amount=-21.25,
+				),
+				frappe._dict(
+					tax_amount_after_discount_amount=-26.31,
+					base_tax_amount_after_discount_amount=-26.31,
+				),
+			],
+		)
+
+		reconcile_restaurant_pos_components(invoice, [source], currency_precision=2)
+
+		self.assertEqual(invoice["items"][-1].amount, -2.44)
+		self.assertLess(invoice["items"][-1].rate, 0)
+
+	def test_document_and_base_residuals_are_reconciled_independently(self):
+		amounts = [20.0] * 10 + [2.41]
+		items = [_item("POS-FX", amount) for amount in amounts]
+		for item in items:
+			item.base_amount = item.amount * 2
+			item.base_net_amount = item.base_amount
+			item.base_rate = item.base_amount / item.qty
+			item.base_net_rate = item.base_rate
+		invoice = frappe._dict(items=items)
+		source = frappe._dict(
+			name="POS-FX",
+			grand_total=250.0,
+			base_grand_total=500.0,
+			is_return=0,
+			taxes=[
+				frappe._dict(
+					tax_amount_after_discount_amount=21.25,
+					base_tax_amount_after_discount_amount=42.50,
+				),
+				frappe._dict(
+					tax_amount_after_discount_amount=26.31,
+					base_tax_amount_after_discount_amount=52.62,
+				),
+			],
+		)
+
+		reconcile_restaurant_pos_components(invoice, [source], currency_precision=2)
+
+		self.assertEqual(invoice["items"][-1].amount, 2.44)
+		self.assertEqual(invoice["items"][-1].base_amount, 4.88)
+		self.assertAlmostEqual(
+			sum(item.base_amount for item in invoice["items"]) + 42.50 + 52.62,
+			500.0,
+			places=2,
+		)
+
+	def test_zero_value_lines_do_not_expand_rounding_tolerance(self):
+		items = [_item("POS-ZERO", 79.98)]
+		items.extend(_item("POS-ZERO", 0) for _ in range(20))
+		invoice = frappe._dict(items=items)
+		source = _source("POS-ZERO", 98.4, 79.98, 18.4)
+
+		self.assertRaises(
+			frappe.ValidationError,
+			reconcile_restaurant_pos_components,
+			invoice,
+			[source],
+			2,
+		)
