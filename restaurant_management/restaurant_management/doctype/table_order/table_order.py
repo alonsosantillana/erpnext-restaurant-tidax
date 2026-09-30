@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 
 import hashlib
 import json
+from html import escape
 from types import MethodType
 
 import frappe
@@ -120,7 +121,9 @@ def apply_pos_tax_inclusion(invoice, tax_inclusive):
         tax.included_in_print_rate = included_in_print_rate
 
 
-def apply_restaurant_pos_currency(invoice, pos_profile, selling_price_list, company):
+def apply_restaurant_pos_currency(
+    invoice, pos_profile, selling_price_list, company, diagnostic_stage="unknown"
+):
     """Keep restaurant totals in the POS Profile currency, not the customer currency."""
     profile = frappe.db.get_value(
         "POS Profile",
@@ -139,7 +142,17 @@ def apply_restaurant_pos_currency(invoice, pos_profile, selling_price_list, comp
 
     if price_list_currency and price_list_currency != transaction_currency:
         frappe.throw(
-            _("La moneda de la lista de precios debe coincidir con la moneda del perfil POS")
+            _(
+                "La moneda de la lista de precios debe coincidir con la moneda del perfil POS "
+                "(etapa: {stage}; perfil POS: {profile} [{profile_currency}]; "
+                "lista de precios: {price_list} [{price_list_currency}])"
+            ).format(
+                stage=escape(repr(diagnostic_stage)[:80], quote=False),
+                profile=escape(repr(pos_profile)[:120], quote=False),
+                profile_currency=escape(repr(profile.currency)[:40], quote=False),
+                price_list=escape(repr(selling_price_list)[:120], quote=False),
+                price_list_currency=escape(repr(price_list_currency)[:40], quote=False),
+            )
         )
 
     conversion_rate = get_exchange_rate(
@@ -176,6 +189,7 @@ def enforce_restaurant_pos_invoice_currency(invoice, method=None):
         invoice.pos_profile,
         invoice.selling_price_list,
         invoice.company,
+        diagnostic_stage="pos_invoice_validation",
     )
     tax_inclusive = frappe.db.get_value(
         "POS Profile", invoice.pos_profile, "posa_tax_inclusive"
@@ -1042,6 +1056,7 @@ class TableOrder(Document):
             self.pos_profile,
             self.selling_price_list,
             self.company,
+            diagnostic_stage="table_order_invoice_build",
         )
         apply_pos_tax_inclusion(invoice, included_in_print_rate)
         invoice.run_method("calculate_taxes_and_totals")

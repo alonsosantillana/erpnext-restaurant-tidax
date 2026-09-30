@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, PropertyMock, call, patch
 from restaurant_management.restaurant_management.doctype.table_order.table_order import (
 	apply_delivery_fee_invoice_rate,
 	apply_restaurant_pos_currency,
+	enforce_restaurant_pos_invoice_currency,
 	apply_pos_tax_inclusion,
 	get_customer_identity,
 	get_voucher_config,
@@ -27,6 +28,10 @@ from restaurant_management.api import (
 	call as call_restaurant_api,
 	print_order_account,
 )
+
+
+def raise_value_error(message):
+	raise ValueError(message)
 
 
 class TestTableOrder(unittest.TestCase):
@@ -202,6 +207,71 @@ class TestTableOrder(unittest.TestCase):
 		self.assertEqual(invoice.conversion_rate, 1)
 		self.assertEqual(invoice.price_list_currency, "PEN")
 		self.assertEqual(invoice.plc_conversion_rate, 1)
+
+	def test_pos_currency_mismatch_reports_effective_order_values(self):
+		invoice = frappe._dict(currency="PEN")
+		profile = frappe._dict(company="Test Company", currency="PEN")
+
+		with (
+			patch.object(frappe.db, "get_value", side_effect=[profile, "USD"]),
+			patch.object(frappe, "get_cached_value", return_value="PEN"),
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order._",
+				side_effect=lambda text: text,
+			),
+			patch.object(frappe, "throw", side_effect=raise_value_error),
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order.get_exchange_rate"
+			) as exchange_rate,
+		):
+			with self.assertRaises(ValueError) as raised:
+				apply_restaurant_pos_currency(
+					invoice,
+					"Resto2",
+					"Resto USD",
+					"Test Company",
+					diagnostic_stage="table_order_invoice_build",
+				)
+
+		message = str(raised.exception)
+		self.assertIn("table_order_invoice_build", message)
+		self.assertIn("Resto2", message)
+		self.assertIn("Resto USD", message)
+		self.assertIn("PEN", message)
+		self.assertIn("USD", message)
+		self.assertEqual(invoice.currency, "PEN")
+		exchange_rate.assert_not_called()
+
+	def test_pos_currency_mismatch_reports_invoice_validation_stage(self):
+		invoice = frappe._dict(
+			is_pos=1,
+			pos_profile="Resto2",
+			selling_price_list="Resto USD",
+			company="Test Company",
+			currency="PEN",
+		)
+		profile = frappe._dict(company="Test Company", currency="PEN")
+
+		with (
+			patch.object(frappe.db, "exists", return_value=True),
+			patch.object(frappe.db, "get_value", side_effect=[profile, "USD"]),
+			patch.object(frappe, "get_cached_value", return_value="PEN"),
+			patch(
+				"restaurant_management.restaurant_management.doctype.table_order.table_order._",
+				side_effect=lambda text: text,
+			),
+			patch.object(frappe, "throw", side_effect=raise_value_error),
+		):
+			with self.assertRaises(ValueError) as raised:
+				enforce_restaurant_pos_invoice_currency(invoice)
+
+		message = str(raised.exception)
+		self.assertIn("pos_invoice_validation", message)
+		self.assertIn("Resto2", message)
+		self.assertIn("Resto USD", message)
+		self.assertIn("PEN", message)
+		self.assertIn("USD", message)
+		self.assertEqual(invoice.currency, "PEN")
 
 	@patch("restaurant_management.api._require_authenticated_user")
 	@patch("restaurant_management.api.frappe.has_permission", return_value=True)
