@@ -22,6 +22,75 @@ class TestRestoTixMobileAPI(unittest.TestCase):
     def tearDown(self):
         frappe.destroy()
 
+    def test_offpremise_billing_access_requires_explicit_opt_in(self):
+        context = frappe._dict(company="COMPANY-A", pos_profile="POS-A")
+        for service_type in ("Delivery", "Pickup"):
+            with self.subTest(service_type=service_type):
+                order = frappe._dict(
+                    company="COMPANY-A", pos_profile="POS-A",
+                    service_type=service_type, room=None, table=None,
+                    status=v1.ORDER_STATUS_OPEN,
+                )
+                with (
+                    patch.object(v1, "_allowed_rooms", return_value=["ROOM-1"]),
+                    patch.object(v1, "check_exceptions") as check,
+                ):
+                    v1._validate_order_access(order, context, "write", allow_offpremise=True)
+                    check.assert_called_once()
+                with (
+                    patch.object(v1, "_allowed_rooms", return_value=["ROOM-1"]),
+                    patch.object(v1, "_fail", side_effect=frappe.PermissionError("denied")),
+                    self.assertRaises(frappe.PermissionError),
+                ):
+                    v1._validate_order_access(order, context, "write")
+
+    def test_offpremise_billing_access_keeps_room_and_context_guards(self):
+        context = frappe._dict(company="COMPANY-A", pos_profile="POS-A")
+        cases = (
+            ("Dine In", "ROOM-2", "TABLE-2", "COMPANY-A", "POS-A"),
+            ("Delivery", "ROOM-1", None, "COMPANY-A", "POS-A"),
+            ("Pickup", None, "TABLE-1", "COMPANY-A", "POS-A"),
+            ("Delivery", None, None, "COMPANY-B", "POS-A"),
+            ("Pickup", None, None, "COMPANY-A", "POS-B"),
+        )
+        for service_type, room, table, company, profile in cases:
+            with self.subTest(
+                service_type=service_type, room=room, table=table,
+                company=company, profile=profile,
+            ):
+                order = frappe._dict(
+                    company=company, pos_profile=profile, service_type=service_type,
+                    room=room, table=table, status=v1.ORDER_STATUS_OPEN,
+                )
+                with (
+                    patch.object(v1, "_allowed_rooms", return_value=["ROOM-1"]),
+                    patch.object(v1, "check_exceptions") as check,
+                    patch.object(v1, "_fail", side_effect=frappe.PermissionError("denied")),
+                    self.assertRaises(frappe.PermissionError),
+                ):
+                    v1._validate_order_access(order, context, "write", allow_offpremise=True)
+                check.assert_not_called()
+
+    def test_offpremise_billing_access_keeps_native_permission_and_open_status(self):
+        context = frappe._dict(company="COMPANY-A", pos_profile="POS-A")
+        order = frappe._dict(
+            company="COMPANY-A", pos_profile="POS-A", service_type="Delivery",
+            room=None, table=None, status=v1.ORDER_STATUS_OPEN,
+        )
+        with (
+            patch.object(v1, "check_exceptions", side_effect=frappe.ValidationError("denied")),
+            patch.object(v1, "_fail", side_effect=frappe.PermissionError("denied")),
+            self.assertRaises(frappe.PermissionError),
+        ):
+            v1._validate_order_access(order, context, "write", allow_offpremise=True)
+        order.status = "Invoiced"
+        with (
+            patch.object(v1, "check_exceptions"),
+            patch.object(v1, "_fail", side_effect=frappe.ValidationError("not open")),
+            self.assertRaises(frappe.ValidationError),
+        ):
+            v1._validate_order_access(order, context, "write", allow_offpremise=True)
+
     def test_client_request_id_is_normalized(self):
         request_id = uuid.uuid4()
 
@@ -413,7 +482,7 @@ class TestRestoTixMobileAPI(unittest.TestCase):
             patch.object(v1, "_active_context", return_value=context),
             patch.object(v1, "_begin_request", return_value=(MagicMock(), None)),
             patch.object(v1, "_lock_order", return_value=order),
-            patch.object(v1, "_validate_order_access"),
+            patch.object(v1, "_validate_order_access") as validate_access,
             patch.object(v1, "_assert_order_version"),
             patch.object(v1, "_payment_permissions", return_value=frappe._dict(can_pay=True)),
             patch.object(v1, "_billing_profile", return_value=(MagicMock(), [{"name": "Cash"}])),
@@ -436,6 +505,7 @@ class TestRestoTixMobileAPI(unittest.TestCase):
         self.assertEqual(order.invoice_kwargs["mode_of_payment"], {"Cash": 59.9})
         self.assertEqual(order.invoice_kwargs["customer"], "CUSTOMER-1")
         complete_request.assert_called_once()
+        validate_access.assert_called_once_with(order, context, "write", allow_offpremise=True)
 
     def test_table_payload_does_not_expose_assigned_user(self):
         context = frappe._dict(

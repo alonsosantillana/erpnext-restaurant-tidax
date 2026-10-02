@@ -237,7 +237,10 @@ def _validate_table_access(table, context) -> None:
         )
 
 
-def _validate_order_access(order, context, action: str = "read") -> None:
+def _validate_order_access(
+    order, context, action: str = "read", *, allow_offpremise: bool = False
+) -> None:
+    offpremise_billing = allow_offpremise and order.service_type in {"Delivery", "Pickup"}
     if order.company != context.company or order.pos_profile != context.pos_profile:
         _fail(
             "ORDER_NOT_ALLOWED",
@@ -245,7 +248,14 @@ def _validate_order_access(order, context, action: str = "read") -> None:
             403,
             frappe.PermissionError,
         )
-    if order.room not in _allowed_rooms(context):
+    if offpremise_billing and (order.room or order.table):
+        _fail(
+            "ORDER_NOT_ALLOWED",
+            "Off-premise order cannot have a room or table",
+            403,
+            frappe.PermissionError,
+        )
+    if not offpremise_billing and order.room not in _allowed_rooms(context):
         _fail(
             "ORDER_NOT_ALLOWED",
             "The requested order belongs to an unauthorized room",
@@ -1039,7 +1049,7 @@ def create_invoice(
         return cached
 
     order = _lock_order(order_name)
-    _validate_order_access(order, context, "write")
+    _validate_order_access(order, context, "write", allow_offpremise=True)
     _assert_order_version(order, expected_order_version)
     if not _payment_permissions(context, order).can_pay:
         _fail(
