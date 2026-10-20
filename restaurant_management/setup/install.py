@@ -584,6 +584,8 @@ def set_custom_scripts():
         if script_name
         else frappe.new_doc("Client Script")
     )
+    if CS.is_new():
+        CS.name = "Restaurant POS Profile Room Permissions"
 
     CS.set("enabled", 1)
     CS.set("view", "Form")
