@@ -20,14 +20,31 @@ frappe.pages["restaurant-print-console"].on_page_hide = function(wrapper) {
     if (wrapper.page.station_controller) wrapper.page.station_controller.stop();
 };
 
+function restaurant_print_client_is_ready() {
+    const client = frappe.silent_print;
+    if (typeof client?.make_id !== "function"
+        || typeof client?.WebSocketPrinter !== "function") return false;
+
+    return ["connect", "reconnect", "close", "getState", "isConnected", "submit"]
+        .every(method => typeof client.WebSocketPrinter.prototype?.[method] === "function");
+}
+
 async function get_restaurant_print_station_controller(wrapper) {
     if (wrapper.page.station_controller) return wrapper.page.station_controller;
 
-    if (!frappe.silent_print || !frappe.silent_print.WebSocketPrinter) {
-        await frappe.require("/assets/silent_print/js/silent_print_v15.js");
+    if (!restaurant_print_client_is_ready()) {
+        try {
+            await frappe.require("/assets/silent_print/js/silent_print_v15.js");
+        } catch (error) {
+            throw new Error(__(
+                "No se pudo cargar el cliente de impresión v15. Actualice la app silent_print, reconstruya sus assets y recargue la página."
+            ), { cause: error });
+        }
     }
-    if (!frappe.silent_print || !frappe.silent_print.WebSocketPrinter) {
-        throw new Error(__("No se pudo cargar el cliente de Silent Print."));
+    if (!restaurant_print_client_is_ready()) {
+        throw new Error(__(
+            "El cliente de impresión es incompatible. Actualice la app silent_print, reconstruya sus assets y recargue la página."
+        ));
     }
 
     wrapper.page.main.find('[data-role="station-loading"]').remove();
