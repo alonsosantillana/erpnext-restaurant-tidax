@@ -1,5 +1,9 @@
 import frappe
 
+from restaurant_management.restaurant_management.pos_series import (
+    validate_company_pos_series,
+)
+
 
 SETTINGS_FIELDS = (
     "restricted_to_owner_table",
@@ -77,6 +81,8 @@ def _migrate_settings(company):
             {fieldname: row.get(fieldname) for fieldname in child_fields},
         )
 
+    # Migration bypasses normal settings validation, but mandatory series still apply.
+    validate_company_pos_series(target)
     target.insert(ignore_permissions=True)
 
 
