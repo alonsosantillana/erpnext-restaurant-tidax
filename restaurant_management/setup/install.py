@@ -300,6 +300,11 @@ WAITER_PERMISSION_RULES = {
     'Item': ('read', 'select'),
 }
 
+KITCHEN_PERMISSION_RULES = {
+    # Restaurant Manage needs the profile configuration even for kitchen-only users.
+    'POS Profile': ('read', 'select'),
+}
+
 PRODUCTION_PERMISSION_RULES = {
     # Operational production documents. Cancellation and deletion remain
     # reserved for managers so posted stock movements cannot be reversed here.
@@ -419,6 +424,8 @@ def set_operational_role_permissions():
         permission_rules.setdefault(doctype, {})['resto_cajero'] = permission_types
     for doctype, permission_types in WAITER_PERMISSION_RULES.items():
         permission_rules.setdefault(doctype, {})['resto_mozo'] = permission_types
+    for doctype, permission_types in KITCHEN_PERMISSION_RULES.items():
+        permission_rules.setdefault(doctype, {})['resto_cocina'] = permission_types
     for doctype, permission_types in PRODUCTION_PERMISSION_RULES.items():
         permission_rules.setdefault(doctype, {})['resto_produccion'] = permission_types
     for doctype, permission_types in RESERVATION_PERMISSION_RULES.items():

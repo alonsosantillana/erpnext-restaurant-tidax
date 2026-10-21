@@ -1,3 +1,4 @@
+from copy import deepcopy
 from unittest import TestCase
 from unittest.mock import MagicMock, call, patch
 
@@ -5,6 +6,91 @@ import frappe
 from frappe.model.naming import _prompt_autoname
 
 from restaurant_management.setup import install
+
+
+class TestKitchenProfilePermissions(TestCase):
+    def setUp(self):
+        self.rules = {}
+        self.db = self.enterContext(patch.object(install.frappe, "db", MagicMock()))
+        self.db.exists.return_value = True
+        self.db.get_value.side_effect = self.get_permission
+        self.add = self.enterContext(
+            patch("frappe.permissions.add_permission", side_effect=self.add_permission)
+        )
+        self.update = self.enterContext(
+            patch(
+                "frappe.permissions.update_permission_property",
+                side_effect=self.update_permission,
+            )
+        )
+        self.enterContext(patch.object(install.frappe, "clear_cache"))
+        self.enterContext(patch.object(install, "set_production_report_permissions"))
+
+    def get_permission(self, doctype, identifier, fieldname=None):
+        self.assertEqual(doctype, "Custom DocPerm")
+        if isinstance(identifier, dict):
+            key = (
+                identifier["parent"], identifier["role"],
+                identifier["permlevel"], identifier["if_owner"],
+            )
+            return self.rules.get(key, {}).get("name")
+        return next(
+            (row.get(fieldname, 0) for row in self.rules.values() if row["name"] == identifier),
+            None,
+        )
+
+    def add_permission(self, doctype, role, permlevel=0, ptype=None):
+        key = (doctype, role, permlevel, 0)
+        self.assertNotIn(key, self.rules)
+        self.rules[key] = {"name": f"perm-{len(self.rules)}", ptype: 1}
+
+    def update_permission(self, doctype, role, permlevel, ptype, value):
+        self.rules[(doctype, role, permlevel, 0)][ptype] = value
+
+    def test_kitchen_receives_only_profile_and_company_read_select(self):
+        install.set_operational_role_permissions()
+
+        kitchen_rules = {
+            key[0]: {field: value for field, value in row.items() if field != "name"}
+            for key, row in self.rules.items() if key[1] == "resto_cocina"
+        }
+        self.assertEqual(kitchen_rules, {
+            "Company": {"read": 1, "select": 1},
+            "POS Profile": {"read": 1, "select": 1},
+        })
+        self.add.assert_any_call("POS Profile", "resto_cocina", permlevel=0, ptype="read")
+
+    def test_existing_rule_is_repaired_and_custom_grants_are_preserved(self):
+        key = ("POS Profile", "resto_cocina", 0, 0)
+        self.rules[key] = {"name": "existing-kitchen-rule", "read": 1, "write": 1}
+
+        install.set_operational_role_permissions()
+
+        self.assertEqual(self.rules[key], {
+            "name": "existing-kitchen-rule", "read": 1, "write": 1, "select": 1,
+        })
+        kitchen_updates = [
+            invocation for invocation in self.update.call_args_list
+            if invocation.args[:2] == ("POS Profile", "resto_cocina")
+        ]
+        self.assertEqual(kitchen_updates, [call("POS Profile", "resto_cocina", 0, "select", 1)])
+        self.assertFalse(any(
+            invocation.args[:2] == ("POS Profile", "resto_cocina")
+            for invocation in self.add.call_args_list
+        ))
+
+    def test_repeated_sync_creates_no_duplicates_or_rewrites(self):
+        install.set_operational_role_permissions()
+        before = deepcopy(self.rules)
+        self.add.reset_mock()
+        self.update.reset_mock()
+
+        install.set_operational_role_permissions()
+
+        self.assertIn(("POS Profile", "resto_cocina", 0, 0), self.rules)
+        self.assertEqual(self.rules, before)
+        self.add.assert_not_called()
+        self.update.assert_not_called()
 
 
 class TestRoomPermissionsClientScript(TestCase):
