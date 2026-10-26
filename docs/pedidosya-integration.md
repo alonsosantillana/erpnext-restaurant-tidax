@@ -34,6 +34,51 @@ Los endpoints Frappe son:
 - `POST /api/method/restaurant_management.integrations.pedidosya.api.dispatch_order?remote_id=<remoteId>`
 - `PUT /api/method/restaurant_management.integrations.pedidosya.api.update_order_status?remote_id=<remoteId>&remote_order_id=<remoteOrderId>`
 
+### Autenticación entrante y prueba sin sesión
+
+El JWT entrante se valida mediante `auth_hooks` antes del rechazo genérico de
+Frappe a un Bearer desconocido. El hook solo reconoce las rutas exactas anteriores
+(y sus equivalentes `/api/v1/method/`), con POST para dispatch y PUT/POST para
+status. No habilita autenticación JWT en otras APIs ni en rutas con sufijos.
+Se rechazan `cmd` que redirijan la llamada y overrides del método antes de cambiar
+la identidad. No enviar `cmd` ni añadir una barra final a las URLs del webhook.
+
+El token debe estar firmado con el secreto de la configuración habilitada, usar
+HS256/HS384/HS512 según el algoritmo configurado e incluir `exp` y
+`service: "middleware"`. Se validan issuer/audience cuando estén configurados;
+una tolerancia de reloj de 0 se respeta. Los tokens sin vencimiento, antes
+admitidos por la validación interna, ahora se rechazan. El usuario de integración
+debe existir y estar habilitado; no usar los usuarios especiales `Guest` ni
+`Administrator`. No se otorgan roles ni se modifica la seguridad de otras APIs.
+
+Una prueba correcta no debe enviar cookies de administrador. Ante 401, distinguir
+un rechazo global de Frappe de uno por firma, vencimiento, configuración o usuario;
+no cambiar permisos ni quitar la validación JWT para hacerla pasar. El endpoint
+vuelve a validar el JWT como defensa adicional. No copiar secretos ni JWT a logs,
+capturas o conversaciones.
+
+### Validación de la corrección del hook
+
+Las pruebas aisladas se ejecutan desde la raíz de esta app, sin inicializar sitio:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 ../../env/bin/python -m unittest discover \
+  -s restaurant_management/integrations/pedidosya -p 'test_*.py' -v
+```
+
+No usar `bench run-tests` sobre sitios operativos: la inicialización de ERPNext
+puede eliminar Item Price. La suite usa DB simulada y ejecuta `validate_auth` y
+`set_user` reales; simula OAuth, API keys, validación IP, persistencia y colas.
+No sustituye una prueba HTTP/WSGI completa ni la certificación del proveedor.
+
+La corrección no cambia esquema ni frontend: no requiere `migrate` ni `build`.
+Para un despliegue posterior autorizado, actualizar código, limpiar la caché de
+hooks del sitio y recargar los procesos según el modo de ejecución. Esos comandos
+no forman parte de la validación aislada y requieren autorización operacional.
+Repetir después la recepción con `test: true` y sin callbacks: primera entrega
+202, duplicado 200 con el mismo identificador, estado final `Test` y enlaces a
+orden/fulfillment vacíos. Deshabilitar la configuración de simulación al terminar.
+
 Si PedidosYa exige literalmente `/order/{remoteId}` y `/remoteId/{remoteId}/remoteOrder/{remoteOrderId}/posOrderStatus`, publicar esos paths mediante el reverse proxy hacia los métodos anteriores. El proxy debe preservar `Authorization` y el cuerpo JSON, aceptar exclusivamente HTTPS y no reintentar respuestas 4xx.
 
 ## Operación

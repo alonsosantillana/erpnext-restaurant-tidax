@@ -15,6 +15,10 @@ app_license = "GPL-3.0-only"
 required_apps = ["erpnext", "ovenube_peru", "silent_print"]
 source_link = "https://github.com/joepa37/restaurant_management"
 
+auth_hooks = [
+    "restaurant_management.integrations.pedidosya.auth.authenticate_request",
+]
+
 jinja = {
     "methods": [
         "restaurant_management.thermal_print.qr_svg_data_uri",

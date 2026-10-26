@@ -1,15 +1,12 @@
 import frappe
 
-from restaurant_management.integrations.pedidosya.auth import authenticate_inbound
+from restaurant_management.integrations.pedidosya.auth import authenticate_inbound, get_enabled_settings
 from restaurant_management.integrations.pedidosya.parsing import PayloadError
 from restaurant_management.integrations.pedidosya.service import receive_order, receive_status
 
 
 def _settings(remote_id):
-    name = frappe.db.get_value("PedidosYa Integration Settings", {"remote_id": remote_id, "enabled": 1}, "name")
-    if not name:
-        frappe.throw("PedidosYa restaurant is not enabled", frappe.DoesNotExistError)
-    return frappe.get_doc("PedidosYa Integration Settings", name)
+    return get_enabled_settings(remote_id)
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
