@@ -92,6 +92,27 @@ Si PedidosYa exige literalmente `/order/{remoteId}` y `/remoteId/{remoteId}/remo
 
 Los pedidos de prueba (`test=true`) validan autenticación, estructura y mapeo, pero no crean órdenes operativas.
 
+### Medio de pago al calcular e importar
+
+El perfil POS debe tener un único medio de pago predeterminado habilitado y una
+cuenta configurada para la compañía. El cálculo usa ese medio en una factura
+temporal, sin guardar comprobantes, cobrar ni generar asientos. No depende de un
+medio global llamado `cash` ni habilita métodos automáticamente. Si falta un
+predeterminado válido, el error identifica el perfil que debe revisarse.
+
+Al cobrar, se conservan los medios e importes seleccionados por el cajero, también
+en pagos mixtos. Las validaciones estándar de ERPNext continúan aplicándose a los
+medios usados y sus cuentas. El estado logístico `Prepaid` de PedidosYa no equivale
+a una contabilización automática del cobro.
+
+Si un inbox falló con `Mode of Payment cash is disabled`, después de publicar y
+desplegar la corrección usar **Retry Processing** en el registro existente, siempre
+que no tenga orden enlazada. No enviar un token nuevo: generaría otra recepción.
+En flujo Direct con autoaceptación apagada, esperar `Awaiting Acceptance`, una sola
+orden y fulfillment, sin aceptar, cobrar ni emitir durante esta comprobación.
+El scheduler también puede reintentar el registro; revisar sus enlaces antes de
+repetir acciones. Esta corrección Python no requiere `migrate` ni `build`.
+
 ## Activación segura
 
 1. Desplegar código y ejecutar la migración en una ventana controlada.
