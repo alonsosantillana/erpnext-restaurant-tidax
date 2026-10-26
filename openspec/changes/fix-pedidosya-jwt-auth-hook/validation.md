@@ -4,7 +4,8 @@
 
 - Host local confirmado como 192.168.2.53; repositorio restaurant_management.
 - master y upstream/master coincidían en cd6564d al iniciar, árbol limpio.
-- Rama local: fix/pedidosya-jwt-auth-hook. No merge ni push en este alcance.
+- Rama local: fix/pedidosya-jwt-auth-hook. La implementación inicial se entregó
+  sin merge ni push; la publicación fue autorizada posteriormente (ver abajo).
 - Solo se cambió código/documentación/pruebas de esta app. No se modificaron
   Frappe, ERPNext, ovenube_peru, silent_print ni resto.v1.tidax.pe.
 - No se ejecutaron migrate, restart, clear-cache, bench run-tests, consultas a
@@ -46,7 +47,11 @@ IP, persistencia y colas. No prueban WSGI/init_request completo ni una BD real.
 ## Pending operational validation
 
 La corrección está en el código de desarrollo, no desplegada en el servidor de
-pruebas remoto. Para una publicación/despliegue posterior se requiere autorización.
+pruebas remoto. El usuario autorizó después: «ok pasa los cambios a la rama
+principal y push remoto». Se prepara la integración de d654ec7 y su documentación
+en master de restaurant_management y la publicación en upstream
+(alonsosantillana/erpnext-restaurant-tidax). Se repitieron las 44 pruebas aisladas
+antes de la integración. Esto no autoriza desplegar ni modificar sitios.
 No necesita migrate ni build de frontend; actualizar caché de hooks y procesos
 según el modo de ejecución en una ventana autorizada.
 

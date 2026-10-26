@@ -19,6 +19,7 @@
 
 - [x] Registrar resultados, límites y estado Git; dejar cambios solo en desarrollo.
 - [x] Documentar pasos pendientes para despliegue posterior autorizado y repetir test=true.
+- [x] Registrar autorización posterior para integrar en master y hacer push remoto, sin desplegar.
 
 ## Results
 

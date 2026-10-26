@@ -21,8 +21,10 @@ de trabajo fix/pedidosya-jwt-auth-hook. Riesgo alto: autenticación e integraci�
 El usuario autorizó expresamente la corrección únicamente en desarrollo.
 Archivos: hooks.py, integrations/pedidosya/auth.py, api.py, pruebas y documentación.
 Sin cambios en core, otras apps, roles, DocTypes, fixtures, esquema o precios.
-No desplegar ni cambiar configuración/datos de resto.v1.tidax.pe. No hacer merge
-ni publicación remota en este alcance; dejar el cambio local revisable.
+No desplegar ni cambiar configuración/datos de resto.v1.tidax.pe. El alcance
+inicial dejó el cambio local revisable; posteriormente el usuario autorizó
+explícitamente integrar en master y publicar en el remoto. Esa autorización
+no incluye despliegue ni cambios de datos/configuración de ningún sitio.
 
 ## Acceptance
 
