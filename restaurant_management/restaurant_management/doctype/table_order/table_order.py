@@ -121,6 +121,34 @@ def apply_pos_tax_inclusion(invoice, tax_inclusive):
         tax.included_in_print_rate = included_in_print_rate
 
 
+def get_pos_preview_payment_method(pos_profile, company):
+    """Resolve a temporary validation payment, never an actual receipt of money."""
+    profile = frappe.get_cached_doc("POS Profile", pos_profile)
+    if profile.company != company or cint(profile.get("disabled")):
+        frappe.throw(
+            _("Configure un perfil POS habilitado para la empresa de la orden: {0}").format(
+                frappe.bold(pos_profile)
+            )
+        )
+
+    defaults = [row for row in profile.get("payments") or [] if cint(row.get("default"))]
+    if len(defaults) != 1 or not defaults[0].get("mode_of_payment"):
+        frappe.throw(
+            _("Configure un único medio de pago predeterminado en el perfil POS {0}").format(
+                frappe.bold(pos_profile)
+            )
+        )
+
+    method = defaults[0].mode_of_payment
+    if not cint(frappe.get_cached_value("Mode of Payment", method, "enabled")):
+        frappe.throw(
+            _("El medio de pago predeterminado del perfil POS {0} debe estar habilitado").format(
+                frappe.bold(pos_profile)
+            )
+        )
+    return method
+
+
 def apply_restaurant_pos_currency(
     invoice, pos_profile, selling_price_list, company, diagnostic_stage="unknown"
 ):
@@ -710,6 +738,9 @@ class TableOrder(Document):
                 frappe.PermissionError,
             )
 
+        if not mode_of_payment:
+            frappe.throw(_("At least one mode of payment is required for POS invoice."))
+
         if self.link_invoice:
             return frappe.throw(_("The order has been invoiced"))
 
@@ -744,13 +775,7 @@ class TableOrder(Document):
         if len(entry_items) == 0:
             frappe.throw(_("There is not Item in this Order"))
 
-        invoice = self.get_invoice(entry_items, True)
-        invoice.payments = []
-        for mp in mode_of_payment:
-            invoice.append('payments', dict(
-                mode_of_payment=mp,
-                amount=mode_of_payment[mp]
-            ))
+        invoice = self.get_invoice(entry_items, True, mode_of_payment=mode_of_payment)
 
         # TIDAX: CASOS PRODUCTOS GRATIS
         total_dicount_lines = 0
@@ -945,13 +970,26 @@ class TableOrder(Document):
                 "POS Profile", self.pos_profile, "warehouse"
             )
 
-    def get_invoice(self, entry_items=None, make=False):
+    def get_invoice(self, entry_items=None, make=False, mode_of_payment=None):
+        if mode_of_payment is not None and not mode_of_payment:
+            frappe.throw(_("At least one mode of payment is required for POS invoice."))
+        preview_method = (
+            get_pos_preview_payment_method(self.pos_profile, self.company)
+            if mode_of_payment is None else None
+        )
         invoice = frappe.new_doc("POS Invoice")
         invoice.validate_pos_opening_entry = MethodType(
             validate_restaurant_pos_opening_entry,
             invoice,
         )
         self.transfer_order_values(invoice)
+
+        # Prevent native set_missing_values from refreshing every profile method.
+        # Only the chosen methods need an account, not unrelated/disabled tenders.
+        invoice.payments = []
+        initial_payments = mode_of_payment if mode_of_payment is not None else {preview_method: 0}
+        for method, amount in initial_payments.items():
+            invoice.append("payments", dict(mode_of_payment=method, amount=amount))
 
         invoice.items = []
         invoice.taxes = []
@@ -1061,16 +1099,16 @@ class TableOrder(Document):
         apply_pos_tax_inclusion(invoice, included_in_print_rate)
         invoice.run_method("calculate_taxes_and_totals")
 
-        ##To validate the invoice
+        # Preview payments exist only on this unsaved invoice. Cashier payments
+        # must be used unchanged from the first validation, including mixed tenders.
+        if mode_of_payment is None:
+            mode_of_payment = {preview_method: invoice.grand_total}
         invoice.payments = []
-        invoice.append('payments', dict(
-            mode_of_payment="cash",
-            amount=invoice.grand_total
-        ))
+        for method, amount in mode_of_payment.items():
+            invoice.append("payments", dict(mode_of_payment=method, amount=amount))
         invoice._action = "submit"
         invoice.validate()
         enforce_restaurant_pos_invoice_currency(invoice)
-        ##To validate the invoice
 
         return invoice
 
