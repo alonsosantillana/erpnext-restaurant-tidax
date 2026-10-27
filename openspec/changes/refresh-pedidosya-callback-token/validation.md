@@ -40,3 +40,7 @@ Injected failure before fixture commit was observed as expected; all cleanup che
 The receiver is simulated, not PedidosYa's sandbox. Scheduler execution was targeted, not natural cron. Concurrent logins are not single-flight; the guarantee is that invalidating a rejected token cannot delete a newer value. Serialization follows the installed Frappe v15 RedisWrapper; revalidate when upgrading that dependency. Outgoing callback renewal does not add payment/accounting behavior.
 
 Changes are for a local commit only. GitHub publication, principal-branch merge and any deployment require separate explicit authorization.
+
+## Subsequent publication authorization — 2026-10-27
+
+After completion of local commit `dd4ff666b91586856967d5199e91d6e151482c39`, the user explicitly requested integration into the principal branch and remote push. This authorizes merging into `master` and publishing to the existing `upstream` GitHub repository only. It does not authorize production access, deployment or restart. Before integration, `master` and `upstream/master` both resolved to `c498d693e0998f126934b5b73845879307c3bcf5`; all 70 isolated tests and strict OpenSpec validation passed again. No deployment workflows were present in the repository.
