@@ -317,35 +317,53 @@ def main():
             run_worker("LOGIN-RESTORED")
             require(confirmed("BADLOGIN"), "restored_login_failed")
 
+            # Exercise the real Redis Lua comparison with synthetic credentials.
+            # A newer worker's value must survive invalidation of an older token.
+            rejected, renewed = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+            frappe.cache.set_value(cache_key, renewed, expires_in_sec=300)
+            frappe.local.cache[frappe.cache.make_key(cache_key)] = rejected
+            client._invalidate_access_token(cfg, rejected)
+            require(frappe.cache.make_key(cache_key) not in frappe.local.cache,
+                    "stale_request_local_token_retained")
+            require(frappe.cache.get_value(cache_key, expires=True) == renewed,
+                    "concurrently_renewed_token_deleted")
+            client._invalidate_access_token(cfg, renewed)
+            require(frappe.cache.get_value(cache_key, expires=True) is None,
+                    "matching_rejected_token_not_deleted")
+            result["checks"].append("real Redis atomic invalidation preserves a newer token and removes only a matching token")
+
             invalid = secrets.token_urlsafe(32)
             frappe.cache.set_value(cache_key, invalid, expires_in_sec=300)
-            for attempt in (1, 2):
-                enqueue_case("BADTOKEN", "INVALID" + str(attempt))
-                run_worker("BADTOKEN" + str(attempt))
-                require(not confirmed("BADTOKEN") and frappe.cache.get_value(cache_key) == invalid,
-                        "unexpected_401_refresh_or_confirmation")
-            frappe.cache.delete_value(cache_key)
-            enqueue_case("BADTOKEN", "CLEARED")
-            run_worker("BADTOKEN-CLEARED")
-            require(confirmed("BADTOKEN"), "cache_clear_did_not_recover")
-            token = frappe.cache.get_value(cache_key)
+            auth_before = len(store.evidence(active_run[0], limit=1000))
+            enqueue_case("BADTOKEN", "AUTO-REFRESH")
+            run_worker("BADTOKEN")
+            require(confirmed("BADTOKEN"), "invalid_token_automatic_recovery_failed")
+            ev = store.evidence(active_run[0], limit=1000)[auth_before:]
+            require([(r["event"], r["result"]) for r in ev] ==
+                    [("prepared", "401"), ("login", "200"), ("prepared", "204")],
+                    "invalid_token_bounded_renewal_sequence")
+            token = frappe.cache.get_value(cache_key, expires=True)
             require(bool(token), "test_token_required")
+            require(token != invalid, "invalid_token_not_replaced")
             with store.transaction() as db:
                 updated = db.execute("UPDATE tokens SET expires=0 WHERE digest=?", (Store.token_hash(token),)).rowcount
                 require(updated == 1, "token_expiry_scope")
-            enqueue_case("EXPIRED", "INVALID")
+            auth_before = len(store.evidence(active_run[0], limit=1000))
+            enqueue_case("EXPIRED", "AUTO-REFRESH")
             run_worker("EXPIRED")
-            require(not confirmed("EXPIRED"), "expired_token_confirmed")
-            frappe.cache.delete_value(cache_key)
-            enqueue_case("EXPIRED", "CLEARED")
-            run_worker("EXPIRED-CLEARED")
             require(confirmed("EXPIRED"), "expired_token_recovery_failed")
+            ev = store.evidence(active_run[0], limit=1000)[auth_before:]
+            require([(r["event"], r["result"]) for r in ev] ==
+                    [("prepared", "401"), ("login", "200"), ("prepared", "204")],
+                    "expired_token_bounded_renewal_sequence")
+            require(frappe.cache.get_value(cache_key, expires=True) != token,
+                    "expired_token_not_replaced")
             ev = store.evidence(active_run[0], limit=1000)
             require([r["result"] for r in ev if r["test_id"].endswith(":" + names["BADTOKEN"])] ==
-                    ["401", "401", "204"], "bad_token_sequence")
+                    ["401", "204"], "bad_token_sequence")
             require([r["result"] for r in ev if r["test_id"].endswith(":" + names["EXPIRED"])] ==
                     ["401", "204"], "expired_token_sequence")
-            result["checks"].append("bad credentials, invalid token and expired token fail without notification; only own cache reset restores token access")
+            result["checks"].append("bad credentials do not confirm; invalid and expired tokens recover automatically within one RQ job each: callback401/login200/callback204")
             record_jobs()
         result["receiver_evidence"] = []
         for suffix in ("WORKER", "TRANSIENT", "PERSISTENT", "AUTH"):
@@ -388,6 +406,10 @@ def main():
                 frappe.db.commit()
         attempt("disable_test_setting", close_setting)
         attempt("clear_test_cache", lambda: frappe.cache.delete_value("pedidosya:access-token:" + setting))
+        # Raw GET must propagate Redis errors: get_value silently returns None
+        # on connection failure and could incorrectly attest successful cleanup.
+        test_cache_removed = attempt("verify_test_cache", lambda: frappe.cache.get(
+            frappe.cache.make_key("pedidosya:access-token:" + setting)) is None, False)
 
         def cancel_pending():
             for job_id in queue.get_job_ids():
@@ -408,6 +430,7 @@ def main():
         after = attempt("verify_baseline", baseline)
         result["cleanup"] = {
             "test_urls_removed": urls_removed,
+            "test_cache_removed": test_cache_removed,
             "test_setting_disabled": attempt("verify_setting", lambda: not bool(
                 frappe.db.get_value("PedidosYa Integration Settings", setting, "enabled")), False),
             "existing_config_and_records_unchanged": before == after,
@@ -436,7 +459,7 @@ def main():
         attempt("destroy_frappe_context", frappe.destroy)
         result["cleanup"]["errors"] = cleanup_errors
         if cleanup_errors or not all(result["cleanup"].get(key) for key in (
-                "test_urls_removed", "test_setting_disabled", "existing_config_and_records_unchanged",
+                "test_urls_removed", "test_cache_removed", "test_setting_disabled", "existing_config_and_records_unchanged",
                 "global_scheduler_enable_unchanged", "private_queue_empty", "temporary_receiver_stopped",
                 "test_ca_environment_restored", "temporary_resources_removed")):
             result["passed"] = False
