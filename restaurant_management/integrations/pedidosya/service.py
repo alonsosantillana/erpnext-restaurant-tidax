@@ -267,7 +267,7 @@ def _accept(name, automatic=False):
             "restaurant_management.integrations.pedidosya.service.send_callback",
             job_id=f"pedidosya-accepted:{doc.name}",
             name=doc.name,
-            event="accepted",
+            callback_event="accepted",
         )
     return "Accepted"
 
@@ -302,7 +302,7 @@ def reject_order(name, reason, message=None):
             "restaurant_management.integrations.pedidosya.service.send_callback",
             job_id=f"pedidosya-rejected:{doc.name}",
             name=doc.name,
-            event="rejected",
+            callback_event="rejected",
             reason=reason,
             message=message,
         )
@@ -323,7 +323,12 @@ def retry_order(name):
     )
 
 
-def send_callback(name, event, reason=None, message=None):
+def send_callback(name, event=None, reason=None, message=None, callback_event=None):
+    if event is not None and callback_event is not None and event != callback_event:
+        raise ValueError("Conflicting callback event")
+    event = callback_event if callback_event is not None else event
+    if event not in {"accepted", "rejected", "prepared", "picked_up"}:
+        raise ValueError("Invalid callback event")
     doc = frappe.get_doc("PedidosYa Order", name)
     settings = frappe.get_doc("PedidosYa Integration Settings", doc.settings)
     urls = {
@@ -385,7 +390,7 @@ def notify_prepared_by_fulfillment(fulfillment_name):
             "restaurant_management.integrations.pedidosya.service.send_callback",
             job_id=f"pedidosya-prepared:{doc.name}",
             name=doc.name,
-            event="prepared",
+            callback_event="prepared",
         )
 
 
@@ -406,7 +411,7 @@ def notify_picked_up_by_fulfillment(fulfillment_name):
             "restaurant_management.integrations.pedidosya.service.send_callback",
             job_id=f"pedidosya-picked-up:{doc.name}",
             name=doc.name,
-            event="picked_up",
+            callback_event="picked_up",
         )
 
 
@@ -497,7 +502,7 @@ def recover_pending_orders():
                 "restaurant_management.integrations.pedidosya.service.send_callback",
                 job_id=f"pedidosya-{event}-recovery:{row.name}",
                 name=row.name,
-                event=event,
+                callback_event=event,
                 reason=row.rejection_reason if event == "rejected" else None,
                 message=row.rejection_message if event == "rejected" else None,
             )
