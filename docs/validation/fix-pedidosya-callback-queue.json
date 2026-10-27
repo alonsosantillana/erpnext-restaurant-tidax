@@ -1,0 +1,458 @@
+{
+  "site": "v15.local",
+  "prefix": "TDX-TEST-DEV-1027061815-7B91",
+  "private_queue": "home-erpnext-frappe-bench:tdx_callback_1a6a61d8536581ca",
+  "scheduler_invocation": "targeted ScheduledJobType.enqueue(force=True); global scheduler remains paused",
+  "transport_adaptation": "in-memory get_queue routing of short/default to a unique private RQ queue",
+  "checks": [
+    "HTTPS certificate requires the process-scoped test CA",
+    "disabled configuration and eleven test inboxes created without operational links",
+    "four native callback jobs completed through real RQ and verified HTTPS contracts",
+    "targeted scheduled recovery retries accepted/rejected 503 then 204 and skips confirmed callbacks",
+    "persistent HTTP503 retains both notification flags across two scheduled recoveries",
+    "bad credentials, invalid token and expired token fail without notification; only own cache reset restores token access"
+  ],
+  "cycles": [
+    {
+      "label": "TRANSIENT1",
+      "status": "Complete",
+      "creation": "2026-10-27 01:18:19.293257"
+    },
+    {
+      "label": "TRANSIENT2",
+      "status": "Complete",
+      "creation": "2026-10-27 01:18:20.042116"
+    },
+    {
+      "label": "NO-DUPLICATE",
+      "status": "Complete",
+      "creation": "2026-10-27 01:18:20.505592"
+    },
+    {
+      "label": "PERSISTENT1",
+      "status": "Complete",
+      "creation": "2026-10-27 01:18:20.802979"
+    },
+    {
+      "label": "PERSISTENT2",
+      "status": "Complete",
+      "creation": "2026-10-27 01:18:21.459930"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:BADLOGIN:INVALID",
+      "status": "failed",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:22.174749",
+      "ended_at": "2026-10-27 06:18:22.467315",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": true
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:BADLOGIN:RESTORED",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:22.600138",
+      "ended_at": "2026-10-27 06:18:22.891408",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:BADTOKEN:CLEARED",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:23.823306",
+      "ended_at": "2026-10-27 06:18:24.108280",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:BADTOKEN:INVALID1",
+      "status": "failed",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:23.006099",
+      "ended_at": "2026-10-27 06:18:23.201000",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": true
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:BADTOKEN:INVALID2",
+      "status": "failed",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:23.411960",
+      "ended_at": "2026-10-27 06:18:23.600943",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": true
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:EXPIRED:CLEARED",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:24.500978",
+      "ended_at": "2026-10-27 06:18:24.874861",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:EXPIRED:INVALID",
+      "status": "failed",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:24.296117",
+      "ended_at": "2026-10-27 06:18:24.467378",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": true
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:WACC:CONTRACT",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:18.390256",
+      "ended_at": "2026-10-27 06:18:18.783018",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:WPICK:CONTRACT",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:19.044647",
+      "ended_at": "2026-10-27 06:18:19.157962",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:WPRE:CONTRACT",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:18.927948",
+      "ended_at": "2026-10-27 06:18:19.033085",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::TDX-TEST-DEV-1027061815-7B91:WREJ:CONTRACT",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:18.795689",
+      "ended_at": "2026-10-27 06:18:18.916270",
+      "argument_names": [
+        "callback_event",
+        "name"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::pedidosya-accepted-recovery:TDX-TEST-DEV-1027061815-7B91-PACC",
+      "status": "failed",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:21.703684",
+      "ended_at": "2026-10-27 06:18:21.942395",
+      "argument_names": [
+        "callback_event",
+        "message",
+        "name",
+        "reason"
+      ],
+      "reserved_event": null,
+      "http_error": true
+    },
+    {
+      "id": "v15.local::pedidosya-accepted-recovery:TDX-TEST-DEV-1027061815-7B91-TACC",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:20.236155",
+      "ended_at": "2026-10-27 06:18:20.332985",
+      "argument_names": [
+        "callback_event",
+        "message",
+        "name",
+        "reason"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::pedidosya-rejected-recovery:TDX-TEST-DEV-1027061815-7B91-PREJ",
+      "status": "failed",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:21.518923",
+      "ended_at": "2026-10-27 06:18:21.683740",
+      "argument_names": [
+        "callback_event",
+        "message",
+        "name",
+        "reason"
+      ],
+      "reserved_event": null,
+      "http_error": true
+    },
+    {
+      "id": "v15.local::pedidosya-rejected-recovery:TDX-TEST-DEV-1027061815-7B91-TREJ",
+      "status": "finished",
+      "method": "restaurant_management.integrations.pedidosya.service.send_callback",
+      "started_at": "2026-10-27 06:18:20.128582",
+      "ended_at": "2026-10-27 06:18:20.224664",
+      "argument_names": [
+        "callback_event",
+        "message",
+        "name",
+        "reason"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    },
+    {
+      "id": "v15.local::scheduled_job::restaurant_management.integrations.pedidosya.service.recover_pending_orders",
+      "status": "finished",
+      "method": "frappe.core.doctype.scheduled_job_type.scheduled_job_type.run_scheduled_job",
+      "started_at": "2026-10-27 06:18:21.435875",
+      "ended_at": "2026-10-27 06:18:21.508116",
+      "argument_names": [
+        "job_type"
+      ],
+      "reserved_event": null,
+      "http_error": false
+    }
+  ],
+  "receiver_evidence": [
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-WORKER",
+      "event": "login",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:18.608128+00:00",
+      "result": "200",
+      "duration_ms": 182.524
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-WORKER:TDX-TEST-DEV-1027061815-7B91-WACC",
+      "event": "accepted",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:18.718466+00:00",
+      "result": "204",
+      "duration_ms": 1.542
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-WORKER:TDX-TEST-DEV-1027061815-7B91-WREJ",
+      "event": "rejected",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:18.829453+00:00",
+      "result": "204",
+      "duration_ms": 1.359
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-WORKER:TDX-TEST-DEV-1027061815-7B91-WPRE",
+      "event": "prepared",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:18.962069+00:00",
+      "result": "204",
+      "duration_ms": 1.279
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-WORKER:TDX-TEST-DEV-1027061815-7B91-WPICK",
+      "event": "picked-up",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:19.078720+00:00",
+      "result": "204",
+      "duration_ms": 1.32
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-TRANSIENT:TDX-TEST-DEV-1027061815-7B91-TREJ",
+      "event": "rejected",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:19.407280+00:00",
+      "result": "503_transient",
+      "duration_ms": 1.273
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-TRANSIENT:TDX-TEST-DEV-1027061815-7B91-TACC",
+      "event": "accepted",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:19.661855+00:00",
+      "result": "503_transient",
+      "duration_ms": 1.487
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-TRANSIENT:TDX-TEST-DEV-1027061815-7B91-TREJ",
+      "event": "rejected",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:20.162046+00:00",
+      "result": "204",
+      "duration_ms": 1.474
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-TRANSIENT:TDX-TEST-DEV-1027061815-7B91-TACC",
+      "event": "accepted",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:20.269336+00:00",
+      "result": "204",
+      "duration_ms": 1.44
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-PERSISTENT:TDX-TEST-DEV-1027061815-7B91-PREJ",
+      "event": "rejected",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:20.916543+00:00",
+      "result": "503_persistent",
+      "duration_ms": 1.318
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-PERSISTENT:TDX-TEST-DEV-1027061815-7B91-PACC",
+      "event": "accepted",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:21.066385+00:00",
+      "result": "503_persistent",
+      "duration_ms": 1.427
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-PERSISTENT:TDX-TEST-DEV-1027061815-7B91-PREJ",
+      "event": "rejected",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:21.551710+00:00",
+      "result": "503_persistent",
+      "duration_ms": 1.366
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-PERSISTENT:TDX-TEST-DEV-1027061815-7B91-PACC",
+      "event": "accepted",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:21.737949+00:00",
+      "result": "503_persistent",
+      "duration_ms": 1.388
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH",
+      "event": "login",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:22.338314+00:00",
+      "result": "401",
+      "duration_ms": 128.085
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH",
+      "event": "login",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:22.757981+00:00",
+      "result": "200",
+      "duration_ms": 120.706
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH:TDX-TEST-DEV-1027061815-7B91-BADLOGIN",
+      "event": "prepared",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:22.819784+00:00",
+      "result": "204",
+      "duration_ms": 1.127
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH:TDX-TEST-DEV-1027061815-7B91-BADTOKEN",
+      "event": "prepared",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:23.040330+00:00",
+      "result": "401",
+      "duration_ms": 1.12
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH:TDX-TEST-DEV-1027061815-7B91-BADTOKEN",
+      "event": "prepared",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:23.445274+00:00",
+      "result": "401",
+      "duration_ms": 1.099
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH",
+      "event": "login",
+      "attempt": 3,
+      "date": "2026-10-27T06:18:23.973009+00:00",
+      "result": "200",
+      "duration_ms": 115.279
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH:TDX-TEST-DEV-1027061815-7B91-BADTOKEN",
+      "event": "prepared",
+      "attempt": 3,
+      "date": "2026-10-27T06:18:24.037122+00:00",
+      "result": "204",
+      "duration_ms": 1.118
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH:TDX-TEST-DEV-1027061815-7B91-EXPIRED",
+      "event": "prepared",
+      "attempt": 1,
+      "date": "2026-10-27T06:18:24.330081+00:00",
+      "result": "401",
+      "duration_ms": 1.116
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH",
+      "event": "login",
+      "attempt": 4,
+      "date": "2026-10-27T06:18:24.647620+00:00",
+      "result": "200",
+      "duration_ms": 113.181
+    },
+    {
+      "test_id": "TDX-TEST-DEV-1027061815-7B91-AUTH:TDX-TEST-DEV-1027061815-7B91-EXPIRED",
+      "event": "prepared",
+      "attempt": 2,
+      "date": "2026-10-27T06:18:24.801069+00:00",
+      "result": "204",
+      "duration_ms": 1.178
+    }
+  ],
+  "passed": true,
+  "cleanup": {
+    "test_urls_removed": true,
+    "test_setting_disabled": true,
+    "existing_config_and_records_unchanged": true,
+    "global_scheduler_enable_unchanged": true,
+    "private_queue_empty": true,
+    "temporary_receiver_stopped": true,
+    "test_ca_environment_restored": true,
+    "temporary_resources_removed": true,
+    "errors": [],
+    "operational_counts_unchanged": true
+  }
+}

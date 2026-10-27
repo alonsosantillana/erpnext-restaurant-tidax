@@ -1,0 +1,27 @@
+{
+  "site": "v15.local",
+  "prefix": "TDX-TEST-DEV-1027061812-7288",
+  "private_queue": "home-erpnext-frappe-bench:tdx_callback_2838a2731a64eed5",
+  "scheduler_invocation": "targeted ScheduledJobType.enqueue(force=True); global scheduler remains paused",
+  "transport_adaptation": "in-memory get_queue routing of short/default to a unique private RQ queue",
+  "checks": [
+    "HTTPS certificate requires the process-scoped test CA"
+  ],
+  "cycles": [],
+  "jobs": [],
+  "passed": false,
+  "failure_type": "AssertionError",
+  "failure_code": "injected_failure_before_fixture_commit",
+  "cleanup": {
+    "test_urls_removed": true,
+    "test_setting_disabled": true,
+    "existing_config_and_records_unchanged": true,
+    "global_scheduler_enable_unchanged": true,
+    "private_queue_empty": true,
+    "temporary_receiver_stopped": true,
+    "test_ca_environment_restored": true,
+    "temporary_resources_removed": true,
+    "errors": [],
+    "operational_counts_unchanged": true
+  }
+}
