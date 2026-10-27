@@ -92,6 +92,25 @@ Si PedidosYa exige literalmente `/order/{remoteId}` y `/remoteId/{remoteId}/remo
 
 Los pedidos de prueba (`test=true`) validan autenticación, estructura y mapeo, pero no crean órdenes operativas.
 
+### Recogidos en el tablero
+
+En **Pedidos externos → Recojo en local**, el selector **Recogidos del día** muestra
+los pedidos recogidos y pagados en la fecha elegida. Inicialmente selecciona hoy,
+según la zona horaria del sitio. La fecha se obtiene del historial de la transición
+a Recogido; editar o pagar después no cambia el día de recogida.
+
+Los pendientes de fechas anteriores siguen visibles, incluidos recogidos sin pago.
+La fecha solo limita los recogidos ya pagados. La columna **Recogido** cuenta sus
+tarjetas visibles; los contadores superiores siguen indicando únicamente pendientes.
+Por ejemplo, un recogido pagado puede aparecer en su columna y el contador de
+pendientes mantenerse en cero. El selector se conserva al actualizar en tiempo real.
+
+La vista mantiene los límites de 200 pendientes y hasta 200 recogidos pagados del
+día por consulta, restringidos a la compañía/perfil POS activos y permisos de lectura.
+Para auditoría completa usar la lista de Restaurant Fulfillment. Los históricos sin
+transición auditada no reciben una fecha de recogida inventada. Mostrar una tarjeta
+no modifica su estado, pago, comprobante ni datos del pedido. Delivery no cambia.
+
 ### Medio de pago al calcular e importar
 
 El perfil POS debe tener un único medio de pago predeterminado habilitado y una
