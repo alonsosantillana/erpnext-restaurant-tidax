@@ -4,6 +4,8 @@ class FulfillmentBoard {
         this.fulfillment_type = null;
         this.reload_timer = null;
         this.counts_timer = null;
+        this.reload_request_id = 0;
+        this.completed_date = frappe.datetime.system_datetime().slice(0, 10);
         this.counts = { Delivery: 0, Pickup: 0 };
         this.enabled_types = this.enabled_types || ["Delivery", "Pickup"];
         this.order_managers = {};
@@ -20,6 +22,19 @@ class FulfillmentBoard {
         this.wrapper = $("<div>").addClass("fulfillment-board hide");
         this.toolbar = $("<div>").addClass("fulfillment-toolbar");
         this.title = $("<h4>").addClass("fulfillment-title");
+        this.completed_date_input = $("<input>").attr({
+            type: "date",
+            "aria-label": "Fecha de recogidos pagados (zona horaria del sitio)",
+            title: "La fecha filtra recogidos pagados; los pendientes de otras fechas siguen visibles."
+        }).addClass("form-control input-sm").val(this.completed_date).on("change", () => {
+            this.completed_date = this.completed_date_input.val()
+                || frappe.datetime.system_datetime().slice(0, 10);
+            this.completed_date_input.val(this.completed_date);
+            this.reload();
+        });
+        this.completed_date_filter = $("<label>")
+            .addClass("fulfillment-completed-date hide")
+            .append($("<span>").text("Recogidos del día"), this.completed_date_input);
         this.back_button = $("<button>")
             .attr({ type: "button", "aria-label": "Volver a pedidos externos" })
             .addClass("btn btn-default btn-sm fulfillment-back-button")
@@ -33,7 +48,7 @@ class FulfillmentBoard {
             .addClass("btn btn-primary btn-sm")
             .append($("<span>").addClass("fa fa-plus"), document.createTextNode(" " + __("New order")))
             .on("click", () => this.new_order());
-        const heading = $("<div>").addClass("fulfillment-toolbar-heading").append(this.back_button, this.title);
+        const heading = $("<div>").addClass("fulfillment-toolbar-heading").append(this.back_button, this.title, this.completed_date_filter);
         this.toolbar.append(heading, $("<div>").addClass("fulfillment-toolbar-actions").append(this.refresh_button, " ", this.new_button));
         this.columns_wrapper = $("<div>").addClass("fulfillment-columns");
         this.wrapper.append(this.toolbar, this.columns_wrapper);
@@ -42,6 +57,7 @@ class FulfillmentBoard {
 
     show(fulfillment_type) {
         this.fulfillment_type = fulfillment_type;
+        this.completed_date_filter.toggleClass("hide", fulfillment_type !== "Pickup");
         this.title.text(fulfillment_type === "Delivery" ? "Entrega a domicilio" : "Recojo en local");
         this.new_button.text(fulfillment_type === "Delivery" ? "Nuevo delivery" : "Nuevo recojo");
         this.new_button.prepend($("<span>").addClass("fa fa-plus"), document.createTextNode(" "));
@@ -50,21 +66,30 @@ class FulfillmentBoard {
     }
 
     hide() {
+        this.reload_request_id += 1;
         this.wrapper.addClass("hide");
     }
 
     reload() {
         if (!this.fulfillment_type || this.wrapper.hasClass("hide")) return;
+        const request_id = ++this.reload_request_id;
+        const fulfillment_type = this.fulfillment_type;
+        const completed_date = this.completed_date;
+        const args = { fulfillment_type };
+        if (fulfillment_type === "Pickup") args.completed_date = completed_date;
         this.columns_wrapper.addClass("loading");
         frappe.call({
             method: "restaurant_management.api.get_fulfillment_board",
-            args: { fulfillment_type: this.fulfillment_type },
+            args,
             always: r => {
+                if (request_id !== this.reload_request_id || this.wrapper.hasClass("hide")
+                    || fulfillment_type !== this.fulfillment_type
+                    || (fulfillment_type === "Pickup" && completed_date !== this.completed_date)) return;
                 this.columns_wrapper.removeClass("loading");
                 if (r && Array.isArray(r.message)) {
-                    this.counts[this.fulfillment_type] = r.message.length;
-                    this.notify_counts();
                     this.render(r.message);
+                    // Visible closed cards must not inflate pending badges.
+                    this.schedule_counts_refresh();
                 }
             }
         });

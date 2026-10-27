@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+from datetime import date, timedelta
+
 import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate
@@ -661,8 +663,20 @@ def create_fulfillment_order(
     }
 
 
+def _pickup_completion_bounds(completed_date):
+    """Use audited local-site dates, never the editable parent's modified time."""
+    try:
+        day = date.fromisoformat(completed_date)
+        if day.isoformat() != completed_date:
+            raise ValueError
+        next_day = day + timedelta(days=1)
+    except (TypeError, ValueError, OverflowError):
+        frappe.throw(_("Seleccione una fecha válida para los pedidos recogidos (AAAA-MM-DD)"))
+    return f"{day} 00:00:00", f"{next_day} 00:00:00"
+
+
 @frappe.whitelist()
-def get_fulfillment_board(fulfillment_type, include_closed=0):
+def get_fulfillment_board(fulfillment_type, include_closed=0, completed_date=None):
     _require_authenticated_user()
     fulfillment_type = str(fulfillment_type or "").strip()
     if fulfillment_type not in {"Delivery", "Pickup"}:
@@ -671,6 +685,11 @@ def get_fulfillment_board(fulfillment_type, include_closed=0):
         frappe.throw(_("Not permitted to view fulfillment orders"), frappe.PermissionError)
 
     company, pos_profile = _active_restaurant_pos_context()
+    completion_bounds = (
+        _pickup_completion_bounds(completed_date)
+        if fulfillment_type == "Pickup" and completed_date and not cint(include_closed)
+        else None
+    )
     filters = {
         "company": company,
         "pos_profile": pos_profile.name,
@@ -714,6 +733,40 @@ def get_fulfillment_board(fulfillment_type, include_closed=0):
             for row in rows
             if row.status != terminal_status or row.payment_status != "Paid"
         ]
+
+    if completion_bounds:
+        start, end = completion_bounds
+        history = "Restaurant Fulfillment Status Log"
+        completed = frappe.get_list(
+            "Restaurant Fulfillment",
+            filters=[
+                ["Restaurant Fulfillment", "company", "=", company],
+                ["Restaurant Fulfillment", "pos_profile", "=", pos_profile.name],
+                ["Restaurant Fulfillment", "fulfillment_type", "=", "Pickup"],
+                ["Restaurant Fulfillment", "status", "=", "Picked Up"],
+                ["Restaurant Fulfillment", "payment_status", "=", "Paid"],
+                [history, "parenttype", "=", "Restaurant Fulfillment"],
+                [history, "parentfield", "=", "status_log"],
+                [history, "to_status", "=", "Picked Up"],
+                [history, "changed_at", ">=", start],
+                [history, "changed_at", "<", end],
+            ],
+            fields=[
+                "name", "order", "fulfillment_type", "status", "customer_name_snapshot",
+                "order_channel", "promised_at", "delivery_fee", "courier_name",
+                "payment_timing", "payment_status", "creation", "modified",
+            ],
+            order_by="`tabRestaurant Fulfillment`.`modified` desc",
+            distinct=True,
+            limit_page_length=200,
+        )
+        # Keep the active query independent: closed cards cannot displace pending
+        # orders under its existing page limit. Both parent queries enforce access.
+        seen = {row.name for row in rows}
+        for row in completed:
+            if row.name not in seen:
+                rows.append(row)
+                seen.add(row.name)
 
     order_names = [row.order for row in rows]
     orders = {
