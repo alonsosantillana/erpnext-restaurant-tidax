@@ -115,3 +115,17 @@ The native suite now contains 26 cases. All 256 selected cross-app/local regress
 methods passed together after this correction, with outer site/network guards
 and each native fixture's mutation/POS/FX guards reporting zero attempts.
 No disposable-site certification or runtime activation is implied.
+
+## Parent Publication
+
+Source checkpoint d7812f8693ba852f72d917e2f337104b9e2ce59b was pushed normally to
+upstream/feature/restaurant-readonly-order-quote-r9e2 and independently verified.
+Remote master remains cc765f95e35b7b2c8faeefa1906447c954da7522. Matching TIX source
+checkpoint is f8409479e243ab53c02e28121efca12445e5e19f on its separate feature branch.
+
+Refreshed native Graphify locally with extract --code-only after the source
+commit: 2555 nodes, 4704 edges, 278 communities. Checked 278 source paths and
+presence of the new quote module; graphify-out is ignored and not versioned.
+74 code-classified sources had no extracted nodes, including JSON metadata.
+No LLM extraction, mixed-app graph, MCP configuration or installed source change.
+Only this publication record changes after the reviewed source checkpoint.
