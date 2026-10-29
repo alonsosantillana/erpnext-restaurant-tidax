@@ -237,6 +237,120 @@ class TestReadonlyOrderQuote(unittest.TestCase):
                 self.assertEqual(result["delivery_fee"], "10")
                 self.assertEqual(len(result["lines"]), 2)
 
+    def add_service_charge(self, rate=13, root_type="Expense", account_type=""):
+        self.doc("Account", "SERVICE", company="CO", account_type=account_type,
+                 root_type=root_type, report_type="Profit and Loss", is_group=0, disabled=0)
+        self.docs["Sales Taxes and Charges Template", "TAXES"].taxes.append(
+            frappe._dict(charge_type="On Net Total", account_head="SERVICE", rate=rate))
+
+    def test_configured_charges_service_and_inclusion_matrix(self):
+        self.docs["Sales Taxes and Charges Template", "TAXES"].taxes[0].rate = 10.5
+        self.docs["Item Price", "PRICE-FEE"].price_list_rate = 6.5
+        tax_only = copy.deepcopy(self.docs)
+        for charge in (False, True):
+            for delivery in (False, True):
+                for inclusive in (0, 1):
+                    with self.subTest(charge=charge, delivery=delivery, inclusive=inclusive):
+                        self.docs = copy.deepcopy(tax_only)
+                        if charge:
+                            self.add_service_charge()
+                        self.docs["POS Profile", "POS"].posa_tax_inclusive = inclusive
+                        self.proposal["service_type"] = "Delivery" if delivery else "Pickup"
+                        if delivery:
+                            self.proposal["address"] = "ADDRESS"
+                        else:
+                            self.proposal.pop("address", None)
+                        before = copy.deepcopy(self.docs)
+                        with patch.object(quote, "calculate_taxes_and_totals", wraps=native_tax.calculate_taxes_and_totals) as engine:
+                            result = self.run_quote()
+                        self.assertEqual(engine.call_count, 1)
+                        invoice = engine.call_args.args[0]
+                        self.assertEqual(len(invoice.items), 3 if delivery else 2)
+                        self.assertEqual(sum(row.item_code == "FEE" for row in invoice.items), int(delivery))
+                        self.assertEqual([row.account_head for row in invoice.taxes],
+                                         ["VAT", "SERVICE"] if charge else ["VAT"])
+                        self.assertEqual([row.rate for row in invoice.taxes],
+                                         [10.5, 13] if charge else [10.5])
+                        self.assertTrue(all(row.included_in_print_rate == inclusive for row in invoice.taxes))
+                        expected = (("316.77" if delivery else "308.75") if charge
+                                    else ("283.43" if delivery else "276.25"))
+                        self.assertEqual(result["total"], ("256.5" if delivery else "250") if inclusive else expected)
+                        if not inclusive:
+                            self.assertEqual(result["tax"], (("60.27" if delivery else "58.75") if charge
+                                             else ("26.93" if delivery else "26.25")))
+                            if charge:
+                                self.assertEqual([row.tax_amount for row in invoice.taxes],
+                                                 [26.93, 33.34] if delivery else [26.25, 32.5])
+                        self.assertGreater(float(result["tax"]), 0)
+                        self.assertEqual(result["delivery_fee"], "6.5" if delivery else "0")
+                        self.assertEqual(len(result["lines"]), 2)
+                        self.assertEqual(self.docs, before)
+
+    def test_charge_percentage_and_income_expense_types_are_configurable(self):
+        self.proposal["items"] = [dict(item_code="DISH", qty=1)]
+        self.docs["Sales Taxes and Charges Template", "TAXES"].taxes[0].rate = 10.5
+        self.add_service_charge(rate=7.25)
+        account = self.docs["Account", "SERVICE"]
+        for root, types in (
+            ("Income", (None, "", "Chargeable", "Income Account", "Direct Income", "Indirect Income")),
+            ("Expense", (None, "", "Chargeable", "Expense Account", "Direct Expense", "Indirect Expense")),
+        ):
+            for account_type in types:
+                with self.subTest(root=root, account_type=account_type):
+                    account.update(root_type=root, account_type=account_type)
+                    self.assertEqual(self.run_quote()["total"], "117.75")
+
+    def test_charge_account_scope_and_classification_fail_closed(self):
+        self.add_service_charge()
+        account = self.docs["Account", "SERVICE"]
+        original = dict(account)
+        for mutation in (dict(company="OTHER"), dict(disabled=1), dict(is_group=1),
+                         dict(denied=True), dict(root_type="Liability"), dict(root_type="Asset"),
+                         dict(root_type="Equity"), dict(root_type=None), dict(report_type=None),
+                         dict(report_type="Balance Sheet"), dict(account_type="Bank"),
+                         dict(account_type="Cash"), dict(account_type="Receivable"),
+                         dict(account_type="Payable"), dict(account_type="Stock"),
+                         dict(account_type="Round Off"), dict(account_type="Unsupported")):
+            with self.subTest(mutation=mutation):
+                account.update(mutation)
+                with self.assertRaises(quote.QuoteUnavailable):
+                    self.run_quote()
+                account.clear()
+                account.update(original)
+
+    def test_service_charge_rows_keep_existing_support_limits(self):
+        self.add_service_charge()
+        template = self.docs["Sales Taxes and Charges Template", "TAXES"]
+        row = template.taxes[-1]
+        original = dict(row)
+        for mutation in (dict(rate=-1), dict(rate=101), dict(rate="NaN"),
+                         dict(add_deduct_tax="Deduct"), dict(dont_recompute_tax=1),
+                         dict(charge_type="On Previous Row Total")):
+            with self.subTest(mutation=mutation):
+                row.update(mutation)
+                with self.assertRaises(quote.QuoteUnavailable):
+                    self.run_quote()
+                row.clear()
+                row.update(original)
+        template.taxes.append(copy.deepcopy(row))
+        with self.assertRaises(quote.QuoteUnavailable):
+            self.run_quote()
+
+    def test_charge_eligibility_and_rate_are_fingerprinted(self):
+        self.add_service_charge()
+        first = self.run_quote()
+        self.docs["Account", "SERVICE"].root_type = "Income"
+        second = self.run_quote()
+        self.assertEqual(first["total"], second["total"])
+        self.assertNotEqual(first["native_fingerprint"], second["native_fingerprint"])
+        self.docs["Account", "SERVICE"].account_type = "Chargeable"
+        third = self.run_quote()
+        self.assertNotEqual(second["native_fingerprint"], third["native_fingerprint"])
+        self.docs["Sales Taxes and Charges Template", "TAXES"].taxes[-1].rate = 7.25
+        fourth = self.run_quote()
+        self.assertNotEqual(third["total"], fourth["total"])
+        self.assertNotEqual(third["native_fingerprint"], fourth["native_fingerprint"])
+
     def test_fractional_multi_item_native_rounding(self):
         self.docs["Item Price", "PRICE-DISH"].price_list_rate = 0.99
         self.docs["Item Price", "PRICE-DRINK"].price_list_rate = 0.33

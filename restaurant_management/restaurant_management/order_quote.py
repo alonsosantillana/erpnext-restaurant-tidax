@@ -227,8 +227,17 @@ def _taxes(profile, evidence):
         rate = _decimal(row.rate, Decimal("100"))
         account = _read("Account", row.account_head)
         _require(account.company == profile.company and not account.get("is_group") and not account.get("disabled"))
-        _require(account.account_type == "Tax")
-        evidence.append(_stamp(account, ("company", "account_type", "is_group", "disabled")))
+        # A configured service charge need not be classified as a tax account.
+        charge_account = (
+            account.get("root_type") in {"Income", "Expense"}
+            and account.get("report_type") == "Profit and Loss"
+            and account.get("account_type") in {
+                None, "", "Chargeable", "Income Account", "Expense Account",
+                "Direct Income", "Indirect Income", "Direct Expense", "Indirect Expense",
+            }
+        )
+        _require(account.account_type == "Tax" or charge_account)
+        evidence.append(_stamp(account, ("company", "account_type", "root_type", "report_type", "is_group", "disabled")))
         result.append({
             "charge_type": "On Net Total", "account_head": account.name,
             "description": account.name, "rate": float(rate),
@@ -261,7 +270,8 @@ def quote_order(proposal, context):
     """Quote a normalized cart using current readable native data, or fail closed.
 
     All monetary outputs are transaction-currency decimal strings. Lines exclude
-    the fee, while grand total includes it; inclusive tax is already in amounts.
+    the fee, while grand total includes it; inclusive charges are already in amounts.
+    The tax field is native total_taxes_and_charges, not a tax-only breakdown.
     Same-currency only; unsupported pricing is never treated as a free cart.
     """
     _inputs(proposal, context)
