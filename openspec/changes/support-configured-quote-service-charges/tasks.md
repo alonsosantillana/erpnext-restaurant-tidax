@@ -6,4 +6,4 @@
 - [x] Implement bounded configured-charge eligibility and fingerprint evidence.
 - [x] Add guarded native-engine positive/negative and no-mutation tests.
 - [x] Run native and companion Web checks; review diffs and record limitations.
-- [ ] Commit and push dedicated branches without merging/deploying mainlines.
+- [x] Commit and push dedicated branches without merging/deploying mainlines.

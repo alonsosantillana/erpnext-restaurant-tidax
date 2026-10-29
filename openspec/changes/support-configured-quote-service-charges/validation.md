@@ -94,3 +94,13 @@ Pending after code review: a separately bounded update of the installed revision
 then real read-only full quote/preview checks and Web consent/human approval in
 the existing authorized site. Do not enable gates merely because offline tests
 and the account eligibility probe passed. No new bench/site is required here.
+
+## Publication
+
+Native implementation aa74e55e354dbcaa047105f4e856e81275119d9f and companion TIX
+b42a0fdb10a22a1466b22bc5a16963917e583b02 were pushed and independently verified by
+ls-remote on their dedicated branches. Native remote master remains cc765f9;
+TIX version-15 remains ae51fff and default version-14 remains 4644fd7. This closing
+documentation checkpoint records publication and marks tasks complete. No merge,
+deployment, branch deletion or automatic archive occurred. Ready for review and
+subsequent acceptance/archive, with runtime certification explicitly pending.
