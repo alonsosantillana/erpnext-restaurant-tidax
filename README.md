@@ -83,3 +83,16 @@ ___
 > GNU / General Public License (see [license.txt](license.txt))
 
 > The POS Restaurant code is licensed under the GNU General Public License (v3).
+
+
+## Preparacion de compatibilidad v16 (desarrollo, 2026-11-01)
+
+Los adaptadores de APIs/campos de Frappe y ERPNext v16 se documentan en
+`openspec/changes/migration-v16-compatibility/`. Se preservan las restricciones
+de acceso y los contratos de lectura existentes; no se introducen cambios de
+calculos contables ni tributarios.
+
+Verificacion aislada: `python tests/test_v16_compatibility.py` (8 casos,
+solo dobles; sin base de datos ni servicios externos). La revision independiente
+aprobo estos escenarios con Python 3.14. La migracion del sitio y UAT funcional
+son etapas separadas que coordina el expediente corporativo del upgrade.

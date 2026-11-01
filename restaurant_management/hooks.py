@@ -91,6 +91,7 @@ override_whitelisted_methods = {
         "restaurant_management.printing.update_pos_invoice_ce_and_queue_print",
     "erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry.get_pos_invoices":
         "restaurant_management.restaurant_management.pos_closing.get_pos_invoices",
+	"erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry.get_invoices": "restaurant_management.restaurant_management.pos_closing.get_invoices",
 }
 
 override_doctype_class = {

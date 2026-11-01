@@ -2,10 +2,19 @@ import frappe
 from frappe import _
 from frappe.utils import get_datetime
 
-from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import (
-	POSClosingEntry as ERPNextPOSClosingEntry,
-	get_pos_invoices as erpnext_get_pos_invoices,
-)
+from erpnext.accounts.doctype.pos_closing_entry import pos_closing_entry as native_pos_closing
+
+ERPNextPOSClosingEntry = native_pos_closing.POSClosingEntry
+
+
+def erpnext_get_pos_invoices(start, end, pos_profile, user):
+	"""Retain the legacy list-of-full-POS-documents response on either version."""
+	legacy = getattr(native_pos_closing, "get_pos_invoices", None)
+	if legacy is not None:
+		return legacy(start, end, pos_profile, user)
+	payload = native_pos_closing.get_invoices(start, end, pos_profile, user)
+	return [frappe.get_doc("POS Invoice", row["name"]).as_dict()
+		for row in payload["invoices"] if row["doctype"] == "POS Invoice"]
 
 
 def _is_restaurant_pos_profile(pos_profile):
@@ -191,7 +200,10 @@ class RestaurantPOSClosingEntry(ERPNextPOSClosingEntry):
 		invalid_rows = []
 		is_restaurant = _is_restaurant_pos_profile(self.pos_profile)
 
-		for reference in self.pos_transactions:
+		references = self.get("pos_invoices")
+		if references is None:
+			references = self.get("pos_transactions", [])
+		for reference in references or []:
 			invoice = frappe.db.get_value(
 				"POS Invoice",
 				reference.pos_invoice,
@@ -235,3 +247,28 @@ class RestaurantPOSClosingEntry(ERPNextPOSClosingEntry):
 				for message in row["messages"]:
 					errors.append(_("Fila #{0}: {1}").format(row["idx"], message))
 			frappe.throw(errors, title=_("Facturas POS inválidas"), as_list=True)
+
+
+def _v16_pos_invoice_row(invoice):
+	"""Project an already-scoped POS document onto the native v16 row contract."""
+	fields = ("name", "customer", "posting_date", "grand_total", "net_total", "total_qty",
+		"total_taxes_and_charges", "change_amount", "account_for_change_amount", "is_return", "return_against")
+	row = frappe._dict({field: invoice.get(field) for field in fields})
+	row["doctype"] = "POS Invoice"
+	row["timestamp"] = get_datetime(f"{invoice.get('posting_date')} {invoice.get('posting_time')}")
+	return row
+
+
+@frappe.whitelist()
+def get_invoices(start, end, pos_profile, user):
+	"""Preserve the v16 payload and existing restaurant opening-session scope."""
+	payload = native_pos_closing.get_invoices(start, end, pos_profile, user)
+	if (not _is_restaurant_pos_profile(pos_profile)
+		or frappe.db.get_single_value("POS Settings", "invoice_type") != "POS Invoice"):
+		return payload
+	# Keep native Sales Invoice rows; replace only POS rows using the existing scope.
+	rows = [row for row in payload["invoices"] if row["doctype"] != "POS Invoice"]
+	rows.extend(_v16_pos_invoice_row(invoice) for invoice in get_pos_invoices(start, end, pos_profile, user))
+	rows.sort(key=lambda row: get_datetime(row["timestamp"]))
+	return dict(payload, invoices=rows, payments=native_pos_closing.get_payments(rows),
+		taxes=native_pos_closing.get_taxes(rows))

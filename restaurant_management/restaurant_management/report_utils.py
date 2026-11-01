@@ -5,7 +5,7 @@ POS_TRANSACTIONS_FIELD = "pos_transactions"
 def append_pos_session_conditions(filters, conditions, invoice_alias="invoice"):
 	"""Append optional POS opening/closing filters without multiplying invoice rows."""
 	filters.pos_closing_doctype = POS_CLOSING_DOCTYPE
-	filters.pos_transactions_field = POS_TRANSACTIONS_FIELD
+	filters.pos_transactions_field = get_pos_transactions_field()
 
 	if filters.get("pos_opening_entry"):
 		conditions.append(
@@ -48,3 +48,11 @@ def append_pos_session_conditions(filters, conditions, invoice_alias="invoice"):
 		)
 
 	return conditions
+
+
+def get_pos_transactions_field(erpnext_version=None):
+	"""Select the core child-table name without querying operational data."""
+	if erpnext_version is None:
+		from erpnext import __version__
+		erpnext_version = __version__
+	return "pos_invoices" if int(erpnext_version.split(".", 1)[0]) >= 16 else POS_TRANSACTIONS_FIELD

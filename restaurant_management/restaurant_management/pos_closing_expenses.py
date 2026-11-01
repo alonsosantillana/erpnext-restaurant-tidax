@@ -97,7 +97,10 @@ def _get_opening_amounts(pos_opening_entry):
 
 def _get_sales_amounts(doc):
 	amounts = defaultdict(float)
-	invoice_names = [row.pos_invoice for row in doc.pos_transactions if row.pos_invoice]
+	rows = doc.get("pos_invoices")
+	if rows is None:
+		rows = doc.get("pos_transactions", [])
+	invoice_names = [row.pos_invoice for row in rows or [] if row.pos_invoice]
 	for invoice_name in invoice_names:
 		invoice = frappe.get_doc("POS Invoice", invoice_name)
 		for payment in invoice.payments:

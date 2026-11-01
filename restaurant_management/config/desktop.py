@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from frappe import _
-from frappe.desk.moduleview import add_setup_section
 
 
 def get_data():

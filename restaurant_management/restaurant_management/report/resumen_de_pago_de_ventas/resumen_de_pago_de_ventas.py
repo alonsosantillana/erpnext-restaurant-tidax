@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate
+from restaurant_management.restaurant_management.report_utils import get_pos_transactions_field
 
 
 def execute(filters=None):
@@ -34,7 +35,7 @@ def get_data(filters):
 	filters.pos_invoice_doctype = "POS Invoice"
 	filters.payment_parentfield = "payments"
 	filters.pos_closing_doctype = "POS Closing Entry"
-	filters.pos_transactions_field = "pos_transactions"
+	filters.pos_transactions_field = get_pos_transactions_field()
 
 	conditions = [
 		"invoice.company = %(company)s",

@@ -7,6 +7,7 @@ from erpnext.setup.doctype import company
 from frappe import _
 import frappe
 import os
+from restaurant_management.restaurant_management.report_utils import get_pos_transactions_field
 
 def execute_legacy(filters=None):
 	return get_columns(filters), get_data(filters)
@@ -106,6 +107,7 @@ def execute(filters=None):
         conditions.append("closing.name = %(pos_closing_entry)s")
         values["pos_closing_entry"] = filters.pos_closing_entry
 
+    values["pos_transactions_field"] = get_pos_transactions_field()
     data = frappe.db.sql(
         """
         SELECT
@@ -140,7 +142,7 @@ def execute(filters=None):
         LEFT JOIN `tabPOS Invoice Reference` invoice_reference
             ON invoice_reference.pos_invoice = tip.pos_invoice
             AND invoice_reference.parenttype = 'POS Closing Entry'
-            AND invoice_reference.parentfield = 'pos_transactions'
+            AND invoice_reference.parentfield = %(pos_transactions_field)s
         LEFT JOIN `tabPOS Closing Entry` closing
             ON closing.name = invoice_reference.parent
             AND closing.docstatus = 1

@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import cint, flt, getdate, now_datetime, nowtime, today
+from restaurant_management.restaurant_management.report_utils import get_pos_transactions_field
 
 
 TIP_MANAGEMENT_ROLES = {
@@ -200,14 +201,14 @@ def _get_tip_cash_session(tip):
         LEFT JOIN `tabPOS Invoice Reference` reference
             ON reference.pos_invoice = invoice.name
             AND reference.parenttype = 'POS Closing Entry'
-            AND reference.parentfield = 'pos_transactions'
+            AND reference.parentfield = %s
         LEFT JOIN `tabPOS Closing Entry` closing
             ON closing.name = reference.parent
             AND closing.docstatus = 1
         WHERE invoice.name = %s
         LIMIT 1
         """,
-        tip.pos_invoice,
+        (get_pos_transactions_field(), tip.pos_invoice),
         as_dict=True,
     )
     return rows[0] if rows else frappe._dict()

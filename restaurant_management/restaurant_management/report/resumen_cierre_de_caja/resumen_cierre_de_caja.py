@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate
+from restaurant_management.restaurant_management.report_utils import get_pos_transactions_field
 
 
 def execute(filters=None):
@@ -60,6 +61,7 @@ def _get_data(filters):
 		if filters.get(fieldname):
 			conditions.append(f"AND {column} = %({fieldname})s")
 
+	filters["pos_transactions_field"] = get_pos_transactions_field()
 	return frappe.db.sql(
 		f"""
 		WITH selected_closings AS (
@@ -84,7 +86,7 @@ def _get_data(filters):
 			INNER JOIN `tabPOS Invoice Reference` reference
 				ON reference.parent = closing.name
 				AND reference.parenttype = 'POS Closing Entry'
-				AND reference.parentfield = 'pos_transactions'
+				AND reference.parentfield = %(pos_transactions_field)s
 			INNER JOIN `tabPOS Invoice` invoice
 				ON invoice.name = reference.pos_invoice
 				AND invoice.docstatus = 1
@@ -98,7 +100,7 @@ def _get_data(filters):
 			INNER JOIN `tabPOS Invoice Reference` reference
 				ON reference.parent = closing.name
 				AND reference.parenttype = 'POS Closing Entry'
-				AND reference.parentfield = 'pos_transactions'
+				AND reference.parentfield = %(pos_transactions_field)s
 			INNER JOIN `tabRestaurant Tip` tip
 				ON tip.pos_invoice = reference.pos_invoice
 				AND tip.company = closing.company
