@@ -8,4 +8,4 @@
 - [x] Add real permission-decision/adversarial and guarded quote regressions.
 - [x] Validate candidate on approved read-only fixture scenario where feasible.
 - [x] Review security/diff, update docs/index and record outcomes/limitations.
-- [ ] Commit/push task branch; keep installed/principal refs unchanged.
+- [x] Commit/push task branch; keep installed/principal refs unchanged.

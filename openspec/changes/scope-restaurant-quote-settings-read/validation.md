@@ -102,3 +102,10 @@ read-only boundaries; this document does not authorize deployment or data edits.
 
 Rollback: installed code/data are unchanged. Revert only this task commit after
 review if needed; no inverse migration, permission removal or restore is needed.
+
+## Publication
+
+Implementation/test/documentation commit `5b22985` was pushed successfully to
+`upstream/fix/restaurant-quote-scoped-settings-read`. This is a work-branch backup,
+not a merge or installed update. A following documentation-only commit records
+this publication and completed tracking without changing the tested runtime.
