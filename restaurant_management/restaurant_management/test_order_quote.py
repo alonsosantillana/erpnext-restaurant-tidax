@@ -18,6 +18,7 @@ from unittest.mock import Mock, patch
 import frappe
 import erpnext
 from frappe.model.document import Document
+from frappe.model.db_query import DatabaseQuery
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import POSInvoice
 from erpnext.stock import get_item_details as native_prices
 
@@ -101,6 +102,7 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         frappe.local.flags = frappe._dict()
         frappe.local.session = frappe._dict(user="api-test")
         frappe.local.valid_columns = {}
+        frappe.local.role_permissions = {}
         self.meta = {}
         self.enterContext(patch.object(frappe, "get_meta", side_effect=self.get_meta))
         self.enterContext(patch("frappe.model.base_document.get_controller", return_value=Document))
@@ -109,6 +111,12 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         self.enterContext(patch.object(frappe, "get_cached_value", side_effect=self.cached_value))
         self.enterContext(patch.object(frappe, "get_all", side_effect=self.get_all))
         self.enterContext(patch.object(frappe, "has_permission", return_value=True))
+        self.actor_roles = ["quote-reader"]
+        self.user_permissions = {}
+        self.settings_queries = []
+        self.enterContext(patch.object(frappe, "get_roles", side_effect=lambda user=None: self.actor_roles))
+        self.enterContext(patch.object(quote, "get_user_permissions", side_effect=lambda user: self.user_permissions))
+        self.enterContext(patch.object(quote, "get_server_script_map", return_value={}))
         self.enterContext(patch.object(native_prices, "get_item_price", side_effect=self.price_rows))
         self.enterContext(patch.object(quote, "today", return_value="2030-01-01"))
         self.docs, self.rules = {}, set()
@@ -151,8 +159,15 @@ class TestReadonlyOrderQuote(unittest.TestCase):
 
     def get_meta(self, doctype):
         if doctype not in self.meta:
-            self.meta[doctype] = Metadata(doctype)
-            frappe.local.valid_columns[doctype] = self.meta[doctype].columns
+            if doctype == "Restaurant Company Settings":
+                path = Path(quote.__file__).parent / "doctype/restaurant_company_settings/restaurant_company_settings.json"
+                fields = [frappe._dict(row) for row in json.loads(path.read_text())["fields"]]
+                self.meta[doctype] = SimpleNamespace(name=doctype, issingle=0, istable=0, is_virtual=0,
+                    permissions=[frappe._dict(role="quote-reader", read=1, permlevel=0, if_owner=0)],
+                    get_field=lambda name: next((row for row in fields if row.fieldname == name), None))
+            else:
+                self.meta[doctype] = Metadata(doctype)
+                frappe.local.valid_columns[doctype] = self.meta[doctype].columns
         return self.meta[doctype]
 
     def db_value(self, doctype, name, fields, as_dict=False, **kwargs):
@@ -179,6 +194,15 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         raise AssertionError((doctype, field))
 
     def get_all(self, doctype, filters, **kwargs):
+        if doctype == "Restaurant Company Settings":
+            self.settings_queries.append(copy.deepcopy(dict(filters=filters, **kwargs)))
+            self.assertEqual(kwargs["fields"], ["name", "modified", "company", "pos_profile",
+                                               "enable_pickup", "enable_delivery", "delivery_fee_item"])
+            self.assertEqual(kwargs["limit_page_length"], 2)
+            self.assertEqual(kwargs["order_by"], "name asc")
+            return [frappe._dict({key: d.get(key) for key in kwargs["fields"]})
+                    for (dt, _), d in self.docs.items()
+                    if dt == doctype and all(d.get(k) == v for k, v in filters.items())][:2]
         self.assertEqual(doctype, "Item Price")
         return [frappe._dict(name=d.name) for (dt, _), d in self.docs.items()
                 if dt == doctype and all(d.get(k) == v for k, v in filters.items())]
@@ -197,6 +221,197 @@ class TestReadonlyOrderQuote(unittest.TestCase):
 
     def run_quote(self):
         return quote.quote_order(copy.deepcopy(self.proposal), dict(self.context))
+
+    def test_quote_settings_queries_only_allowed_fields_not_unrelated_customer(self):
+        settings = self.docs["Restaurant Company Settings", "SETTINGS"]
+        settings.update(default_customer="UNRELATED-PRIVATE", denied=True,
+                        reservation_default_customer="RESERVATION-PRIVATE")
+        self.user_permissions = {"Customer": [frappe._dict(doc="CUSTOMER")]}
+        self.doc("Customer", "UNRELATED-PRIVATE", denied=True)
+        self.doc("Address", "FOREIGN-ADDRESS", denied=True)
+        result = self.run_quote()
+        projection = quote._quote_settings("CO", "POS")
+        self.assertEqual(set(projection), {"doctype", "name", "modified", *quote._QUOTE_SETTINGS_FIELDS})
+        self.assertEqual(result["total"], "295")
+        self.assertNotIn("PRIVATE", json.dumps(result))
+        for dt, name in (("Customer", "UNRELATED-PRIVATE"), ("Address", "FOREIGN-ADDRESS")):
+            with self.assertRaises(quote.QuoteUnavailable):
+                quote._read(dt, name)
+        with self.assertRaises(frappe.PermissionError):
+            settings.check_permission("read")
+        self.assertTrue(self.settings_queries)
+
+    def test_settings_requires_effective_read_role_not_select_or_share(self):
+        meta = self.get_meta("Restaurant Company Settings")
+        for permissions in ([], [frappe._dict(role="quote-reader", read=0, select=1, permlevel=0)],
+                            [frappe._dict(role="another-role", read=1, permlevel=0)]):
+            with self.subTest(permissions=permissions):
+                meta.permissions = permissions
+                frappe.local.role_permissions.clear()
+                with patch("frappe.share.get_shared", side_effect=AssertionError("No share rescue")):
+                    with self.assertRaises(quote.QuoteUnavailable):
+                        self.run_quote()
+        self.assertEqual(self.settings_queries, [])
+
+    def test_settings_owner_read_is_constrained_before_field_fetch(self):
+        meta = self.get_meta("Restaurant Company Settings")
+        meta.permissions[0].if_owner = 1
+        settings = self.docs["Restaurant Company Settings", "SETTINGS"]
+        settings.owner = "another-owner"
+        with self.assertRaises(quote.QuoteUnavailable):
+            self.run_quote()
+        self.assertEqual(self.settings_queries[-1]["filters"], {"company": "CO", "owner": "api-test"})
+        settings.owner = "api-test"
+        self.assertEqual(self.run_quote()["total"], "295")
+        self.assertNotIn("owner", self.settings_queries[-1]["fields"])
+
+    def test_settings_field_level_and_owner_only_field_read(self):
+        meta = self.get_meta("Restaurant Company Settings")
+        meta.get_field("enable_delivery").permlevel = 1
+        with self.assertRaises(quote.QuoteUnavailable):
+            self.run_quote()
+        self.assertEqual(self.settings_queries, [])
+        meta.permissions.append(frappe._dict(role="quote-reader", read=1, permlevel=1, if_owner=1))
+        settings = self.docs["Restaurant Company Settings", "SETTINGS"]
+        settings.owner = "another-owner"
+        with self.assertRaises(quote.QuoteUnavailable):
+            self.run_quote()
+        settings.owner = "api-test"
+        self.assertEqual(self.run_quote()["total"], "295")
+        meta.permissions[-1].if_owner = 0
+        settings.owner = "another-owner"
+        self.assertEqual(self.run_quote()["total"], "295")
+        self.assertEqual(self.settings_queries[-1]["filters"], {"company": "CO"})
+
+    def test_settings_user_permissions_preserve_record_and_link_scope(self):
+        for dt in ("Restaurant Company Settings", "Company", "POS Profile", "Item"):
+            with self.subTest(doctype=dt):
+                self.user_permissions = {dt: [frappe._dict(doc="EXCLUDED")]}
+                with self.assertRaises(quote.QuoteUnavailable):
+                    quote._quote_settings("CO", "POS")
+        self.user_permissions = {
+            "Restaurant Company Settings": [frappe._dict(doc="SETTINGS")],
+            "Company": [frappe._dict(doc="CO")], "POS Profile": [frappe._dict(doc="POS")],
+            "Item": [frappe._dict(doc="FEE")], "Customer": [frappe._dict(doc="CUSTOMER")],
+        }
+        self.assertEqual(self.run_quote()["total"], "295")
+        self.user_permissions["Item"] = [frappe._dict(doc="EXCLUDED", applicable_for="Item Price")]
+        self.assertEqual(quote._quote_settings("CO", "POS").company, "CO")
+        self.user_permissions["Item"][0].applicable_for = "Restaurant Company Settings"
+        with self.assertRaises(quote.QuoteUnavailable):
+            quote._quote_settings("CO", "POS")
+
+    def test_settings_empty_fee_link_respects_strict_user_permissions(self):
+        self.docs["Restaurant Company Settings", "SETTINGS"].delivery_fee_item = None
+        self.user_permissions = {"Item": [frappe._dict(doc="FEE")]}
+        with patch.object(frappe, "get_system_settings", return_value=0):
+            self.assertIsNone(quote._quote_settings("CO", "POS").delivery_fee_item)
+        with patch.object(frappe, "get_system_settings", return_value=1):
+            with self.assertRaises(quote.QuoteUnavailable):
+                quote._quote_settings("CO", "POS")
+
+    def test_settings_missing_ambiguous_or_mismatched_binding_rejected(self):
+        settings = self.docs["Restaurant Company Settings", "SETTINGS"]
+        for profile in (None, "ALTERNATE", "FOREIGN"):
+            with self.subTest(profile=profile):
+                settings.pos_profile = profile
+                with self.assertRaises(quote.QuoteUnavailable):
+                    self.run_quote()
+        settings.pos_profile = "POS"
+        self.doc("Restaurant Company Settings", "DUPLICATE", company="CO", pos_profile="POS")
+        with self.assertRaises(quote.QuoteUnavailable):
+            self.run_quote()
+        self.docs.pop(("Restaurant Company Settings", "DUPLICATE"))
+        settings.company = "OTHER"
+        with self.assertRaises(quote.QuoteUnavailable):
+            self.run_quote()
+        with self.assertRaises(quote.QuoteUnavailable):
+            quote._quote_settings("OTHER", "POS")
+
+    def test_settings_custom_authorization_extensions_fail_closed(self):
+        for key in ("has_permission", "permission_query_conditions", "override_doctype_class"):
+            for scope in ("Restaurant Company Settings", "*"):
+                with self.subTest(key=key, scope=scope):
+                    def hooks(name, default=None):
+                        return {scope: ["unknown.policy"]} if name == key else {}
+                    with patch.object(frappe, "get_hooks", side_effect=hooks):
+                        with self.assertRaises(quote.QuoteUnavailable):
+                            self.run_quote()
+        with patch.object(frappe, "get_hooks", return_value={"Unrelated": ["another.policy"]}):
+            self.assertEqual(self.run_quote()["total"], "295")
+
+    def test_settings_metadata_changes_fail_closed(self):
+        meta = self.get_meta("Restaurant Company Settings")
+        for field in ("issingle", "istable", "is_virtual"):
+            with self.subTest(field=field):
+                setattr(meta, field, 1)
+                with self.assertRaises(quote.QuoteUnavailable):
+                    self.run_quote()
+                setattr(meta, field, 0)
+        field = meta.get_field("company")
+        original = dict(field)
+        for change in (dict(options="Customer"), dict(fieldtype="Data"), dict(is_virtual=1)):
+            with self.subTest(change=change):
+                field.update(change)
+                with self.assertRaises(quote.QuoteUnavailable):
+                    self.run_quote()
+                field.clear()
+                field.update(original)
+        getter = meta.get_field
+        with patch.object(meta, "get_field", side_effect=lambda name: None if name == "company" else getter(name)):
+            with self.assertRaises(quote.QuoteUnavailable):
+                self.run_quote()
+
+    def test_settings_permission_query_server_scripts_fail_closed_before_fetch(self):
+        for scripts in ({"permission_query": {"Restaurant Company Settings": "POLICY"}},
+                        {"permission_query": {"*": "POLICY"}},
+                        {"permission_query": ["invalid"]}, ["invalid"]):
+            with self.subTest(scripts=scripts):
+                with patch.object(quote, "get_server_script_map", return_value=scripts):
+                    with self.assertRaises(quote.QuoteUnavailable):
+                        self.run_quote()
+        self.assertEqual(self.settings_queries, [])
+        with patch.object(quote, "get_server_script_map",
+                          return_value={"permission_query": {"Unrelated": "POLICY"}}):
+            self.assertEqual(self.run_quote()["total"], "295")
+
+    def test_settings_query_order_cannot_use_unselected_metadata_fields(self):
+        quote._quote_settings("CO", "POS")
+        projection = self.settings_queries[-1]
+        # Exercise native ordering, including the unsafe metadata fallback control.
+        query = DatabaseQuery("Restaurant Company Settings")
+        query.doctype_meta.sort_field = "default_customer"
+        query.doctype_meta.sort_order = "desc"
+        query.fields = projection["fields"]
+        query.group_by = None
+        query.order_by = "KEEP_DEFAULT_ORDERING"
+        args = frappe._dict()
+        query.set_order_by(args)
+        self.assertIn("default_customer", args.order_by)
+        query.order_by = projection["order_by"]
+        query.set_order_by(args)
+        query.validate_order_by_and_group_by(args.order_by)
+        self.assertEqual(args.order_by, "name asc")
+        self.assertNotIn("default_customer", args.order_by)
+
+    def test_settings_actor_switch_and_revocation_do_not_reuse_projection(self):
+        settings = self.docs["Restaurant Company Settings", "SETTINGS"]
+        settings.owner = "api-test"
+        meta = self.get_meta("Restaurant Company Settings")
+        meta.permissions[0].if_owner = 1
+        self.assertEqual(quote._quote_settings("CO", "POS").name, "SETTINGS")
+        frappe.local.session.user = "another-actor"
+        with self.assertRaises(quote.QuoteUnavailable):
+            quote._quote_settings("CO", "POS")
+        frappe.local.session.user = "api-test"
+        self.assertEqual(quote._quote_settings("CO", "POS").name, "SETTINGS")
+        self.user_permissions = {"Restaurant Company Settings": [frappe._dict(doc="EXCLUDED")]}
+        with self.assertRaises(quote.QuoteUnavailable):
+            quote._quote_settings("CO", "POS")
+        self.user_permissions = {}
+        meta.permissions = []
+        with self.assertRaises(quote.QuoteUnavailable):
+            quote._quote_settings("CO", "POS")
 
     def test_exclusive_whole_cart_uses_real_native_engine(self):
         with patch.object(quote, "calculate_taxes_and_totals", wraps=native_tax.calculate_taxes_and_totals) as engine:

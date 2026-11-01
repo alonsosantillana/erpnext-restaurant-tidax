@@ -51,6 +51,16 @@ The payment form requires two independent selections: `Boleta`/`Factura` and `El
 
 These series are resolved from `Restaurant Company Settings`, so each Company keeps independent fiscal and order numbering.
 
+#### Internal read-only order quotes
+
+The internal quote service can price supported Pickup/Delivery carts without
+creating orders or invoices. Its Settings reader authorizes only the fixed
+company/POS/service/fee fields it needs; it does not grant full Settings access
+or access to unrelated default customers. Unknown custom authorization policies
+remain an explicit handoff. This capability does not activate a channel or replace
+human approval. See [read-only quotes](docs/readonly-order-quotes.md) and the
+[documentation index](docs/README.md) for scope, permissions and safe validation.
+
 #### Reliable ticket printing
 
 Printing is company-scoped and durable:

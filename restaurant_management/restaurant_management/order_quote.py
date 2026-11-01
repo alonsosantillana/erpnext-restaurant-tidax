@@ -10,15 +10,27 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 import frappe
+from frappe.core.doctype.server_script.server_script_utils import get_server_script_map
+from frappe.core.doctype.user_permission.user_permission import get_user_permissions
+from frappe.permissions import get_allowed_docs_for_doctype, get_role_permissions
 from frappe.utils import cint, getdate, today
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import POSInvoice
 from erpnext.controllers.taxes_and_totals import calculate_taxes_and_totals
 from erpnext.stock.get_item_details import get_price_list_rate_for
 
 from restaurant_management.restaurant_management.company_settings import (
-    get_restaurant_settings,
+    COMPANY_SETTINGS_DOCTYPE,
     get_user_restaurant_company,
 )
+
+
+_QUOTE_SETTINGS_FIELDS = {
+    "company": ("Link", "Company"),
+    "pos_profile": ("Link", "POS Profile"),
+    "enable_pickup": ("Check", None),
+    "enable_delivery": ("Check", None),
+    "delivery_fee_item": ("Link", "Item"),
+}
 
 
 class QuoteUnavailable(frappe.ValidationError):
@@ -107,6 +119,53 @@ def _inputs(proposal, context):
     _require(len(json.dumps(proposal, ensure_ascii=True)) <= 16384)
 
 
+def _quote_settings(company, pos_profile):
+    """Authorize only quote fields after _context checks Company and exact POS."""
+    actor = frappe.session.user
+    _require(actor and actor != "Guest" and get_user_restaurant_company() == company)
+    doctype = COMPANY_SETTINGS_DOCTYPE
+    for key in ("has_permission", "permission_query_conditions", "override_doctype_class"):
+        policies = frappe.get_hooks(key, {}) or {}
+        # Unknown policies may require omitted fields; never guess their outcome.
+        _require(isinstance(policies, dict) and not policies.get(doctype) and not policies.get("*"))
+    scripts = get_server_script_map()
+    _require(isinstance(scripts, dict))
+    policies = scripts.get("permission_query", {})
+    _require(isinstance(policies, dict) and not policies.get(doctype) and not policies.get("*"))
+    meta = frappe.get_meta(doctype)
+    _require(not meta.issingle and not meta.istable and not meta.is_virtual)
+    roles = set(frappe.get_roles(actor))
+    _require(get_role_permissions(meta, user=actor).get("read"))
+    read_perms = [row for row in meta.permissions if row.role in roles and cint(row.get("read"))]
+    unrestricted = {cint(row.permlevel) for row in read_perms if not cint(row.get("if_owner"))}
+    owner_only = {cint(row.permlevel) for row in read_perms if cint(row.get("if_owner"))}
+    required_levels = {0}
+    for name, (fieldtype, options) in _QUOTE_SETTINGS_FIELDS.items():
+        field = meta.get_field(name)
+        _require(field and not field.get("is_virtual") and field.fieldtype == fieldtype)
+        _require(not options or field.options == options)
+        required_levels.add(cint(field.permlevel))
+    _require(required_levels <= unrestricted | owner_only)
+    filters = {"company": company}
+    if not required_levels <= unrestricted:
+        filters["owner"] = actor
+    rows = frappe.get_all(doctype, filters=filters,
+        fields=["name", "modified", *_QUOTE_SETTINGS_FIELDS], limit_page_length=2,
+        order_by="name asc")
+    _require(len(rows) == 1)
+    settings = frappe._dict(doctype=doctype, **rows[0])
+    _require(settings.company == company and settings.pos_profile == pos_profile)
+    permissions = get_user_permissions(actor)
+    strict = cint(frappe.get_system_settings("apply_strict_user_permissions"))
+    scope = [(doctype, settings.name), *[(options, settings.get(name))
+        for name, (fieldtype, options) in _QUOTE_SETTINGS_FIELDS.items() if fieldtype == "Link"]]
+    for linked_doctype, value in scope:
+        allowed = get_allowed_docs_for_doctype(permissions.get(linked_doctype, []), doctype)
+        if allowed and (linked_doctype == doctype or value or strict):
+            _require(str(value) in allowed)
+    return settings
+
+
 def _context(proposal, context, evidence):
     actor = frappe.session.user
     _require(actor and actor != "Guest")
@@ -126,11 +185,7 @@ def _context(proposal, context, evidence):
     price_list = _read("Price List", context["selling_price_list"])
     _require(cint(price_list.get("enabled")) and cint(price_list.get("selling")))
     _require(company.default_currency == profile.currency == price_list.currency == context["currency"])
-    settings = get_restaurant_settings(company=company.name, pos_profile=profile.name)
-    try:
-        settings.check_permission("read")
-    except frappe.PermissionError:
-        raise QuoteUnavailable("Native read-only quote unavailable; manual review required") from None
+    settings = _quote_settings(company.name, profile.name)
     _require(settings.company == company.name and settings.pos_profile == profile.name)
     _require(cint(settings.get("enable_delivery" if proposal["service_type"] == "Delivery" else "enable_pickup")))
     customer = _read("Customer", proposal["customer"])
