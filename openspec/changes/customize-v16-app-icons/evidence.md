@@ -13,3 +13,5 @@ App `restaurant_management`: icon `/assets/restaurant_management/images/app-icon
 - No new site backups were made. Rollback uses only the recorded hook preimage/new image, preserving existing assets/navigation.
 
 Commit/push identifiers are added after source delivery. Do not promote to production or merge maintenance branches implicitly.
+
+Source commit `390855de9345682e14cde1a611c102a25fe6ee4c` was pushed to `upstream` / `feature/v16-app-icons-20261102` and the remote SHA was verified. This documentation follow-up records completed source delivery.
