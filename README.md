@@ -109,3 +109,13 @@ Los iconos de Apps usan las iniciales nativas cuando no hay logo propio.
 Alcance, activación puntual en desarrollo y reversión:
 [OpenSpec show-apps-on-v16-desktop](openspec/changes/show-apps-on-v16-desktop/design.md).
 Esta navegación exige el contrato Apps/Dock de v16; no modifica procesos de negocio.
+
+### Icono de Apps
+
+El acceso de **Restaurant** usa un SVG propio servido desde
+`/assets/restaurant_management/images/app-icon-v1.svg`. Forma parte de una familia de símbolos funcionales con
+azul petróleo, celeste y ámbar inspirados en la identidad TIDAX; no sustituye
+logotipos oficiales de terceros. El archivo es vectorial, local y sin dependencias
+externas. Solo cambia la imagen: conserva destino y permisos.
+
+Diseño y reversión: [customize-v16-app-icons](openspec/changes/customize-v16-app-icons/design.md).

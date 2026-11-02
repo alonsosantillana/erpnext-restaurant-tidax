@@ -305,6 +305,7 @@ add_to_apps_screen = [
     {
         "name": "restaurant_management",
         "title": "Restaurant",
+        "logo": "/assets/restaurant_management/images/app-icon-v1.svg",
         "route": "/desk/restaurant-management",
         "has_permission": "restaurant_management.desktop_navigation.has_app_permission",
     }
