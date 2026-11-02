@@ -57,11 +57,26 @@ Printing is company-scoped and durable:
 
 1. Create or review **Restaurant Print Station** for each permanent Windows cashier or kitchen workstation. The Station User must be the user logged into that browser.
 2. In **Restaurant Company Settings > Reliable Ticket Printing**, map `ACCOUNT` and `INVOICE` to that station, a Print Format, a Hardware Print Type and copies. Optional `ORDER` and `KITCHEN` routes can stay disabled until physically qualified.
-3. Keep WebApp Hardware Bridge running on `ws://127.0.0.1:12212` and open `/app/restaurant-print-station` in the permanent browser session. Only one live browser lease may claim a station.
+3. Keep WebApp Hardware Bridge running on `ws://127.0.0.1:12212` and open `/app/restaurant-print-console` in the permanent browser session. Only one live browser lease may claim a station.
 4. Jobs remain `Pending` while the bridge is offline. They become `Accepted by HWB` only after a correlated acknowledgement. `Ambiguous` jobs require a person to verify the printer before retrying.
 5. PDFs are rendered on demand and are not persisted in the queue. Invoice and account routes remain isolated by Company.
 
 HWB 0.13.0 remains compatible. Test 1.0.1 separately before upgrading because it removes an old Base64 size limitation.
+
+On Desk v16, the printer SVG appears in the active page header, or the sidebar's
+standard-items area when there is no visible page header. The v15 navbar placement
+remains supported. It opens the print console in a new tab, only when the server
+returns a station assigned to the current user/company. Keep that console tab open
+while using the station; opening it can process pending print jobs. Merely rendering
+or moving the indicator does not activate a station or print.
+
+The paired `fix-v16-printer-indicator` changes in Restaurant Management and
+Silent Print preserve restaurant-indicator priority and legacy master-tab selection.
+For restaurant use, update both apps in a separately authorized deployment and
+hard-reload the browser to replace previously cached plain JavaScript assets.
+No schema migration is needed for this UI-only correction. Offline browser evidence
+and remaining real-user/HWB acceptance are recorded in
+[`openspec/changes/fix-v16-printer-indicator/`](openspec/changes/fix-v16-printer-indicator/).
 
 #### Frappe Cloud:
 >Available in your hosting on FrappeCloud [here](https://frappecloud.com/marketplace/apps/restaurant_management)
