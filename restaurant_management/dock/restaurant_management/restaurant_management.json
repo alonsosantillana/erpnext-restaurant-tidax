@@ -1,0 +1,18 @@
+{
+ "doctype": "Dock",
+ "name": "restaurant_management",
+ "app": "restaurant_management",
+ "standard": 1,
+ "user": "",
+ "mount_on": "",
+ "items": [
+  {
+   "link_type": "Workspace",
+   "title": "Restaurant",
+   "icon": "storefront-soft",
+   "added": 0,
+   "hidden": 0,
+   "link_to": "Restaurant Management"
+  }
+ ]
+}
