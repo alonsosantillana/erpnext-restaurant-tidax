@@ -254,7 +254,7 @@ class TestRestaurantPrinting(FrappeTestCase):
 
 		self.assertTrue(result["queued"])
 		has_permission.assert_called_once_with(
-			"POS Invoice", "print", invoice, raise_exception=False
+			"POS Invoice", "print", invoice, print_logs=False
 		)
 		payment_permissions.assert_called_once_with(
 			"POS Restaurant", order_owner="waiter@example.com"
@@ -277,7 +277,7 @@ class TestRestaurantPrinting(FrappeTestCase):
 		queue_invoice_print(invoice.name, "manual-request-1")
 
 		has_permission.assert_called_once_with(
-			"POS Invoice", "print", invoice, raise_exception=False
+			"POS Invoice", "print", invoice, print_logs=False
 		)
 		enqueue_print.assert_called_once_with(
 			"POS Invoice",

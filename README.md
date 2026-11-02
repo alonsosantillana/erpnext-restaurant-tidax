@@ -138,3 +138,7 @@ Diseño y reversión: [customize-v16-app-icons](openspec/changes/customize-v16-a
 ## Permanent POS opening compatibility (v16)
 
 Optional, company-scoped compatibility for an older active primary POS session; default disabled. See [configuration, controls and rollback](docs/permanent-pos-opening.md).
+
+### v16 invoice printing permission compatibility
+
+Print and electronic-access gates use the native silent permission check (`print_logs=False`), preserving scoped authorization and queue idempotency. No migration or permission assignment is required. See [compatibility validation and rollback](openspec/changes/fix-v16-print-permission-api/design.md).

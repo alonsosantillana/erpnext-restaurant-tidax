@@ -229,7 +229,7 @@ def queue_invoice_print(invoice_name, request_id=None):
 	# the scoped fallback below. The default check would append misleading
 	# permission messages to an otherwise successful response.
 	if not has_permission(
-		"POS Invoice", "print", invoice, raise_exception=False
+		"POS Invoice", "print", invoice, print_logs=False
 	):
 		order = frappe.db.get_value(
 			"Table Order",

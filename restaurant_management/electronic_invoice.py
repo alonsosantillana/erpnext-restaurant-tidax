@@ -88,7 +88,7 @@ def _get_linked_order(invoice_name):
 def _check_user_access(invoice):
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Authentication required"), frappe.AuthenticationError)
-	if has_permission("POS Invoice", "write", invoice, raise_exception=False):
+	if has_permission("POS Invoice", "write", invoice, print_logs=False):
 		return
 
 	order = _get_linked_order(invoice.name)
