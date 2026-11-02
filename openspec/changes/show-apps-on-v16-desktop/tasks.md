@@ -9,4 +9,4 @@
 - [x] Verify native Apps data and existing destinations; operator confirmed all thirteen custom apps in an authenticated development screenshot.
 ## 3. Delivery
 - [x] Record evidence, limits and preserved concurrent work in evidence.md.
-- [ ] Record final feature-branch commit/push identifiers after delivery; no maintenance merge or production rollout is authorized by this change.
+- [x] Record final feature-branch commit/push identifiers after delivery; no maintenance merge or production rollout is authorized by this change.
