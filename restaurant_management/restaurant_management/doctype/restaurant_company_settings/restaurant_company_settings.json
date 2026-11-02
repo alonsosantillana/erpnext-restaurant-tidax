@@ -54,6 +54,7 @@
   "finished_goods_warehouse",
   "pos_and_print_section",
   "pos_profile",
+  "allow_permanent_pos_opening",
   "default_customer",
   "print_format_order",
   "column_break_print",
@@ -527,6 +528,13 @@
   {
    "fieldname": "double_click_events_info",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "allow_permanent_pos_opening",
+   "fieldtype": "Check",
+   "label": "Allow Permanent POS Opening",
+   "default": "0",
+   "description": "Allow an older submitted open session only for the primary POS Profile of this company. Opening uniqueness and integrity checks remain enforced."
   }
  ],
  "index_web_pages_for_search": 1,
@@ -558,7 +566,7 @@
    "role": "Admin Resto",
    "write": 1
   },
-{
+  {
    "create": 1,
    "delete": 1,
    "export": 1,
@@ -572,7 +580,7 @@
    "read": 1,
    "role": "Cajero"
   },
-{
+  {
    "export": 1,
    "read": 1,
    "role": "resto_cajero"
@@ -582,12 +590,12 @@
    "read": 1,
    "role": "Mozo"
   },
-{
+  {
    "export": 1,
    "read": 1,
    "role": "resto_mozo"
   },
-{
+  {
    "export": 1,
    "read": 1,
    "role": "resto_delivery"
@@ -597,7 +605,7 @@
    "read": 1,
    "role": "Cocinero"
   },
-{
+  {
    "export": 1,
    "read": 1,
    "role": "resto_cocina"

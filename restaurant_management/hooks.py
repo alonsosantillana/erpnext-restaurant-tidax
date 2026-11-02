@@ -310,3 +310,8 @@ add_to_apps_screen = [
         "has_permission": "restaurant_management.desktop_navigation.has_app_permission",
     }
 ]
+
+# v16 cooperative extension; all other invoice validation remains native.
+extend_doctype_class = {
+    "POS Invoice": ["restaurant_management.restaurant_management.permanent_pos_opening.PermanentPOSOpeningMixin"],
+}

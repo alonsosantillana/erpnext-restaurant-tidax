@@ -134,3 +134,7 @@ logotipos oficiales de terceros. El archivo es vectorial, local y sin dependenci
 externas. Solo cambia la imagen: conserva destino y permisos.
 
 Diseño y reversión: [customize-v16-app-icons](openspec/changes/customize-v16-app-icons/design.md).
+
+## Permanent POS opening compatibility (v16)
+
+Optional, company-scoped compatibility for an older active primary POS session; default disabled. See [configuration, controls and rollback](docs/permanent-pos-opening.md).
