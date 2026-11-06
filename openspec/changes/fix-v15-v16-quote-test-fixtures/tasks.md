@@ -6,9 +6,11 @@
 - [x] Replace private local storage access with public isolated cleanup.
 - [x] Target moved constructor/read mocks without changing native arithmetic.
 - [x] Verify caller context restoration after success and setup failure.
-- [ ] Run native quote and paired TIX regressions on v15 and v16.
-- [ ] Obtain independent review; record limits, rollback and source provenance.
-- [ ] Commit/push dedicated branches, leaving installed/main branches unchanged.
+- [x] Run native quote and paired TIX regressions on v15 and v16.
+- [x] Obtain independent review; record limits, rollback and source provenance.
+- [x] Commit/push dedicated branches, leaving installed/main branches unchanged.
+- [ ] Resolve or explicitly accept the inclusive-tax monetary difference before
+  declaring the v16 quote contract accepted.
 
 Companion: TIX fix-v15-v16-approval-test-fixtures. Live site, package compatibility
 declaration, merge, deployment and services are outside this test-only task.
@@ -39,3 +41,15 @@ declaration, merge, deployment and services are outside this test-only task.
 - No live site, configuration, network, real mutation, regional tax override or
   provider was exercised. Core and installed checkouts remain unchanged. This
   is offline fixture implementation, not fiscal or installed-site certification.
+- Source backup verified remotely: `4f95170` on
+  `fix/quote-v15-v16-test-fixtures`; companion TIX `e6da6a0` on
+  `fix/mcp-v15-v16-test-fixtures`. Installed branch remains at `9466ba8`;
+  native version-16 remains at `c96d967`. No merge or deployment performed.
+- Companion TIX full v15 discovery passed in one invocation with this native
+  worktree explicitly selected: **2,174 cases, 2,072 passed, 102 skipped, zero
+  failures/errors**. The 34 native/isolation cases are covered separately in the
+  focused 53-case record, not added twice to full-discovery totals.
+- Both new OpenSpec changes pass strict validation. The edited sources compile
+  on Python 3.14; v15 focused runtime is Python 3.12. Documentation links and
+  git diff --check pass. Temp artifacts stay outside Git. Existing monetary
+  assertions and the visible v16 difference are retained pending acceptance.
