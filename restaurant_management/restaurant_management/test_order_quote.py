@@ -30,6 +30,14 @@ from restaurant_management.restaurant_management import order_quote as quote
 native_tax = importlib.import_module("erpnext.controllers.taxes_and_totals")
 
 
+def expected_inclusive_tax():
+    expectations = {"15": "38.13", "16": "38.14"}
+    major = erpnext.__version__.split(".", 1)[0]
+    if major not in expectations:
+        raise AssertionError("No reviewed inclusive-tax expectation for this ERPNext major")
+    return expectations[major]
+
+
 @contextmanager
 def isolated_local():
     previous = dict(frappe.local)
@@ -260,7 +268,7 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         self.docs["POS Profile", "POS"].posa_tax_inclusive = 1
         result = self.run_quote()
         self.assertEqual(result["total"], "250")
-        self.assertEqual(result["tax"], "38.13")
+        self.assertEqual(result["tax"], expected_inclusive_tax())
         self.assertEqual([row["amount"] for row in result["lines"]], ["200", "50"])
 
     def test_delivery_fee_once_exclusive_and_inclusive(self):
@@ -641,6 +649,19 @@ class TestQuoteFixtureIsolation(unittest.TestCase):
             self.assertEqual(dict(frappe.local), {"fixture_sentinel": original})
             self.assertIs(frappe.local.fixture_sentinel, original)
             self.assertEqual(fixture.guard_calls, [])
+
+
+class TestInclusiveTaxExpectations(unittest.TestCase):
+    def test_reviewed_majors_use_fixed_independent_values(self):
+        for version, expected in (("15.109.0", "38.13"), ("16.53.0", "38.14")):
+            with self.subTest(version=version), patch.object(erpnext, "__version__", version):
+                self.assertEqual(expected_inclusive_tax(), expected)
+
+    def test_unreviewed_majors_have_no_fallback(self):
+        for version in ("14.99.0", "17.0.0", "develop", ""):
+            with self.subTest(version=version), patch.object(erpnext, "__version__", version):
+                with self.assertRaisesRegex(AssertionError, "No reviewed inclusive-tax expectation"):
+                    expected_inclusive_tax()
 
 
 if __name__ == "__main__":

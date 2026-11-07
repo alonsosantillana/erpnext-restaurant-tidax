@@ -47,6 +47,11 @@ La adaptacion se especifica en
 [fix-v15-v16-quote-test-fixtures](../openspec/changes/fix-v15-v16-quote-test-fixtures/design.md).
 La validacion sintetica no certifica un sitio ni una localizacion tributaria.
 Las versiones inspeccionadas difieren en redondeo inclusivo: para total 250,
-ERPNext 15.109 devuelve impuesto 38.13 y 16.53 devuelve 38.14. Las expectativas
-originales permanecen como bloqueo visible hasta aceptar el contrato por version;
-no modificar tasas, calculos operativos o tolerancias para ocultar esa diferencia.
+ERPNext 15.109 devuelve impuesto 38.13 y 16.53 devuelve 38.14. El usuario acepto
+expectativas exactas por version: 38.13 para v15 y 38.14 para v16, sin cambiar
+el total 250. El helper solo de pruebas usa valores fijos independientes del
+resultado calculado y rechaza majors desconocidos. No se modificaron tasas,
+calculos operativos, precisiones ni tolerancias; las 55 pruebas enfocadas
+nativas/emparejadas/aprobacion pasan en ambas matrices inspeccionadas.
+Evidencia y limites:
+[accept-native-inclusive-tax-test-matrix](../openspec/changes/accept-native-inclusive-tax-test-matrix/tasks.md).

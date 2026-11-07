@@ -9,7 +9,7 @@
 - [x] Run native quote and paired TIX regressions on v15 and v16.
 - [x] Obtain independent review; record limits, rollback and source provenance.
 - [x] Commit/push dedicated branches, leaving installed/main branches unchanged.
-- [ ] Resolve or explicitly accept the inclusive-tax monetary difference before
+- [x] Resolve or explicitly accept the inclusive-tax monetary difference before
   declaring the v16 quote contract accepted.
 
 Companion: TIX fix-v15-v16-approval-test-fixtures. Live site, package compatibility
@@ -53,3 +53,12 @@ declaration, merge, deployment and services are outside this test-only task.
   on Python 3.14; v15 focused runtime is Python 3.12. Documentation links and
   git diff --check pass. Temp artifacts stay outside Git. Existing monetary
   assertions and the visible v16 difference are retained pending acceptance.
+
+## Accepted Expectation Follow-up
+The user subsequently accepted each native major's exact result. The dedicated
+change [accept-native-inclusive-tax-test-matrix](../accept-native-inclusive-tax-test-matrix/tasks.md)
+changes only the native/paired inclusive tax expectation: 38.13 on v15 and 38.14
+on v16, both at total 250. All 55 focused cases now pass on both inspected
+matrices. Prior assertion-preservation and failure records above describe the
+fixture-port phase before that explicit acceptance; production math, rates,
+precision and all other expected monetary values remain unchanged.
