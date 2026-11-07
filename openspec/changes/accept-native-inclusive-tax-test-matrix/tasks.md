@@ -6,7 +6,7 @@
 - [x] Verify paired TIX assertion uses the same independent expectation.
 - [x] Run focused and broader guarded regressions on both inspected versions.
 - [x] Obtain independent review; update acceptance documentation and prior task.
-- [ ] Validate specs/diffs; commit and push the dedicated branch.
+- [x] Validate specs/diffs; commit and push the dedicated branch.
 
 Do not alter actual tax computation, totals, rates, configuration, live data or
 supported package ranges. No migration, service change, merge or deployment.
@@ -36,3 +36,6 @@ supported package ranges. No migration, service change, merge or deployment.
 - Previous full v15 discovery belongs to the parent fixture candidate; this
   expectation delta is covered by the new focused/backend runs, not presented
   as a fresh full-suite or live fiscal/site certification.
+- Source publication verified: native 5644083 on fix/quote-native-tax-expectations
+  and companion TIX 68ed34b on fix/mcp-native-tax-expectations. Installed native
+  checkout remains clean at 9466ba8, version-16 at c96d967. No merge/deployment.
