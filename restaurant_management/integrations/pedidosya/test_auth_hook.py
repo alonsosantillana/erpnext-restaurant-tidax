@@ -10,7 +10,9 @@ from werkzeug.wrappers import Request
 
 import frappe
 import frappe.auth
+from frappe.utils.local import release_local
 from restaurant_management import hooks
+from restaurant_management.integrations import auth_finalizer
 from restaurant_management.integrations.pedidosya import api, auth
 from restaurant_management.integrations.pedidosya.parsing import PayloadError
 
@@ -18,10 +20,13 @@ from restaurant_management.integrations.pedidosya.parsing import PayloadError
 DISPATCH = "restaurant_management.integrations.pedidosya.api.dispatch_order"
 STATUS = "restaurant_management.integrations.pedidosya.api.update_order_status"
 AUTH_HOOK = "restaurant_management.integrations.pedidosya.auth.authenticate_request"
+FINALIZER_HOOK = "restaurant_management.integrations.auth_finalizer.authenticate_request"
 
 
 class TestPedidosYaAuthHook(unittest.TestCase):
     def setUp(self):
+        self.addCleanup(release_local, frappe.local)
+        release_local(frappe.local)
         self.secret = "isolated-test-only-never-use-as-a-real-jwt-secret-" * 2
         self.settings = SimpleNamespace(
             name="vendor-test", remote_id="vendor-test", enabled=1,
@@ -52,7 +57,6 @@ class TestPedidosYaAuthHook(unittest.TestCase):
         for patcher in self.patchers:
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.addCleanup(frappe.local.__release_local__)
 
     @staticmethod
     def _throw(message, exc=frappe.ValidationError, **kwargs):
@@ -63,13 +67,17 @@ class TestPedidosYaAuthHook(unittest.TestCase):
             return getattr(hooks, "auth_hooks", [])
         if name == "override_whitelisted_methods":
             return self.overrides
+        if name == "tix_mcp_read_auth_finalizers":
+            return []
         raise AssertionError(f"Unexpected hook lookup: {name}")
 
     @staticmethod
     def _get_hook(name):
-        if name != AUTH_HOOK:
-            raise AssertionError(f"Unexpected authentication hook: {name}")
-        return auth.authenticate_request
+        if name == AUTH_HOOK:
+            return auth.authenticate_request
+        if name == FINALIZER_HOOK:
+            return auth_finalizer.authenticate_request
+        raise AssertionError(f"Unexpected authentication hook: {name}")
 
     def _get_settings(self, doctype, name):
         self.assertEqual(doctype, "PedidosYa Integration Settings")

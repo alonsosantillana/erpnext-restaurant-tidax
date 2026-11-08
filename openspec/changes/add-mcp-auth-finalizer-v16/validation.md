@@ -1,5 +1,10 @@
 # V16 Design And Baseline Evidence
 
+Historical pre-implementation preparation. The source correction is now approved
+and its executed results are in
+[implementation-validation.md](implementation-validation.md). The failed baseline
+below is retained as history, not as a claim that the fixture remains uncorrected.
+
 ## Status
 
 2026-11-08 UTC. Proposal and documentation only, based on Restaurant version-16

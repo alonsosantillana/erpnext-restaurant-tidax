@@ -4,4 +4,4 @@
 
 - [v16 print permission compatibility](../openspec/changes/fix-v16-print-permission-api/design.md)
 
-- [Optional MCP authentication finalizer, v16 design only](../openspec/changes/add-mcp-auth-finalizer-v16/design.md)
+- [Optional MCP authentication finalizer, isolated v16 implementation and limits](../openspec/changes/add-mcp-auth-finalizer-v16/implementation-validation.md)

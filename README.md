@@ -81,6 +81,15 @@ and remaining real-user/HWB acceptance are recorded in
 #### Frappe Cloud:
 >Available in your hosting on FrappeCloud [here](https://frappecloud.com/marketplace/apps/restaurant_management)
 
+#### Optional MCP authentication finalizer (v16 source)
+
+An internal optional auth hook can run the paired TIX read-account finalizer after
+PedidosYa without reordering apps. With no configured callbacks it is a no-op and
+does not require TIX. This is isolated, source-tested code, not installed or
+activated on a site. See [paired results and rollout limits](openspec/changes/add-mcp-auth-finalizer-v16/implementation-validation.md)
+before any separately authorized code/account deployment. JWT validation and
+native permission grants are unchanged.
+
 ___
 ### How to Use
 > See the documentation [here](https://github.com/quantumbitcore/erpnext-restaurant/wiki)

@@ -1,5 +1,9 @@
 # Optional Terminal Authentication Bridge
 
+The paired source implementation is approved and completed in isolated branches.
+Read [implementation-validation.md](implementation-validation.md) for actual
+results. The rollout gates below remain pending; source approval is not deployment.
+
 ## Placement And Ownership
 
 Register restaurant_management.integrations.auth_finalizer.authenticate_request

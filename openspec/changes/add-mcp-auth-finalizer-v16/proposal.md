@@ -2,9 +2,10 @@
 
 ## Status And Problem
 
-Design only, pending explicit authorization for the additional Restaurant source
-change and paired tests. Nothing is implemented, installed or enabled here.
-The owner selected Frappe / ERPNext 16 exclusively for this work.
+The owner explicitly approved the additional Restaurant source change and paired
+TIX tests in isolated branches only. No installation, live activation, external
+contact, data/permission/configuration or service operation is authorized. The
+owner selected Frappe / ERPNext 16 exclusively for this work.
 
 The existing native site order places TIX authentication before Restaurant's
 PedidosYa authenticator. A restricted MCP identity selected by a later hook needs
