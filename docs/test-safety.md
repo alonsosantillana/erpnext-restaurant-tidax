@@ -55,3 +55,29 @@ calculos operativos, precisiones ni tolerancias; las 55 pruebas enfocadas
 nativas/emparejadas/aprobacion pasan en ambas matrices inspeccionadas.
 Evidencia y limites:
 [accept-native-inclusive-tax-test-matrix](../openspec/changes/accept-native-inclusive-tax-test-matrix/tasks.md).
+
+## Verificacion de la pareja de fuentes
+
+La rama `docs/quote-paired-source-verification` parte de `4d01d2e`
+(`fix/quote-native-tax-expectations`), con las correcciones anteriores ya
+incluidas. Este seguimiento agrega solo documentacion: no modifica el motor,
+impuestos ni fixtures. Se verifico junto a TIX
+`fix/mcp-release-cli-paired-gates`, basado en `018d19e`, en worktrees persistentes
+aislados; no se sustituyo el checkout instalado de ninguna app.
+
+Antes de probar, fijar ambos roots en `PYTHONPATH` y comprobar las rutas reales
+de `tix.__file__` y `test_order_quote.__file__`. El checkout instalado puede no
+contener `isolated_local` ni `expected_inclusive_tax`: no asumir que una rama
+complementaria pendiente ya esta aplicada al sitio.
+
+Con Python 3.14.3, Frappe 16.55.2 y ERPNext 16.53.0 pasaron 36 pruebas nativas,
+9 emparejadas de TIX (incluida limpieza ante fallo parcial de setup) y 5 de
+diagnostico con datos sinteticos. Son 50 pruebas distintas; las repeticiones no
+se suman. Esta ejecucion no revalida v15, no certifica un sitio ni amplifica los
+rangos publicados del MCP. La evidencia TIX esta en
+`mcp_server/docs/release-cli-paired-validation.md` de la rama indicada.
+
+Integrar las correcciones de `4d01d2e` en la linea de mantenimiento requiere una
+operacion Git aprobada por separado; ni esta documentacion ni los tests offline
+equivalen a merge, despliegue o migracion. No se necesita una nueva correccion
+funcional de Restaurant para esta pareja, ni cambios en datos de negocio.
