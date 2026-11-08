@@ -19,7 +19,8 @@
 - [x] Run paired TIX v16 tests with fake identities, state transitions and dispatch spy.
 - [x] Independently review ordering, error behavior, ordinary users and drift limits.
 - [x] Record Restaurant 42 and combined 185-pass, zero-skip results and limits.
-- [ ] Verify remote backups of both implementation branches.
+- [x] Verify remote backups of both implementation branches: Restaurant 4a28064,
+  TIX 95db579; exact remote hashes matched before this documentation closure.
 
 ## Separate Deployment Gates
 

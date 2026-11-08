@@ -6,6 +6,10 @@ Implemented under explicit approval in fix/mcp-v16-auth-finalizer, based on
 Restaurant design 66a20e2 and maintenance version-16 c96d967. Companion TIX is
 fix/mcp-v16-auth-composition, based on design 7225853.
 
+Implementation commits 4a28064 (Restaurant) and 95db579 (TIX) were pushed and the
+exact remote hashes verified before this documentation-only closure. Their tested
+functional sources remain unchanged; no maintenance merge follows from the backup.
+
 Neither installed app nor the active MCP runtime was changed. No site was
 initialized, no business record created, no provider contacted and no role,
 permission, credential, site configuration, cache, migration or service operation
