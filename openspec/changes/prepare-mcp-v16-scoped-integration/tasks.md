@@ -11,8 +11,11 @@
 - [x] Document outcomes, limits and recovery; verify no installed-source changes.
 - [x] Commit/push both candidate branches and verify exact upstream hashes.
 
-## Outside This Preparation
+## Separately Approved Follow-Up
 
-- [ ] Explicit native inherited-permission risk acceptance.
-- [ ] Approval and execution of paired maintenance merge.
+- [x] Explicit native inherited-permission risk acceptance, bounded to the documented HTTP boundary.
+- [x] Approval and execution of paired maintenance merge, with remote verification.
+
+## Not Performed
+
 - [ ] Any installed-source/external-MCP update or broader runtime certification.

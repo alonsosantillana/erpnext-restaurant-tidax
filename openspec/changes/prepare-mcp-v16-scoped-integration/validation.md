@@ -104,8 +104,44 @@ cache reset, migration, permission write or installed-source update is part of
 this preparation. Existing installed pins remain TIX 41d8d21 and Restaurant
 c1333a8. External MCP remains separately pinned; no reload is implied.
 
-Native All-derived Item/Item Group rights remain a real warning and acceptance
-gate. Synthetic tests do not certify prior sessions, sockets, jobs, all workers,
-POS or universal read-only access. Recovery is to leave these isolated branches
-unmerged; never remove the active marker or revert the installed guard as an
-automatic rollback. Preserve original branches and concurrent user changes.
+Native All-derived Item/Item Group rights remain a real warning; the separate
+acceptance below does not remove grants or make the native profile least-privilege.
+Synthetic tests do not certify prior sessions, sockets, jobs, all workers, POS or
+universal read-only access. Following integration, any source-revert proposal must
+be reviewed separately. Never remove the active marker or revert the installed
+guard as an automatic rollback. Preserve original branches and concurrent changes.
+
+## Owner-Accepted Risk And Maintenance Integration
+
+On 2026-11-09 (America/Lima), the owner explicitly accepted the documented risk
+of permissions inherited from All and authorized the paired maintenance merge.
+This acceptance is bounded to the reviewed HTTP boundary: Item/Item Group still
+inherit Export, Print, Email, Report and Share. Warnings stay visible. It is not
+a native permissions remediation, a universal read-only certification, or an
+authorization to deploy, remove the marker, change shared grants or enable actions.
+
+Before merge, fresh upstream queries matched both recorded version-16 bases and
+candidate tips. Clean isolated integration worktrees were used; no installed app
+was switched. The exact source pair was revalidated from those worktrees:
+235 paired cases passed with zero errors, failures, skips, expected failures or
+protected IO attempts; the 25 runner self-tests also passed. Reruns add no new
+unique coverage. OpenSpec and diff checks accompany the documentation closure.
+
+Both fast-forward merges and normal pushes completed in dependency order:
+
+1. Restaurant version-16: c96d9674ca448808debaa16afce6c3671d33f042 to
+   af225df4b93d18a17f2215910f6bde67a31c39c1; ls-remote matched the new tip.
+2. TIX version-16: 9d281ed0c9f7207f49e75d0055188a1d3eef79dc to
+   0e3655b2620dcb585ecb1cf256baf7d10bb141e2; ls-remote matched the new tip.
+
+This follow-up supersedes the earlier pending acceptance/merge gates, not their
+historical findings. The subsequent commit only records this outcome and the
+accepted risk; its incorporation and final remote hash are verified at delivery.
+No authentication code, tests, native permissions or operational configuration
+changes in that documentation closure. No force push or branch deletion is used.
+The five minimarket documents remain outside Restaurant's integration ancestry.
+
+Installed sources remain pinned to TIX 41d8d21 and Restaurant c1333a8, separate
+from maintenance references. The external MCP runtime is not moved or reloaded.
+No site operation, migration, restart, service/cache command or business write
+was performed. Archival and deployment remain separate follow-ups.
