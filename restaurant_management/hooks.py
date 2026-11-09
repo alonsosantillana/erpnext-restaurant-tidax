@@ -17,6 +17,7 @@ source_link = "https://github.com/joepa37/restaurant_management"
 
 auth_hooks = [
     "restaurant_management.integrations.pedidosya.auth.authenticate_request",
+    "restaurant_management.integrations.auth_finalizer.authenticate_request",
 ]
 
 jinja = {
