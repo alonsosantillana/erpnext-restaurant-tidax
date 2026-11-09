@@ -3,6 +3,14 @@
     <h2>POS Restaurant</h2>
 </div>
 
+V16 bounded backend pilot: [scope and evidence](openspec/changes/pilot-mcp-read-boundary-v16/validation.md).
+Only the optional authentication finalizer is included. No account marker,
+business action or channel is activated; this is not general POS/v16 acceptance.
+
+Scoped v16 integration candidate: [preparation and validation](openspec/changes/prepare-mcp-v16-scoped-integration/validation.md).
+The source package does not assign account markers. Paired offline tests do not
+authorize a maintenance merge, deployment or acceptance of native inherited rights.
+
 ___
 > ### POS Restaurant includes the following functionalities:
 

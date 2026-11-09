@@ -1,13 +1,14 @@
 schema: spec-driven
 
 context: |
-  App Frappe/ERPNext v15: restaurant_management.
+  App Frappe/ERPNext v16: restaurant_management.
   Proposito actual: gestionar salas, mesas, ordenes, comandas, centros de produccion,
   pagos y facturacion POS para restaurantes, con personalizaciones TIDAX para Peru,
   facturacion electronica mediante ovenube_peru, impresion y reportes operativos.
 
   Convenciones del proyecto:
-  - Mantener compatibilidad con Frappe v15 y ERPNext v15.
+  - El trabajo actual es exclusivamente Frappe v16 y ERPNext v16.
+  - Conservar evidencia historica v15 sin nuevas pruebas ni despliegues v15.
   - No modificar apps core como frappe o erpnext.
   - Preservar las personalizaciones TIDAX/SUNAT que sean funcionalmente necesarias.
   - Usar ORM y ciclos documentales estandar de Frappe; justificar SQL directo.
@@ -34,12 +35,12 @@ rules:
   proposal:
     - Incluir problema, objetivo, alcance, exclusiones, impacto esperado y criterios de aceptacion.
     - Identificar app, modulos, DocTypes, APIs, hooks, fixtures, reportes, dependencias y archivos afectados.
-    - Clasificar el riesgo y separar compatibilidad v15, seguridad, integridad y funcionalidad tributaria.
+    - Clasificar el riesgo y separar compatibilidad v16, seguridad, integridad y funcionalidad tributaria.
   design:
     - Describir arquitectura, estrategia de port selectivo desde upstream, dependencias y limites de responsabilidad.
     - Documentar permisos, transacciones, concurrencia, tiempo real, migracion, fixtures, patches y plan de reversion.
     - Para facturacion electronica/SUNAT, documentar series, comprobantes, descuentos, gratuidad y casos borde.
-    - Incluir una matriz de pruebas sobre un sitio v15 aislado antes de cualquier despliegue.
+    - Incluir una matriz v16; el aislamiento de pruebas no requiere otro bench ni sustituye autorizacion del sitio existente.
   tasks:
     - Usar tareas verificables y marcables, organizadas por fases y prioridad.
     - Incluir pruebas unitarias, integracion, seguridad, instalacion, migracion y regresion funcional.
