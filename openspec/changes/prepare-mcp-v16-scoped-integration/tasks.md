@@ -9,7 +9,7 @@
 - [x] Check no minimarket ancestry/content is included in Restaurant candidate.
 - [x] Complete independent source/QA review and resolve material findings.
 - [x] Document outcomes, limits and recovery; verify no installed-source changes.
-- [ ] Commit/push both candidate branches and verify exact upstream hashes.
+- [x] Commit/push both candidate branches and verify exact upstream hashes.
 
 ## Outside This Preparation
 

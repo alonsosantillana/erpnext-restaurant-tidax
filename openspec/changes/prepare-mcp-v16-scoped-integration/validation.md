@@ -83,6 +83,20 @@ The full command and limits are documented in TIX's
 mcp_server/docs/read-boundary-offline-tests.md. Final source and remote-reference
 checks accompany delivery; installed source and maintenance refs stay unchanged.
 
+## Verified Source Backups
+
+Both source candidates were committed and pushed to their own upstreams under
+chore/mcp-v16-integration-candidate. Actual ls-remote results matched:
+
+- TIX: efc06cf045af97a27d4fbc6aad9f8ea9617669f4.
+- Restaurant: be66a7a4aee121791b4b10934f8a6469de12c9af.
+
+Maintenance references remained TIX 9d281ed0c9f7207f49e75d0055188a1d3eef79dc and
+Restaurant c96d9674ca448808debaa16afce6c3671d33f042. Installed app checkouts were
+clean and retained the original pilot pins. These hashes identify the qualified
+source pair; later evidence-only commits do not change tested files. Their final
+remote verification is part of delivery, not a maintenance merge.
+
 ## Limits And Recovery
 
 No site, credentials, provider, business document, DB/Redis connection, services,
