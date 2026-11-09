@@ -5,10 +5,13 @@
 - [x] Transfer only reviewed backend files and verify exact byte equality.
 - [x] Run focused paired v16 synthetic tests and independent rollout review.
 - [x] Complete protected pre-install inventory and source checks.
-- [ ] Commit/push and verify candidate remote hash before source installation.
-- [ ] Install the bounded pair without changing maintenance branches or settings.
-- [ ] Check fresh hooks and ordinary HTTP reads; record actual outcomes and limits.
-- [ ] Update evidence and verify its remote backup.
+- [x] Commit/push and verify candidate remote hash before source installation.
+- [x] Install the bounded pair without changing maintenance branches or settings.
+- [x] Check fresh hooks and ordinary HTTP reads; record actual outcomes and limits.
+- [x] Update evidence with verified source backups and site outcomes.
+
+The evidence-only closure also requires push and final remote-hash verification
+at delivery; it does not change the installed, pinned backend commits.
 
 ## Separate Follow-Up, Not Performed Here
 
