@@ -36,6 +36,13 @@ are checked at delivery.
 
 ## Baseline And Diagnostic Deviation
 
+Applied-outcome evidence was subsequently committed/pushed and exact upstream
+hashes were verified: TIX 4241bbf7fe6d35f8e18826305e4a47a1ee4a0b29 and Restaurant
+1fcb4a3aaa328134f0f39cfd25675326ebb18c22. This final task-closure amendment is
+documentation only; its final remote tip is verified at delivery. Installed
+source pins, maintenance refs and the external MCP are not moved by evidence
+commits or pushes.
+
 The first baseline got guest ping 200, then its first authenticated projected
 resource request returned the helper's suppressed OperatorError. No checkout
 occurred. A separate single-request transport diagnostic then got the projected

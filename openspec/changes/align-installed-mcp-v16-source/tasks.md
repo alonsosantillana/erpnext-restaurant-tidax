@@ -9,7 +9,7 @@
 - [x] Update TIX to the exact approved target and recheck the paired state.
 - [x] Run 235 offline cases and 25 runner self-tests against installed origins.
 - [x] Complete post-update HTTP read and denial verification and record outcomes.
-- [ ] Document limits, source pins and recovery; commit/push evidence branches.
+- [x] Document limits, source pins and recovery; commit/push evidence branches with verified remote hashes.
 
 ## Not Authorized By This Change
 
