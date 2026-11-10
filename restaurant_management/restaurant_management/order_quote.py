@@ -71,34 +71,40 @@ def _stamp(document, fields):
     }
 
 
-def _inputs(proposal, context):
+def _inputs(proposal, context, *, cart=False):
     _require(type(proposal) is dict and type(context) is dict)
     _require(set(context) == {"company", "pos_profile", "selling_price_list", "profile_modified", "currency"})
     for value in context.values():
         _reference(value)
-    required = {"service_type", "customer", "phone", "promised_at", "items"}
+    required = {"service_type", "customer", "items"}
+    if not cart:
+        required |= {"phone", "promised_at"}
     _require(required <= set(proposal) <= required | {"address"})
     _require(isinstance(proposal["service_type"], str) and proposal["service_type"] in {"Pickup", "Delivery"})
     _reference(proposal["customer"])
-    phone = proposal["phone"]
-    _require(isinstance(phone, str) and len(phone) <= 16)
-    digits = phone[1:] if phone.startswith("+") else phone
-    _require(digits.isascii() and digits.isdigit() and 7 <= len(digits) <= 15)
-    try:
-        _require(isinstance(proposal["promised_at"], str) and len(proposal["promised_at"]) <= 40)
-        promised = datetime.fromisoformat(proposal["promised_at"].replace("Z", "+00:00"))
-        _require(promised.tzinfo is not None and promised > datetime.now(timezone.utc))
-    except (ValueError, TypeError):
-        raise QuoteUnavailable("Unsupported native quote time") from None
+    if not cart:
+        phone = proposal["phone"]
+        _require(isinstance(phone, str) and len(phone) <= 16)
+        digits = phone[1:] if phone.startswith("+") else phone
+        _require(digits.isascii() and digits.isdigit() and 7 <= len(digits) <= 15)
+        try:
+            _require(isinstance(proposal["promised_at"], str) and len(proposal["promised_at"]) <= 40)
+            promised = datetime.fromisoformat(proposal["promised_at"].replace("Z", "+00:00"))
+            _require(promised.tzinfo is not None and promised > datetime.now(timezone.utc))
+        except (ValueError, TypeError):
+            raise QuoteUnavailable("Unsupported native quote time") from None
     if proposal["service_type"] == "Delivery":
         _reference(proposal.get("address"))
+    elif cart:
+        _require("address" not in proposal)
     else:
         _require(not proposal.get("address"))
     rows = proposal["items"]
     _require(type(rows) is list and 1 <= len(rows) <= 50)
     seen = set()
     for row in rows:
-        _require(type(row) is dict and {"item_code", "qty"} <= set(row) <= {"item_code", "qty", "note"})
+        allowed = {"item_code", "qty"} if cart else {"item_code", "qty", "note"}
+        _require(type(row) is dict and {"item_code", "qty"} <= set(row) <= allowed)
         _reference(row["item_code"])
         _require(row["item_code"] not in seen)
         seen.add(row["item_code"])
@@ -275,6 +281,27 @@ def quote_order(proposal, context):
     Same-currency only; unsupported pricing is never treated as a free cart.
     """
     _inputs(proposal, context)
+    result, _ = _quote(proposal, context)
+    return result
+
+
+def quote_cart(cart, context):
+    """Return price-only native totals without contact data or order admission."""
+    _inputs(cart, context, cart=True)
+    legacy, invoice = _quote(cart, context)
+    return {
+        **{key: legacy[key] for key in ("currency", "lines", "tax", "total", "delivery_fee")},
+        "net_total": _money(invoice.net_total),
+        "taxes_and_charges": [
+            {"ordinal": ordinal, "rate": _money(row.rate),
+             "tax_amount": _money(row.tax_amount),
+             "included_in_print_rate": cint(row.included_in_print_rate)}
+            for ordinal, row in enumerate(invoice.taxes, start=1)
+        ],
+    }
+
+
+def _quote(proposal, context):
     evidence = []
     profile, price_list, settings = _context(proposal, context, evidence)
     date, items = today(), []
@@ -326,4 +353,4 @@ def quote_order(proposal, context):
     result["native_fingerprint"] = hashlib.sha256(
         json.dumps(fingerprint, sort_keys=True, separators=(",", ":"), default=str).encode()
     ).hexdigest()
-    return result
+    return result, invoice

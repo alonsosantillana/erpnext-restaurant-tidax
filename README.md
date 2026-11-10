@@ -7,6 +7,10 @@ V16 bounded backend pilot: [scope and evidence](openspec/changes/pilot-mcp-read-
 Only the optional authentication finalizer is included. No account marker,
 business action or channel is activated; this is not general POS/v16 acceptance.
 
+The [native cart quotation adapter](docs/readonly-cart-quote.md) supports price-only
+Pickup/Delivery calculations through the paired TIX read tool, without creating
+orders or invoices. Its isolated v16 source/tests do not deploy or activate it.
+
 Scoped v16 integration candidate: [preparation and validation](openspec/changes/prepare-mcp-v16-scoped-integration/validation.md).
 The source package does not assign account markers. Paired offline tests do not
 authorize a maintenance merge, deployment or acceptance of native inherited rights.

@@ -10,13 +10,16 @@ import importlib
 import json
 import socket
 import unittest
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from typing import NamedTuple
 from unittest.mock import Mock, patch
 
 import frappe
 import erpnext
+from frappe.model.base_document import BaseDocument
 from frappe.model.document import Document
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import POSInvoice
 from erpnext.stock import get_item_details as native_prices
@@ -25,6 +28,30 @@ from restaurant_management.restaurant_management import order_quote as quote
 
 
 native_tax = importlib.import_module("erpnext.controllers.taxes_and_totals")
+
+
+@contextmanager
+def isolated_local():
+    previous = dict(frappe.local)
+    frappe.release_local(frappe.local)
+    try:
+        yield
+    finally:
+        frappe.release_local(frappe.local)
+        for name, value in previous.items():
+            setattr(frappe.local, name, value)
+
+
+class NativePriceRow(NamedTuple):
+    name: str
+    price_list_rate: float
+    uom: str
+    packing_unit: float | None
+
+
+def native_price_row(document):
+    return NativePriceRow(document.name, document.price_list_rate,
+                          document.uom, document.get("packing_unit"))
 
 
 class ReadDocument(frappe._dict):
@@ -45,9 +72,17 @@ class Metadata:
             if field.fieldtype in {"Currency", "Float", "Percent"}:
                 field.precision = 2 if field.fieldtype == "Currency" else 6
         self.columns = [row.fieldname for row in self.fields]
+        self._table_doctypes = {row.fieldname: row.options
+                               for row in self.get_table_fields(include_computed=True)}
+        self._non_computed_table_doctypes = {row.fieldname: row.options
+                                           for row in self.get_table_fields()}
 
-    def get_table_fields(self):
-        return [row for row in self.fields if row.fieldtype == "Table"]
+    def get_table_fields(self, include_computed=False):
+        return [row for row in self.fields if row.fieldtype in {"Table", "Table MultiSelect"}
+                and (include_computed or not row.get("is_virtual"))]
+
+    def get_valid_columns(self):
+        return self.columns
 
     def get_field(self, name):
         return next((row for row in self.fields if row.fieldname == name), None)
@@ -65,17 +100,14 @@ class Metadata:
 
 class TestReadonlyOrderQuote(unittest.TestCase):
     def setUp(self):
-        storage = frappe.local._Local__storage
-        previous = storage.get({})
-        storage.set({})
-        self.addCleanup(storage.set, previous)
+        self.enterContext(isolated_local())
         self.guard_calls = []
 
         def denied(*args, **kwargs):
             self.guard_calls.append("side effect")
             raise AssertionError("No site, DB mutation, POS validation or network")
 
-        for name in ("init", "connect", "new_doc", "set_user"):
+        for name in ("init", "connect", "new_doc", "set_user", "enqueue", "sendmail", "publish_realtime"):
             self.enterContext(patch.object(frappe, name, side_effect=denied))
         for name in ("save", "insert", "submit", "db_set", "run_method"):
             self.enterContext(patch.object(Document, name, side_effect=denied))
@@ -86,6 +118,7 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         self.enterContext(patch.object(socket.socket, "connect", side_effect=denied))
         self.enterContext(patch.object(native_prices, "insert_item_price", side_effect=denied))
         self.enterContext(patch("erpnext.setup.utils.get_exchange_rate", side_effect=denied))
+        self.enterContext(patch.object(native_prices, "get_exchange_rate", side_effect=denied))
         self.enterContext(patch("frappe.translate.get_all_translations", return_value={}))
         self.enterContext(patch.object(frappe, "get_system_settings", return_value="Banker's Rounding"))
         self.enterContext(patch.object(frappe, "get_hooks", return_value={}))
@@ -103,10 +136,12 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         frappe.local.valid_columns = {}
         self.meta = {}
         self.enterContext(patch.object(frappe, "get_meta", side_effect=self.get_meta))
-        self.enterContext(patch("frappe.model.base_document.get_controller", return_value=Document))
+        document_module = importlib.import_module(BaseDocument.__module__)
+        self.enterContext(patch.object(document_module, "get_controller", return_value=Document))
         self.enterContext(patch.object(frappe, "get_doc", side_effect=self.get_doc))
         self.enterContext(patch.object(frappe, "get_cached_doc", side_effect=self.get_doc))
         self.enterContext(patch.object(frappe, "get_cached_value", side_effect=self.cached_value))
+        self.enterContext(patch.object(frappe, "get_single_value", side_effect=self.single_value))
         self.enterContext(patch.object(frappe, "get_all", side_effect=self.get_all))
         self.enterContext(patch.object(frappe, "has_permission", return_value=True))
         self.enterContext(patch.object(native_prices, "get_item_price", side_effect=self.price_rows))
@@ -190,9 +225,11 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         for (dt, _), d in self.docs.items():
             if dt != "Item Price" or d.item_code != item_code or d.price_list != args["price_list"]:
                 continue
-            if d.get("customer") != args.get("customer"):
+            general_price = (hasattr(native_prices, "get_prices_fitting_packing_unit")
+                             and not d.get("customer") and not d.get("supplier"))
+            if not ignore_party and d.get("customer") != args.get("customer") and not general_price:
                 continue
-            rows.append((d.name, d.price_list_rate, d.uom))
+            rows.append(native_price_row(d))
         return rows
 
     def run_quote(self):
@@ -223,7 +260,7 @@ class TestReadonlyOrderQuote(unittest.TestCase):
         self.docs["POS Profile", "POS"].posa_tax_inclusive = 1
         result = self.run_quote()
         self.assertEqual(result["total"], "250")
-        self.assertEqual(result["tax"], "38.13")
+        self.assertEqual(result["tax"], "38.14")  # ERPNext v16 rounds each native item tax.
         self.assertEqual([row["amount"] for row in result["lines"]], ["200", "50"])
 
     def test_delivery_fee_once_exclusive_and_inclusive(self):
@@ -526,7 +563,8 @@ class TestReadonlyOrderQuote(unittest.TestCase):
             self.run_quote()
 
     def test_native_selected_price_must_equal_checked_rate(self):
-        with patch.object(native_prices, "get_item_price", return_value=[("PRICE-DISH", 1, "Unit")]):
+        wrong_price = ReadDocument(self.docs["Item Price", "PRICE-DISH"], price_list_rate=1)
+        with patch.object(native_prices, "get_item_price", return_value=[native_price_row(wrong_price)]):
             with self.assertRaises(quote.QuoteUnavailable):
                 self.run_quote()
 
