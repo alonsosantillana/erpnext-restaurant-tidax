@@ -71,3 +71,38 @@ El servidor `restaurant_management_graphify` ejecuta `graphify-mcp` por `stdio`,
 Codex carga esta configuracion solo cuando Restaurant Management es un proyecto confiable. Hay que reiniciar o abrir una nueva sesion de Codex desde `apps/restaurant_management` despues de generar el grafo.
 
 Antes de instalar Graphify, crear una configuracion MCP o generar un grafo, solicitar autorizacion explicita. Graphify debe orientar la exploracion; nunca debe modificar codigo, configuracion, datos, DocTypes, fixtures, patches, hooks, permisos, dependencias ni scripts operativos.
+
+## Actualización autorizada del 2026-11-13
+
+Se regeneró el grafo del checkout de desarrollo a partir de la fuente ejecutable
+8138a20, conservando un respaldo local en `graphify-out/pre-refresh-20261113-aPtfv3/`.
+El directorio de salida sigue ignorado por Git: no se incorpora al repositorio.
+
+La herramienta ya instalada soporta reconstrucción completa de AST sin LLM y
+reporte/vista local sin etiquetado por IA:
+
+```bash
+GRAPHIFY_QUERY_LOG_DISABLE=1 /home/erpnext/.local/share/uv/tools/graphifyy/bin/graphify extract . --code-only --force --max-workers 2
+GRAPHIFY_QUERY_LOG_DISABLE=1 /home/erpnext/.local/share/uv/tools/graphifyy/bin/graphify cluster-only . --no-label
+```
+
+Ejecutar desde la raíz de esta app, únicamente con autorización para regenerar.
+`--force` aquí fuerza el rescaneo del grafo local; no es un push Git ni modifica
+la fuente. No usar `label`, proveedores remotos, extracción de BD, `--global`,
+instaladores ni hooks. `--no-label` no genera nuevos nombres mediante LLM; puede
+reutilizar etiquetas locales cuya firma coincida y nombrar otras por su nodo hub.
+
+El análisis AST no interpreta todas las relaciones dinámicas de Frappe: esta
+ejecución detectó 75 archivos sin nodos (principalmente JSON y módulos vacíos).
+Los DocTypes, fixtures y hooks siempre requieren contrastar las fuentes. No
+presentar el grafo como una certificación de permisos, stock o contabilidad.
+El detalle del resultado y sus límites está en [estado del conocimiento](project-knowledge.md).
+
+### Publicación documental en version-16
+
+El grafo descrito corresponde al checkout instalado con cotización de carrito
+candidata; el hash final de esa revisión documental local es ccdf75a. Esta
+publicación no incorpora dicho código a version-16, no copia el grafo a otro
+checkout y no lo presenta como grafo de mantenimiento. Los artefactos siguen
+locales e ignorados; el nuevo commit de documentación no cambia el código
+instalado ni invalida el grafo de ese checkout.

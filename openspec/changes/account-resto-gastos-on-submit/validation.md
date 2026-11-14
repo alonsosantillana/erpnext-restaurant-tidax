@@ -34,3 +34,18 @@ un gasto de S/ 1.23. El resultado fue:
 `openspec validate account-resto-gastos-on-submit --strict` no pudo ejecutarse:
 la instalación actual de OpenSpec usa expresiones regulares `/v`, que requieren
 Node 20 o superior, mientras el bench utiliza Node 18.20.8.
+
+## Actualización documental — 2026-11-13
+
+Se normalizaron los encabezados de requisitos y escenarios al formato del CLI y
+se explicitaron escenarios ya descritos por la propuesta/diseño y presentes en
+`expense_accounting.py`, `RestoGastos.before_cancel` y los hooks. No se cambió
+comportamiento contable. La validación estricta pasa con el Node 22.23.1 ya
+instalado, invocado solo para OpenSpec; no se actualizó el runtime del bench.
+La limitación de Node del apartado anterior es histórica.
+
+No se repitieron pruebas transaccionales ni se consultó configuración viva.
+La prueba histórica de una compañía no acredita aceptación en ambas compañías
+ni en v16. Esa aceptación permanece pendiente; no se migraron o regularizaron
+gastos y no se crearon asientos. Requisitos consolidados:
+`../../specs/resto-gastos-accounting/spec.md`.

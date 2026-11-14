@@ -10,5 +10,6 @@
 - [x] Prepare local delivery; no production, services, live printing or unauthorized merge/deployment.
 
 ## Separately authorized follow-up
-- [ ] Validate in the actual user session with the full Desk stylesheet and physical HWB, reviewing pending jobs before activation.
-- [ ] Obtain explicit publication/merge/deployment authorization before those operations.
+- [x] Record the operator's development-session confirmation of physical printing; see the dated validation addendum for its exact limits.
+- [x] Obtain explicit authorization and integrate/push the paired UI commits to version-16, without treating that as deployment authorization.
+- [ ] Complete any broader station/role acceptance and obtain separate authorization for another server or deployment.

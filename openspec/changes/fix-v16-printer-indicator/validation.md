@@ -42,3 +42,21 @@ The fixture validates actual browser DOM/CSS behavior, not the complete live Des
 Graphify: queried only the existing Restaurant Management graph, then verified source. No prepared Silent Print graph was found. No graph was generated/installed/configured or versioned; no cross-app graph or remote AI was used. This UI adjustment adds no backend dependency or architectural integration.
 
 README usage and the console route were updated. Source commits are local only. Remote publication, merge and deployment remain separate explicit authorizations. Reversion is to revert only the respective UI commit; no data rollback or migration is required.
+
+## Evidence reconciliation — 2026-11-13
+
+The preceding sections preserve the original delivery state. Later in this
+conversation the operator reported "ya ha impreso" and confirmed the indicator
+appears in v15.local (the development site's historical name, now running v16).
+This is operator-reported physical printing, not a new hardware test by this
+documentation refresh. Clearing both pending jobs was not confirmed; no job was
+replayed and no all-stations, all-roles or second-server acceptance is inferred.
+
+The user subsequently authorized integrating/pushing both UI commits to
+version-16. The delivery recorded successful fast-forward pushes and remote hash
+verification for restaurant_management 430dd62 and silent_print 2063fc4. The
+restaurant commit is an ancestor of the source revision audited here, 8138a20.
+The original local-only/pending-publication statements are historical, not the
+current publication status. That authorization did not authorize another
+deployment; the separate print-permission correction has its own evidence in
+`../fix-v16-print-permission-api/validation.md`.

@@ -1,5 +1,10 @@
 # Propuesta: Resto Gastos multiempresa y por caja
 
+> Nota de vigencia (2026-11-13): la exclusión contable de este expediente describe
+> su alcance histórico. El código actual añade contabilización mediante el cambio
+> posterior `account-resto-gastos-on-submit`; no debe interpretarse como que hoy
+> los gastos carecen de asientos. La base consolidada conserva ambos contratos.
+
 ## Problema
 
 `Resto Gastos` registra egresos operativos por fecha, pero no identifica la empresa,

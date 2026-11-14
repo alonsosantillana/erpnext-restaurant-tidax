@@ -3,6 +3,12 @@
     <h2>POS Restaurant</h2>
 </div>
 
+Current development targets Frappe/ERPNext v16. The v15 qualification documents
+below are historical evidence, not the current deployment procedure or a claim
+of complete v16 acceptance. See the [documentation index](docs/README.md),
+[consolidated requirements](openspec/specs/README.md) and
+[OpenSpec/Graphify status and limits](docs/project-knowledge.md).
+
 V16 bounded backend pilot: [scope and evidence](openspec/changes/pilot-mcp-read-boundary-v16/validation.md).
 Only the optional authentication finalizer is included. No account marker,
 business action or channel is activated; this is not general POS/v16 acceptance.
@@ -26,9 +32,9 @@ ___
 
 ___
 ### ERPNext Restaurant Management requires
-1. Frappe 15 and ERPNext 15. The verified baseline is 15.109.0.
-2. `ovenube_peru` 15.3.5 for the current TIDAX/SUNAT flow.
-3. `silent_print` 0.0.1 and a configured WebApp Hardware Bridge for ticket printing.
+1. Compatible Frappe 16 and ERPNext 16 sources. Qualification is scoped by the v16 change evidence, not implied for every release or workflow.
+2. The paired `ovenube_peru` maintenance sources for the TIDAX/SUNAT flow; app version labels alone do not establish v16 qualification.
+3. The paired `silent_print` maintenance sources and a configured WebApp Hardware Bridge for ticket printing.
 
 The frontend helper used by Restaurant Manage is bundled in this app; the legacy `frappe_helper` app is not required. MFC is not a dependency.
 
@@ -36,15 +42,16 @@ ___
 ### How to Install
 
 #### Self Host:
-1. Install compatible v15 versions of `ovenube_peru` and `silent_print`.
-2. `bench get-app [repository-url] --branch feature/restaurant-v15-compatibility`
-3. `bench setup requirements`
-4. `bench --site [site.name] install-app silent_print`
-5. `bench --site [site.name] install-app restaurant_management`
-6. `bench build --app restaurant_management`
-7. Configure Company, POS Profile, POS Opening Entry, Restaurant Company Settings, Silent Print Settings and the Hardware Bridge.
+Deployment requires an explicitly approved, paired v16 source revision and the
+applicable upgrade procedure. The installed development checkout may include a
+feature branch newer than `version-16`; do not substitute a generic branch switch
+or bench update for that procedure. Company, POS configuration, station and HWB
+setup must be reviewed separately. This documentation does not authorize install,
+migrate, build, restart, data changes or any production operation.
 
-Validate first on a disposable site. See `docs/v15-baseline.md` and `docs/v15-qualification.md` for the current support matrix and evidence.
+`docs/v15-baseline.md` and `docs/v15-qualification.md` preserve historical v15
+instructions and results. They are not the current v16 support matrix. The scope
+and remaining acceptance work are linked from [project knowledge](docs/project-knowledge.md).
 
 #### Receipt configuration
 
@@ -83,7 +90,7 @@ Silent Print preserve restaurant-indicator priority and legacy master-tab select
 For restaurant use, update both apps in a separately authorized deployment and
 hard-reload the browser to replace previously cached plain JavaScript assets.
 No schema migration is needed for this UI-only correction. Offline browser evidence
-and remaining real-user/HWB acceptance are recorded in
+and the bounded operator-reported printing confirmation and remaining acceptance are recorded in
 [`openspec/changes/fix-v16-printer-indicator/`](openspec/changes/fix-v16-printer-indicator/).
 
 #### Frappe Cloud:
@@ -95,7 +102,9 @@ ___
 
 ___
 ### Compatibility
-> Verified on Frappe/ERPNext 15.109.0. Other v15 minors require the same qualification suite; v13 and v14 are no longer part of this port target.
+> Current work is v16 only; each compatibility claim is bounded by its recorded
+> evidence. Frappe/ERPNext 15.109.0 is a historical baseline, not a current testing
+> target. No general production or all-workflow certification is implied.
 
 ___
 ERPNext Restaurant Management is based on [Frappe Framework](https://github.com/frappe/frappe).

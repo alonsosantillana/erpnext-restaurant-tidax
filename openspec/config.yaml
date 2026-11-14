@@ -28,6 +28,10 @@ context: |
   - Permisos por perfil POS y sala mediante Restaurant Permission y excepciones.
   - Integracion con POS Profile, POS Invoice, Material Request y stock de ERPNext.
   - Integracion TIDAX con ovenube_peru, silent_print y DocTypes/campos externos.
+  - Cola durable de impresion por estacion/compania y compatibilidad del indicador/permisos v16.
+  - PedidosYa: recepcion, estado y callbacks con transporte callback_event y renovacion 401 acotada.
+  - Cotizacion nativa de orden solo lectura; la extension de carrito sigue en una rama candidata no integrada.
+  - Resto Gastos multiempresa con asiento al enviar y validacion de integridad antes del cierre POS.
   - Reportes, dashboards, gastos, cambio de mozo y productos a producir.
   - Actualizaciones en tiempo real mediante frappe.publish_realtime.
 

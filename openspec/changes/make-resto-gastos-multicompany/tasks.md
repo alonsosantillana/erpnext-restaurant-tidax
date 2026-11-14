@@ -18,6 +18,6 @@
 
 - [x] Validar JSON, JavaScript y Python.
 - [x] Ejecutar pruebas unitarias de validaciones y series.
-- [ ] Ejecutar `openspec validate make-resto-gastos-multicompany`.
+- [x] Ejecutar `openspec validate make-resto-gastos-multicompany` (estricto con Node 22.23.1, 2026-11-13).
 - [x] Ejecutar migrate autorizado en `v15.local`.
 - [ ] Probar creación, envío, cancelación y reporte en ambas empresas.

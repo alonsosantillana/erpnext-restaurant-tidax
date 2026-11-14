@@ -8,5 +8,5 @@
 - [x] Bloquear el cierre ante gastos enviados sin asiento vigente.
 - [x] Añadir parche de configuración para compañías existentes.
 - [x] Añadir pruebas automatizadas.
-- [ ] Validar OpenSpec con Node compatible.
+- [x] Validar OpenSpec con Node compatible (Node 22.23.1, validación estricta documental del 2026-11-13).
 - [ ] Validar en `v15.local` con un gasto transaccional por compañía.

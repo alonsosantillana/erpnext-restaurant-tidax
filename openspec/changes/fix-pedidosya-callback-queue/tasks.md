@@ -13,7 +13,7 @@
 ## 4. Cierre
 - [x] 4.1 Validar sintaxis, diff, OpenSpec y revisión final.
 - [x] 4.2 Documentar resultados/límites y conservar respaldo local recuperable.
-- [ ] 4.4 Publicar rama en GitHub: pendiente autorización explícita por repositorio público.
+- [x] 4.4 Registrar la publicación posteriormente autorizada y su integración; véase la aclaración del 2026-11-13.
 - [x] 4.3 Confirmar ausencia de despliegue a producción.
 
 ## Evidencia y límites
@@ -25,3 +25,16 @@
 
 - Revisión final especializada: ambos hallazgos del harness cerrados; sin bloqueos para desarrollo.
 - La revisión automática rechazó publicar en el repositorio público por falta de autorización explícita. No se intentó otro mecanismo de publicación.
+
+## Aclaración de vigencia — 2026-11-13
+
+Las restricciones y el rechazo anteriores describen la entrega original. Después
+el usuario autorizó expresamente la integración/publicación. La corrección
+ba59719 y el merge cc765f9 (renovación del token) pertenecen a la ascendencia del
+checkout 8138a20 auditado; la publicación fue confirmada en la conversación de
+entrega. No se hizo un push nuevo durante esta actualización documental.
+
+El límite original de no renovar un token tras 401 fue resuelto por el expediente
+posterior `refresh-pedidosya-callback-token`, no por este cambio de cola. Su código
+y especificación se consultan conjuntamente. Esto no acredita homologación
+oficial de PedidosYa ni autoriza nuevas pruebas, scheduler o producción.
