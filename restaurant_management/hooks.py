@@ -83,6 +83,7 @@ doc_events = {
     },
 }
 
+before_migrate = "restaurant_management.setup.pos_stock_metadata.before_migrate"
 after_migrate = "restaurant_management.setup.install.after_migrate"
 after_install = "restaurant_management.setup.install.after_install"
 

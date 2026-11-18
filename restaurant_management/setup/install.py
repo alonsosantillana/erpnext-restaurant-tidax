@@ -57,6 +57,7 @@ docs = {
             read_only=1,
             no_copy=1,
             in_standard_filter=1,
+            print_hide=0,
             description=(
                 "Indica si la Factura POS generó movimientos de inventario. "
                 "El valor se controla desde Restaurant Company Settings."
@@ -499,8 +500,15 @@ def set_production_report_permissions():
 
 
 def set_custom_fields():
+    from restaurant_management.setup.pos_stock_metadata import adopt_native_stock_field
+
+    native_stock = adopt_native_stock_field(
+        properties=docs["POS Invoice"]["update_stock"], apply_definition=True
+    )["native"]
     for doctype, fields in docs.items():
         for field_name, properties in fields.items():
+            if native_stock and doctype == "POS Invoice" and field_name == "update_stock":
+                continue
             if field_name in fields_not_needed:
                 continue
 
